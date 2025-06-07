@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Plus, Camera, TrendingUp, Leaf, Flame, Target } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { router, Link } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 interface DailySummary {
@@ -185,7 +186,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.actionButton, styles.cameraButton]}
-              onPress={() => router.push('/camera')}
+              onPress={() => router.push('/(tabs)/camera' as any)}
             >
               <Camera size={24} color="#FFFFFF" />
               <Text style={styles.actionButtonText}>Scan Fridge</Text>

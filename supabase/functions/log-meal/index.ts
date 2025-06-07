@@ -26,7 +26,7 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const authHeader = req.headers.get('Authorization');
@@ -62,12 +62,17 @@ Deno.serve(async (req: Request) => {
     let protein = 0;
 
     try {
+      const nutritionixAppId = Deno.env.get('NUTRITIONIX_APP_ID') || 'demo_app_id';
+      const nutritionixApiKey = Deno.env.get('NUTRITIONIX_API_KEY') || 'demo_api_key';
+      console.log('Using Nutritionix App ID:', nutritionixAppId);
+      console.log('Using Nutritionix API Key (first 5 chars): ', nutritionixApiKey.substring(0, 5) + '...');
+
       const nutritionixResponse = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-app-id': Deno.env.get('NUTRITIONIX_APP_ID') || 'demo_app_id',
-          'x-app-key': Deno.env.get('NUTRITIONIX_API_KEY') || 'demo_api_key',
+          'x-app-id': nutritionixAppId,
+          'x-app-key': nutritionixApiKey,
         },
         body: JSON.stringify({
           query: mealName,
@@ -76,14 +81,18 @@ Deno.serve(async (req: Request) => {
 
       if (nutritionixResponse.ok) {
         const nutritionData: NutritionixResponse = await nutritionixResponse.json();
+        console.log('Nutritionix API response:', nutritionData);
         if (nutritionData.foods && nutritionData.foods.length > 0) {
           calories = nutritionData.foods[0].nf_calories || 0;
           protein = nutritionData.foods[0].nf_protein || 0;
         }
+      } else {
+        const errorText = await nutritionixResponse.text();
+        console.error('Nutritionix API responded with an error:', nutritionixResponse.status, errorText);
       }
     } catch (error) {
-      console.warn('Nutritionix API error:', error);
-      // Use default values if API fails
+      console.warn('Nutritionix API request error:', error);
+      // Use default values if API fails or request error
       calories = 250; // Default estimate
       protein = 10; // Default estimate
     }

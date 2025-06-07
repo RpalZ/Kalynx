@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Chrome as Home, Utensils, Dumbbell, Leaf, User, Trophy } from 'lucide-react-native';
+import { Chrome as Home, Utensils, Dumbbell, Leaf, User, Trophy, Camera } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -63,6 +63,15 @@ export default function TabLayout() {
           title: 'Leaderboard',
           tabBarIcon: ({ size, color }) => (
             <Trophy size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="camera"
+        options={{
+          title: 'Camera',
+          tabBarIcon: ({ size, color }) => (
+            <Camera size={size} color={color} />
           ),
         }}
       />

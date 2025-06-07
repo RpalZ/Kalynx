@@ -124,8 +124,15 @@ export default function ProfileScreen() {
           text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
-            await supabase.auth.signOut();
-            router.replace('/auth');
+            console.log('Attempting to sign out...');
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+              console.error('Error during sign out:', error.message);
+              Alert.alert('Sign Out Error', error.message);
+            } else {
+              console.log('Sign out successful. Redirecting to auth screen.');
+              router.replace('/auth');
+            }
           },
         },
       ]
@@ -249,7 +256,10 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <TouchableOpacity
             style={styles.signOutButton}
-            onPress={handleSignOut}
+            onPress={() => {
+              console.log('Sign Out button pressed!');
+              handleSignOut();
+            }}
           >
             <LogOut size={20} color="#EF4444" />
             <Text style={styles.signOutText}>Sign Out</Text>

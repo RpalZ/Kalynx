@@ -49,24 +49,52 @@ export default function AuthScreen() {
         if (error) {
           Alert.alert('Sign Up Error', error.message);
         } else if (data.user) {
-          // Create user profile in database
-          const { error: profileError } = await supabase
-            .from('users')
-            .insert({
-              id: data.user.id,
-              email: data.user.email,
-              name: name,
+          console.log('Supabase signUp data:', data);
+          console.log('Supabase signUp error:', error);
+
+          // Call the Edge Function to create user profile in database (bypasses RLS and no longer requires client-side auth header)
+          const createProfileResponse = await fetch(
+            `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/create-user-profile`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                id: data.user.id,
+                email: data.user.email,
+                name: name,
+              }),
+            }
+          );
+
+          if (!createProfileResponse.ok) {
+            const errorText = await createProfileResponse.text();
+            console.error('Edge Function Profile creation error:', errorText);
+            Alert.alert('Sign Up Success, but Profile Creation Failed', errorText || 'Please sign in to complete profile.');
+          } else {
+            console.log('Profile created successfully by Edge Function.');
+
+            // Now, sign in the user to establish a client-side session
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
             });
 
-          if (profileError) {
-            console.error('Profile creation error:', profileError);
+            if (signInError) {
+              console.error('Error signing in after profile creation:', signInError);
+              Alert.alert('Sign Up Success, but Sign In Failed', signInError.message || 'Please sign in manually.');
+            } else {
+              router.replace('/(tabs)');
+              Alert.alert(
+                'Success',
+                'Account created, profile saved, and you are now signed in.',
+                [{ text: 'OK', onPress: () => {} }]
+              );
+            }
           }
-
-          Alert.alert(
-            'Success',
-            'Account created successfully! You can now sign in.',
-            [{ text: 'OK', onPress: () => setIsSignUp(false) }]
-          );
+        } else {
+          Alert.alert('Sign Up Issue', 'Account created but user data not returned. Please try signing in.');
         }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
