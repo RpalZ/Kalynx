@@ -8,12 +8,14 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Leaf, Mail, Lock, User } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
+import { Notification } from '../components/Notification';
 
 export default function AuthScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -21,21 +23,90 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setNotification({ message, type });
+  };
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password: string): { isValid: boolean; message: string } => {
+    if (password.length < 6) {
+      return { isValid: false, message: 'Password must be at least 6 characters long' };
+    }
+    if (!/[A-Z]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one uppercase letter' };
+    }
+    if (!/[a-z]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one lowercase letter' };
+    }
+    if (!/[0-9]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one number' };
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      return { isValid: false, message: 'Password must contain at least one special character' };
+    }
+    return { isValid: true, message: '' };
+  };
+
+  const validateName = (name: string): boolean => {
+    return name.trim().length >= 2;
+  };
 
   const handleAuth = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
+    // Clear any existing notifications
+    setNotification(null);
 
-    if (isSignUp && !name) {
-      Alert.alert('Error', 'Please enter your name');
-      return;
+    // Validate inputs
+    if (isSignUp) {
+      if (!name.trim()) {
+        showNotification('Please enter your name', 'error');
+        return;
+      }
+      if (!validateName(name)) {
+        showNotification('Name must be at least 2 characters long', 'error');
+        return;
+      }
+      if (!email.trim()) {
+        showNotification('Please enter your email', 'error');
+        return;
+      }
+      if (!validateEmail(email)) {
+        showNotification('Please enter a valid email address', 'error');
+        return;
+      }
+      if (!password) {
+        showNotification('Please enter a password', 'error');
+        return;
+      }
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        showNotification(passwordValidation.message, 'error');
+        return;
+      }
+    } else {
+      if (!email.trim()) {
+        showNotification('Please enter your email', 'error');
+        return;
+      }
+      if (!validateEmail(email)) {
+        showNotification('Please enter a valid email address', 'error');
+        return;
+      }
+      if (!password) {
+        showNotification('Please enter your password', 'error');
+        return;
+      }
     }
 
     setIsLoading(true);
     try {
       if (isSignUp) {
+        console.log('Attempting sign up with:', { email, name, passwordLength: password.length });
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -47,70 +118,67 @@ export default function AuthScreen() {
         });
 
         if (error) {
-          Alert.alert('Sign Up Error', error.message);
+          console.error('Supabase signUp error details:', error);
+          let errorMessage = 'An error occurred during sign up.';
+          
+          if (error.message.includes('already registered')) {
+            errorMessage = 'This email is already registered. Please try logging in instead.';
+          } else if (error.message.includes('password')) {
+            errorMessage = 'Password must be at least 6 characters long and include a mix of letters, numbers, and special characters.';
+          } else if (error.message.includes('email')) {
+            errorMessage = 'Please enter a valid email address.';
+          }
+          
+          showNotification(errorMessage, 'error');
         } else if (data.user) {
           console.log('Supabase signUp data:', data);
-          console.log('Supabase signUp error:', error);
+          showNotification('Your account has been created! Please check your email for verification.', 'success');
+          
+          const { error: profileError } = await supabase.functions.invoke('create-user-profile', {
+            body: { 
+              name, 
+              userId: data.user.id, 
+              email: data.user.email
+            },
+          });
 
-          // Call the Edge Function to create user profile in database (bypasses RLS and no longer requires client-side auth header)
-          const createProfileResponse = await fetch(
-            `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/create-user-profile`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                id: data.user.id,
-                email: data.user.email,
-                name: name,
-              }),
-            }
-          );
-
-          if (!createProfileResponse.ok) {
-            const errorText = await createProfileResponse.text();
-            console.error('Edge Function Profile creation error:', errorText);
-            Alert.alert('Sign Up Success, but Profile Creation Failed', errorText || 'Please sign in to complete profile.');
+          if (profileError) {
+            console.error('Error creating user profile:', profileError);
+            showNotification('Your account was created, but there was an error setting up your profile. Please try logging in.', 'error');
           } else {
-            console.log('Profile created successfully by Edge Function.');
-
-            // Now, sign in the user to establish a client-side session
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
-
-            if (signInError) {
-              console.error('Error signing in after profile creation:', signInError);
-              Alert.alert('Sign Up Success, but Sign In Failed', signInError.message || 'Please sign in manually.');
-            } else {
-              router.replace('/(tabs)');
-              Alert.alert(
-                'Success',
-                'Account created, profile saved, and you are now signed in.',
-                [{ text: 'OK', onPress: () => {} }]
-              );
-            }
+            // Redirect after successful signup and profile creation
+            router.replace('/(tabs)');
           }
-        } else {
-          Alert.alert('Sign Up Issue', 'Account created but user data not returned. Please try signing in.');
         }
       } else {
+        console.log('Attempting sign in with:', { email });
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (error) {
-          Alert.alert('Sign In Error', error.message);
+          console.error('Supabase signIn error details:', error);
+          let errorMessage = 'An error occurred during sign in.';
+          
+          if (error.message.includes('Invalid login credentials')) {
+            errorMessage = 'Invalid email or password. Please try again.';
+          } else if (error.message.includes('Email not confirmed')) {
+            errorMessage = 'Please verify your email address before logging in.';
+          } else if (error.message.includes('User not found')) {
+            errorMessage = 'No account found with this email. Please sign up first.';
+          }
+          
+          showNotification(errorMessage, 'error');
         } else if (data.user) {
+          console.log('Supabase signIn data:', data);
+          showNotification(`Welcome back, ${data.user.user_metadata.name || email}!`, 'success');
           router.replace('/(tabs)');
         }
       }
     } catch (error) {
-      console.error('Auth error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      console.error('Unexpected error during auth:', error);
+      showNotification('An unexpected error occurred. Please try again later.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -118,6 +186,13 @@ export default function AuthScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
+      )}
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -181,16 +256,17 @@ export default function AuthScreen() {
           </View>
 
           <TouchableOpacity
-            style={styles.authButton}
+            style={[styles.authButton, isLoading && styles.buttonDisabled]}
             onPress={handleAuth}
             disabled={isLoading}
           >
-            <Text style={styles.authButtonText}>
-              {isLoading 
-                ? (isSignUp ? 'Creating Account...' : 'Signing In...') 
-                : (isSignUp ? 'Create Account' : 'Sign In')
-              }
-            </Text>
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.authButtonText}>
+                {isSignUp ? 'Create Account' : 'Sign In'}
+              </Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -315,5 +391,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9CA3AF',
     textAlign: 'center',
+  },
+  buttonDisabled: {
+    backgroundColor: '#D1D5DB',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

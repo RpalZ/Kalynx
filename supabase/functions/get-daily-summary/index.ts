@@ -18,7 +18,7 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const authHeader = req.headers.get('Authorization');
@@ -51,13 +51,21 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const startOfDay = `${date} 00:00:00.000000+00`;
+    const nextDay = new Date(date);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const startOfNextDay = `${nextDay.toISOString().split('T')[0]} 00:00:00.000000+00`;
+
+    console.log('Fetching summary for user_id:', user.id, 'for date range:', { date, startOfDay, startOfNextDay });
+
+    console.log('Attempting to fetch meals for user_id:', user.id);
     // Get meals for the day
     const { data: meals, error: mealsError } = await supabase
       .from('meals')
       .select('*')
       .eq('user_id', user.id)
-      .gte('created_at', `${date}T00:00:00`)
-      .lt('created_at', `${date}T23:59:59`);
+      .gte('created_at', startOfDay)
+      .lt('created_at', startOfNextDay);
 
     if (mealsError) {
       console.error('Meals error:', mealsError);
@@ -66,14 +74,15 @@ Deno.serve(async (req: Request) => {
         headers: corsHeaders
       });
     }
+    console.log('Meals fetched:', meals?.length, 'First meal created_at:', meals?.[0]?.created_at);
 
     // Get workouts for the day
     const { data: workouts, error: workoutsError } = await supabase
       .from('workouts')
       .select('*')
       .eq('user_id', user.id)
-      .gte('created_at', `${date}T00:00:00`)
-      .lt('created_at', `${date}T23:59:59`);
+      .gte('created_at', startOfDay)
+      .lt('created_at', startOfNextDay);
 
     if (workoutsError) {
       console.error('Workouts error:', workoutsError);
@@ -82,6 +91,7 @@ Deno.serve(async (req: Request) => {
         headers: corsHeaders
       });
     }
+    console.log('Workouts fetched:', workouts?.length, 'First workout created_at:', workouts?.[0]?.created_at);
 
     // Calculate totals
     const totalCalories = meals?.reduce((sum, meal) => sum + (meal.calories || 0), 0) || 0;

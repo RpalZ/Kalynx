@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Plus, Camera, TrendingUp, Leaf, Flame, Target } from 'lucide-react-native';
-import { router, Link } from 'expo-router';
+import { router, Link, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 interface DailySummary {
@@ -40,9 +40,15 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<any>(null);
 
-  useEffect(() => {
+  React.useLayoutEffect(() => {
     checkAuth();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchDashboardData();
+    }, [])
+  );
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();

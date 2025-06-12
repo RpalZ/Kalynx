@@ -115,28 +115,16 @@ export default function ProfileScreen() {
   };
 
   const handleSignOut = async () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            console.log('Attempting to sign out...');
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-              console.error('Error during sign out:', error.message);
-              Alert.alert('Sign Out Error', error.message);
-            } else {
-              console.log('Sign out successful. Redirecting to auth screen.');
-              router.replace('/auth');
-            }
-          },
-        },
-      ]
-    );
+    console.log('handleSignOut called. Bypassing confirmation alert for debug.');
+    // Directly attempt sign out without confirmation alert
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error during direct sign out:', error.message);
+      Alert.alert('Sign Out Error', error.message);
+    } else {
+      console.log('Direct sign out successful. Redirecting to auth screen.');
+      router.replace('/auth');
+    }
   };
 
   const ProfileSection = ({ title, children }: { title: string; children: React.ReactNode }) => (

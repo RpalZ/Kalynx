@@ -1,9 +1,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 interface CreateProfileRequest {
-  id: string;
-  email: string;
+  userId: string; // The user ID from Supabase Auth
   name: string;
+  email: string; // Add email to the interface
 }
 
 const corsHeaders = {
@@ -24,10 +24,13 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '' // Use service_role key here
     );
 
-    const { id, email, name }: CreateProfileRequest = await req.json();
+    const requestBody = await req.json();
+    console.log('Received request body for profile creation:', requestBody);
 
-    if (!id || !email || !name) {
-      return new Response('User ID, email, and name are required', {
+    const { userId, name, email }: CreateProfileRequest = requestBody; // Destructure email
+
+    if (!userId || !name || !email) { // Check for email presence
+      return new Response('User ID, name, and email are required', {
         status: 400,
         headers: corsHeaders
       });
@@ -37,9 +40,9 @@ Deno.serve(async (req: Request) => {
     const { data: newProfile, error: dbError } = await supabaseAdmin
       .from('users')
       .insert({
-        id: id,
-        email: email,
+        id: userId, // Use userId as the id for the profile
         name: name,
+        email: email, // Include email in the insert
       })
       .select()
       .single();
