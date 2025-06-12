@@ -6,10 +6,24 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  TouchableOpacity,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Leaf, Droplet, TreePine, Recycle } from 'lucide-react-native';
+import { 
+  Leaf, 
+  Droplet, 
+  TreePine, 
+  Recycle, 
+  Award,
+  Trophy,
+  Target,
+  TrendingUp,
+  Calendar,
+  Zap,
+  Gift
+} from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 
@@ -21,11 +35,38 @@ interface EcoStats {
   avgWaterPerMeal: number;
 }
 
+interface EcoMilestone {
+  id: string;
+  name: string;
+  description: string;
+  target: number;
+  current: number;
+  type: 'carbon_saved' | 'water_saved' | 'meals_logged' | 'streak_days';
+  reward: string;
+  completed: boolean;
+  icon: string;
+}
+
+interface EcoChallenge {
+  id: string;
+  title: string;
+  description: string;
+  target: number;
+  current: number;
+  endDate: string;
+  reward: string;
+  type: 'weekly' | 'monthly';
+}
+
 export default function EcoScreen() {
   const [ecoStats, setEcoStats] = useState<EcoStats | null>(null);
   const [weeklyStats, setWeeklyStats] = useState<EcoStats | null>(null);
+  const [milestones, setMilestones] = useState<EcoMilestone[]>([]);
+  const [challenges, setChallenges] = useState<EcoChallenge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showRewardModal, setShowRewardModal] = useState(false);
+  const [selectedReward, setSelectedReward] = useState<EcoMilestone | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -38,6 +79,8 @@ export default function EcoScreen() {
       return;
     }
     fetchEcoData();
+    fetchMilestones();
+    fetchChallenges();
   };
 
   const fetchEcoData = async () => {
@@ -105,9 +148,107 @@ export default function EcoScreen() {
     }
   };
 
+  const fetchMilestones = async () => {
+    // Mock milestones data - in production, fetch from database
+    const mockMilestones: EcoMilestone[] = [
+      {
+        id: '1',
+        name: 'Carbon Saver',
+        description: 'Save 10kg of CO₂ through sustainable meal choices',
+        target: 10,
+        current: ecoStats?.totalCO2e ? Math.max(0, 10 - ecoStats.totalCO2e) : 0,
+        type: 'carbon_saved',
+        reward: 'Eco Warrior Badge NFT',
+        completed: false,
+        icon: 'leaf',
+      },
+      {
+        id: '2',
+        name: 'Water Guardian',
+        description: 'Save 100L of water through efficient meal planning',
+        target: 100,
+        current: weeklyStats?.totalWater ? Math.min(100, weeklyStats.totalWater) : 0,
+        type: 'water_saved',
+        reward: 'Water Protector Badge NFT',
+        completed: false,
+        icon: 'droplet',
+      },
+      {
+        id: '3',
+        name: 'Meal Tracker',
+        description: 'Log 50 sustainable meals',
+        target: 50,
+        current: 23, // Mock current progress
+        type: 'meals_logged',
+        reward: 'Nutrition Expert Badge NFT',
+        completed: false,
+        icon: 'target',
+      },
+    ];
+
+    setMilestones(mockMilestones);
+  };
+
+  const fetchChallenges = async () => {
+    // Mock challenges data - in production, fetch from database
+    const mockChallenges: EcoChallenge[] = [
+      {
+        id: '1',
+        title: 'Plant-Based Week',
+        description: 'Log 5 plant-based meals this week',
+        target: 5,
+        current: 2,
+        endDate: '2024-01-14',
+        reward: '50 Eco Points',
+        type: 'weekly',
+      },
+      {
+        id: '2',
+        title: 'Low Carbon Month',
+        description: 'Keep daily CO₂ under 2kg for 20 days this month',
+        target: 20,
+        current: 8,
+        endDate: '2024-01-31',
+        reward: 'Carbon Neutral Champion NFT',
+        type: 'monthly',
+      },
+    ];
+
+    setChallenges(mockChallenges);
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchEcoData();
+    fetchMilestones();
+    fetchChallenges();
+  };
+
+  const claimReward = async (milestone: EcoMilestone) => {
+    setSelectedReward(milestone);
+    setShowRewardModal(true);
+    
+    // In production, mint NFT or award points here
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        router.replace('/auth');
+        return;
+      }
+
+      // Mock NFT minting - replace with actual blockchain integration
+      console.log(`Minting NFT for milestone: ${milestone.name}`);
+      
+      Alert.alert(
+        'Reward Claimed!',
+        `Congratulations! You've earned: ${milestone.reward}`,
+        [{ text: 'Awesome!', onPress: () => setShowRewardModal(false) }]
+      );
+    } catch (error) {
+      console.error('Error claiming reward:', error);
+      Alert.alert('Error', 'Failed to claim reward');
+    }
   };
 
   const EcoCard = ({ title, value, unit, icon: Icon, color, bgColor, subtitle }: any) => (
@@ -122,26 +263,89 @@ export default function EcoScreen() {
     </View>
   );
 
-  const ImpactCard = ({ title, today, weekly, unit, improvement }: any) => (
-    <View style={styles.impactCard}>
-      <Text style={styles.impactTitle}>{title}</Text>
-      <View style={styles.impactStats}>
-        <View style={styles.impactStat}>
-          <Text style={styles.impactLabel}>Today</Text>
-          <Text style={styles.impactValue}>{today} {unit}</Text>
+  const MilestoneCard = ({ milestone }: { milestone: EcoMilestone }) => {
+    const progress = (milestone.current / milestone.target) * 100;
+    const isCompleted = progress >= 100;
+
+    return (
+      <View style={[styles.milestoneCard, isCompleted && styles.completedMilestone]}>
+        <View style={styles.milestoneHeader}>
+          <View style={styles.milestoneIcon}>
+            {milestone.icon === 'leaf' && <Leaf size={20} color="#16A34A" />}
+            {milestone.icon === 'droplet' && <Droplet size={20} color="#06B6D4" />}
+            {milestone.icon === 'target' && <Target size={20} color="#F59E0B" />}
+          </View>
+          <View style={styles.milestoneInfo}>
+            <Text style={styles.milestoneName}>{milestone.name}</Text>
+            <Text style={styles.milestoneDescription}>{milestone.description}</Text>
+          </View>
+          {isCompleted && (
+            <TouchableOpacity
+              style={styles.claimButton}
+              onPress={() => claimReward(milestone)}
+            >
+              <Gift size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
         </View>
-        <View style={styles.impactStat}>
-          <Text style={styles.impactLabel}>7-Day Avg</Text>
-          <Text style={styles.impactValue}>{weekly} {unit}</Text>
+        
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View 
+              style={[
+                styles.progressFill, 
+                { width: `${Math.min(100, progress)}%` }
+              ]} 
+            />
+          </View>
+          <Text style={styles.progressText}>
+            {milestone.current}/{milestone.target}
+          </Text>
         </View>
+        
+        <Text style={styles.rewardText}>Reward: {milestone.reward}</Text>
       </View>
-      {improvement && (
-        <Text style={[styles.improvementText, { color: improvement > 0 ? '#EF4444' : '#16A34A' }]}>
-          {improvement > 0 ? '↑' : '↓'} {Math.abs(improvement)}% from last week
-        </Text>
-      )}
-    </View>
-  );
+    );
+  };
+
+  const ChallengeCard = ({ challenge }: { challenge: EcoChallenge }) => {
+    const progress = (challenge.current / challenge.target) * 100;
+    const daysLeft = Math.ceil((new Date(challenge.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+
+    return (
+      <View style={styles.challengeCard}>
+        <View style={styles.challengeHeader}>
+          <View style={styles.challengeIcon}>
+            <Zap size={20} color="#7C3AED" />
+          </View>
+          <View style={styles.challengeInfo}>
+            <Text style={styles.challengeTitle}>{challenge.title}</Text>
+            <Text style={styles.challengeDescription}>{challenge.description}</Text>
+          </View>
+          <View style={styles.challengeTime}>
+            <Calendar size={16} color="#6B7280" />
+            <Text style={styles.timeLeft}>{daysLeft}d left</Text>
+          </View>
+        </View>
+        
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View 
+              style={[
+                styles.challengeProgressFill, 
+                { width: `${Math.min(100, progress)}%` }
+              ]} 
+            />
+          </View>
+          <Text style={styles.progressText}>
+            {challenge.current}/{challenge.target}
+          </Text>
+        </View>
+        
+        <Text style={styles.rewardText}>Reward: {challenge.reward}</Text>
+      </View>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -160,7 +364,7 @@ export default function EcoScreen() {
         style={styles.header}
       >
         <Text style={styles.headerTitle}>Environmental Impact</Text>
-        <Text style={styles.headerSubtitle}>Track your sustainable choices</Text>
+        <Text style={styles.headerSubtitle}>Track your sustainable choices and earn rewards</Text>
       </LinearGradient>
 
       <ScrollView
@@ -191,6 +395,26 @@ export default function EcoScreen() {
               bgColor="#ECFEFF"
               subtitle={`Avg ${ecoStats?.avgWaterPerMeal.toFixed(1) || '0.0'}L per meal`}
             />
+          </View>
+        </View>
+
+        {/* Eco Milestones */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Eco Milestones</Text>
+          <View style={styles.milestonesContainer}>
+            {milestones.map((milestone) => (
+              <MilestoneCard key={milestone.id} milestone={milestone} />
+            ))}
+          </View>
+        </View>
+
+        {/* Active Challenges */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Active Challenges</Text>
+          <View style={styles.challengesContainer}>
+            {challenges.map((challenge) => (
+              <ChallengeCard key={challenge.id} challenge={challenge} />
+            ))}
           </View>
         </View>
 
@@ -228,27 +452,6 @@ export default function EcoScreen() {
           </View>
         </View>
 
-        {/* Weekly Comparison */}
-        {weeklyStats && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>7-Day Overview</Text>
-            <View style={styles.comparisonContainer}>
-              <ImpactCard
-                title="Carbon Impact"
-                today={ecoStats?.totalCO2e.toFixed(2) || '0.00'}
-                weekly={(weeklyStats.totalCO2e / 7).toFixed(2)}
-                unit="kg CO₂e"
-              />
-              <ImpactCard
-                title="Water Usage"
-                today={ecoStats?.totalWater.toFixed(1) || '0.0'}
-                weekly={(weeklyStats.totalWater / 7).toFixed(1)}
-                unit="liters"
-              />
-            </View>
-          </View>
-        )}
-
         {/* Impact Equivalents */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>What Your Impact Means</Text>
@@ -277,6 +480,33 @@ export default function EcoScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Reward Modal */}
+      <Modal
+        visible={showRewardModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowRewardModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Trophy size={48} color="#F59E0B" />
+            <Text style={styles.modalTitle}>Congratulations!</Text>
+            <Text style={styles.modalText}>
+              You've completed the "{selectedReward?.name}" milestone!
+            </Text>
+            <Text style={styles.modalReward}>
+              Reward: {selectedReward?.reward}
+            </Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setShowRewardModal(false)}
+            >
+              <Text style={styles.modalButtonText}>Awesome!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -357,6 +587,134 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6B7280',
   },
+  milestonesContainer: {
+    gap: 12,
+  },
+  milestoneCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  completedMilestone: {
+    borderColor: '#16A34A',
+    backgroundColor: '#F0FDF4',
+  },
+  milestoneHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  milestoneIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  milestoneInfo: {
+    flex: 1,
+  },
+  milestoneName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  milestoneDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  claimButton: {
+    backgroundColor: '#16A34A',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  progressBar: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#16A34A',
+    borderRadius: 4,
+  },
+  challengeProgressFill: {
+    height: '100%',
+    backgroundColor: '#7C3AED',
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  rewardText: {
+    fontSize: 12,
+    color: '#F59E0B',
+    fontWeight: '500',
+  },
+  challengesContainer: {
+    gap: 12,
+  },
+  challengeCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  challengeHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  challengeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F5F3FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  challengeInfo: {
+    flex: 1,
+  },
+  challengeTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  challengeDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  challengeTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  timeLeft: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
   tipsContainer: {
     gap: 12,
   },
@@ -382,45 +740,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     lineHeight: 20,
-  },
-  comparisonContainer: {
-    gap: 12,
-  },
-  impactCard: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  impactTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 12,
-  },
-  impactStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  impactStat: {
-    alignItems: 'center',
-  },
-  impactLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  impactValue: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  improvementText: {
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'center',
   },
   equivalentsContainer: {
     flexDirection: 'row',
@@ -452,5 +771,49 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6B7280',
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    padding: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    margin: 20,
+    maxWidth: 300,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  modalText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalReward: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#F59E0B',
+    marginBottom: 24,
+  },
+  modalButton: {
+    backgroundColor: '#16A34A',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
