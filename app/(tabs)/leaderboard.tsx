@@ -360,10 +360,13 @@ const styles = StyleSheet.create({
   },
   subScores: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   subScore: {
     alignItems: 'center',
+    flex: 1,
+    minWidth: '48%',
   },
   subScoreLabel: {
     fontSize: 10,

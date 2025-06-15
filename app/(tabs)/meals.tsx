@@ -397,10 +397,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flex: 1,
+    minWidth: '48%',
   },
   statText: {
     fontSize: 14,
     color: '#6B7280',
+    flexWrap: 'wrap',
   },
   mealTime: {
     fontSize: 12,

@@ -253,19 +253,18 @@ export default function CameraScreen() {
             </View>
           ) : (
             <View style={styles.cameraContainer}>
-              <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
-                <View style={styles.cameraButtons}>
-                  <TouchableOpacity style={styles.cameraButton} onPress={toggleCameraFacing}>
-                    <FlipHorizontal size={24} color="#FFFFFF" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
-                    <View style={styles.captureButtonInner} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.cameraButton} onPress={pickImage}>
-                    <ImageIcon size={24} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-              </CameraView>
+              <CameraView style={styles.camera} facing={facing} ref={cameraRef} />
+              <View style={styles.cameraButtons}>
+                <TouchableOpacity style={styles.cameraButton} onPress={toggleCameraFacing}>
+                  <FlipHorizontal size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
+                  <View style={styles.captureButtonInner} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.cameraButton} onPress={pickImage}>
+                  <ImageIcon size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </View>
@@ -406,10 +405,12 @@ const styles = StyleSheet.create({
     marginTop: 16,
     position: 'relative',
     alignItems: 'center',
+    width: '100%',
+    aspectRatio: 4 / 3,
   },
   previewImage: {
     width: '100%',
-    height: 200,
+    height: '100%',
     borderRadius: 12,
     resizeMode: 'cover',
   },
@@ -573,16 +574,19 @@ const styles = StyleSheet.create({
   },
   cameraContainer: {
     width: '100%',
-    height: 300,
+    aspectRatio: 4 / 3,
     borderRadius: 12,
     overflow: 'hidden',
     marginTop: 16,
   },
   camera: {
     flex: 1,
-    justifyContent: 'flex-end',
   },
   cameraButtons: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
@@ -608,7 +612,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   cameraPlaceholder: {
-    height: 300,
+    aspectRatio: 4 / 3,
     backgroundColor: '#E5E7EB',
     borderRadius: 12,
     justifyContent: 'center',

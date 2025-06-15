@@ -337,6 +337,9 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
     borderRadius: 20,
     marginRight: 8,
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   workoutTypeButtonActive: {
     backgroundColor: '#2563EB',
@@ -431,6 +434,7 @@ const styles = StyleSheet.create({
   },
   workoutStats: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
     marginBottom: 8,
   },

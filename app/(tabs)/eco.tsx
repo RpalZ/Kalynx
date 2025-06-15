@@ -743,10 +743,13 @@ const styles = StyleSheet.create({
   },
   equivalentsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
+    justifyContent: 'space-around',
   },
   equivalentCard: {
     flex: 1,
+    minWidth: 120,
     backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
@@ -765,12 +768,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#111827',
     textAlign: 'center',
-    marginBottom: 2,
+    flexWrap: 'wrap',
   },
   equivalentSubtext: {
     fontSize: 11,
     color: '#6B7280',
     textAlign: 'center',
+    flexWrap: 'wrap',
   },
   modalOverlay: {
     flex: 1,

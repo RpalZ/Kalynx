@@ -234,7 +234,7 @@ export default function HomeScreen() {
             <View style={styles.statsGrid}>
               <StatCard
                 title="Calories"
-                value={summary.totalCalories}
+                value={summary.totalCalories.toFixed(0)}
                 unit="kcal"
                 icon={Flame}
                 color="#EF4444"
@@ -283,7 +283,7 @@ export default function HomeScreen() {
               </View>
               <View style={styles.activityItem}>
                 <Text style={[styles.activityCount, { color: summary.netCalories > 0 ? '#EF4444' : '#16A34A' }]}>
-                  {summary.netCalories > 0 ? '+' : ''}{summary.netCalories}
+                  {summary.netCalories > 0 ? '+' : ''}{summary.netCalories.toFixed(0)}
                 </Text>
                 <Text style={styles.activityLabel}>Net Calories</Text>
               </View>
@@ -337,10 +337,13 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
+    justifyContent: 'space-between',
   },
   actionButton: {
     flex: 1,
+    minWidth: '30%',
     backgroundColor: '#16A34A',
     padding: 16,
     borderRadius: 12,

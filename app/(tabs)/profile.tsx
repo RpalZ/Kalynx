@@ -690,10 +690,12 @@ const styles = StyleSheet.create({
   },
   quickStats: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
   },
   statCard: {
     flex: 1,
+    minWidth: '45%',
     backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
@@ -719,7 +721,9 @@ const styles = StyleSheet.create({
   },
   achievementsPreview: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
+    justifyContent: 'center',
   },
   achievementBadge: {
     width: 48,
@@ -730,6 +734,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#E5E7EB',
+    flexBasis: 'auto',
   },
   lockedBadge: {
     backgroundColor: '#F3F4F6',
