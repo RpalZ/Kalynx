@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Search, Utensils, Flame, Activity, Leaf, Droplet } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 interface Meal {
   id: string;
@@ -36,6 +36,12 @@ export default function MealsScreen() {
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchMeals();
+    }, [])
+  );
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();

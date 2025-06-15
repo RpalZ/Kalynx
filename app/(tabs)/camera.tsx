@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Camera, Upload, Sparkles, ChefHat, Leaf, Droplet, Clock, DollarSign, CircleCheck as CheckCircle, X } from 'lucide-react-native';
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { Upload, Sparkles, ChefHat, Leaf, Droplet, Clock, DollarSign, CircleCheck as CheckCircle, X, Camera as CameraIcon, FlipHorizontal, Image as ImageIcon } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 
 interface Recipe {
   id: string;
@@ -33,38 +35,56 @@ interface FridgeAnalysis {
 }
 
 export default function CameraScreen() {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [analysis, setAnalysis] = useState<FridgeAnalysis | null>(null);
+  const [facing, setFacing] = useState<CameraType>('back');
+  const [permission, requestPermission] = useCameraPermissions();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [analysis, setAnalysis] = useState<FridgeAnalysis | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const cameraRef = useRef<CameraView>(null);
 
-  React.useEffect(() => {
-    checkAuth();
-  }, []);
+  useEffect(() => {
+    if (!permission?.granted) {
+      requestPermission();
+    }
+  }, [permission]);
 
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.replace('/auth');
-      return;
+  const takePhoto = async () => {
+    if (cameraRef.current) {
+      const photo = await cameraRef.current.takePictureAsync({
+        base64: true,
+        quality: 0.7,
+      });
+      setSelectedImage(photo.uri);
+      if (photo.base64) {
+        processImage(photo.base64);
+      }
     }
   };
 
-  const handleImageUpload = async (event: any) => {
-    const file = event.target.files[0];
-    if (!file) return;
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+      base64: true,
+    });
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64 = e.target?.result as string;
-      setSelectedImage(base64);
-      await processImage(base64);
-    };
-    reader.readAsDataURL(file);
+    if (!result.canceled) {
+      setSelectedImage(result.assets[0].uri);
+      if (result.assets[0].base64) {
+        processImage(result.assets[0].base64);
+      }
+    }
+  };
+
+  const toggleCameraFacing = () => {
+    setFacing(current => (current === 'back' ? 'front' : 'back'));
   };
 
   const processImage = async (imageBase64: string) => {
     setIsProcessing(true);
+    setAnalysis(null);
     try {
       const { data: session } = await supabase.auth.getSession();
       
@@ -82,14 +102,21 @@ export default function CameraScreen() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            imageBase64: imageBase64.split(',')[1], // Remove data:image/jpeg;base64, prefix
+            imageBase64: imageBase64,
           }),
         }
       );
 
       if (response.ok) {
         const data: FridgeAnalysis = await response.json();
-        setAnalysis(data);
+        // Ensure numeric fields are parsed as numbers
+        const parsedRecipes = data.recipes.map(recipe => ({
+          ...recipe,
+          estimated_cost: Number(recipe.estimated_cost),
+          carbon_impact: Number(recipe.carbon_impact),
+          water_impact: Number(recipe.water_impact),
+        }));
+        setAnalysis({ ...data, recipes: parsedRecipes });
         Alert.alert(
           'Success!', 
           `Found ${data.ingredients.length} ingredients and generated ${data.recipes.length} recipes!`
@@ -103,14 +130,6 @@ export default function CameraScreen() {
       Alert.alert('Error', 'Failed to process image');
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  const triggerFileInput = () => {
-    if (Platform.OS === 'web') {
-      fileInputRef.current?.click();
-    } else {
-      Alert.alert('Camera', 'Camera functionality is available on mobile devices');
     }
   };
 
@@ -133,6 +152,7 @@ export default function CameraScreen() {
           },
           body: JSON.stringify({
             mealName: recipe.title,
+            ingredients: recipe.ingredients,
           }),
         }
       );
@@ -173,15 +193,15 @@ export default function CameraScreen() {
       <View style={styles.recipeMetrics}>
         <View style={styles.metricItem}>
           <DollarSign size={16} color="#059669" />
-          <Text style={styles.metricText}>${recipe.estimated_cost.toFixed(2)}</Text>
+          <Text style={styles.metricText}>${(recipe.estimated_cost ?? 0).toFixed(2)}</Text>
         </View>
         <View style={styles.metricItem}>
           <Leaf size={16} color="#16A34A" />
-          <Text style={styles.metricText}>{recipe.carbon_impact.toFixed(2)} kg CO₂</Text>
+          <Text style={styles.metricText}>{(recipe.carbon_impact ?? 0).toFixed(2)} kg CO₂</Text>
         </View>
         <View style={styles.metricItem}>
           <Droplet size={16} color="#06B6D4" />
-          <Text style={styles.metricText}>{recipe.water_impact.toFixed(1)}L</Text>
+          <Text style={styles.metricText}>{(recipe.water_impact ?? 0).toFixed(1)}L</Text>
         </View>
       </View>
 
@@ -205,38 +225,20 @@ export default function CameraScreen() {
       </LinearGradient>
 
       <ScrollView style={styles.scrollView}>
-        {/* Upload Section */}
+        {/* Camera/Upload Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upload Fridge Photo</Text>
+          <Text style={styles.sectionTitle}>Capture Fridge Photo</Text>
           
-          {Platform.OS === 'web' && (
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              style={{ display: 'none' }}
-            />
-          )}
-
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={triggerFileInput}
-            disabled={isProcessing}
-          >
-            {isProcessing ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <>
-                <Camera size={24} color="#FFFFFF" />
-                <Text style={styles.uploadButtonText}>
-                  {Platform.OS === 'web' ? 'Choose Photo' : 'Take Photo'}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          {selectedImage && (
+          {permission === null ? (
+            <View style={styles.cameraPlaceholder}>
+              <ActivityIndicator size="large" color="#6B7280" />
+              <Text style={styles.cameraPlaceholderText}>Requesting camera permission...</Text>
+            </View>
+          ) : !permission.granted ? (
+            <View style={styles.cameraPlaceholder}>
+              <Text style={styles.cameraPlaceholderText}>No access to camera. Please enable in settings.</Text>
+            </View>
+          ) : selectedImage ? (
             <View style={styles.imagePreview}>
               <Image source={{ uri: selectedImage }} style={styles.previewImage} />
               <TouchableOpacity
@@ -248,6 +250,22 @@ export default function CameraScreen() {
               >
                 <X size={20} color="#FFFFFF" />
               </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.cameraContainer}>
+              <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
+                <View style={styles.cameraButtons}>
+                  <TouchableOpacity style={styles.cameraButton} onPress={toggleCameraFacing}>
+                    <FlipHorizontal size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
+                    <View style={styles.captureButtonInner} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.cameraButton} onPress={pickImage}>
+                    <ImageIcon size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              </CameraView>
             </View>
           )}
         </View>
@@ -314,7 +332,7 @@ export default function CameraScreen() {
               </View>
             </View>
             <View style={styles.tipCard}>
-              <Camera size={20} color="#2563EB" />
+              <CameraIcon size={20} color="#2563EB" />
               <View style={styles.tipContent}>
                 <Text style={styles.tipTitle}>Clear View</Text>
                 <Text style={styles.tipText}>
@@ -552,5 +570,54 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  cameraContainer: {
+    width: '100%',
+    height: 300,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 16,
+  },
+  camera: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  cameraButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    padding: 20,
+  },
+  cameraButton: {
+    padding: 10,
+  },
+  captureButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  captureButtonInner: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+  },
+  cameraPlaceholder: {
+    height: 300,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  cameraPlaceholderText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
   },
 });

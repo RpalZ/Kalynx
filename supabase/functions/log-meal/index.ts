@@ -2,6 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 interface LogMealRequest {
   mealName: string;
+  ingredients: string[];
 }
 
 interface NutritionixResponse {
@@ -9,21 +10,34 @@ interface NutritionixResponse {
     food_name: string;
     nf_calories: number;
     nf_protein: number;
+    nf_total_carbohydrate: number;
+    nf_total_fat: number;
+    nf_saturated_fat: number;
+    nf_cholesterol: number;
+    nf_sodium: number;
+    nf_sugars: number;
+    nf_dietary_fiber: number;
+    nf_potassium: number;
   }>;
 }
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': '*',
+  'Access-Control-Allow-Methods': '*',
+  'Access-Control-Max-Age': '86400',
 };
 
 Deno.serve(async (req: Request) => {
-  try {
-    if (req.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
-    }
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
+  }
 
+  try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -48,58 +62,52 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { mealName }: LogMealRequest = await req.json();
+    const { mealName, ingredients }: LogMealRequest = await req.json();
 
-    if (!mealName) {
-      return new Response('Meal name is required', { 
+    if (!mealName || !ingredients || ingredients.length === 0) {
+      return new Response('Meal name and ingredients are required', { 
         status: 400,
         headers: corsHeaders
       });
     }
 
-    // Get nutrition data from Nutritionix API
-    let calories = 0;
-    let protein = 0;
+    let totalCalories = 0;
+    let totalProtein = 0;
+    const nutritionixAppId = Deno.env.get('NUTRITIONIX_APP_ID') || 'demo_app_id';
+    const nutritionixApiKey = Deno.env.get('NUTRITIONIX_API_KEY') || 'demo_api_key';
 
-    try {
-      const nutritionixAppId = Deno.env.get('NUTRITIONIX_APP_ID') || 'demo_app_id';
-      const nutritionixApiKey = Deno.env.get('NUTRITIONIX_API_KEY') || 'demo_api_key';
-      console.log('Using Nutritionix App ID:', nutritionixAppId);
-      console.log('Using Nutritionix API Key (first 5 chars): ', nutritionixApiKey.substring(0, 5) + '...');
+    for (const ingredient of ingredients) {
+      try {
+        const nutritionixResponse = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-app-id': nutritionixAppId,
+            'x-app-key': nutritionixApiKey,
+          },
+          body: JSON.stringify({
+            query: ingredient,
+          }),
+        });
 
-      const nutritionixResponse = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-app-id': nutritionixAppId,
-          'x-app-key': nutritionixApiKey,
-        },
-        body: JSON.stringify({
-          query: mealName,
-        }),
-      });
-
-      if (nutritionixResponse.ok) {
-        const nutritionData: NutritionixResponse = await nutritionixResponse.json();
-        console.log('Nutritionix API response:', nutritionData);
-        if (nutritionData.foods && nutritionData.foods.length > 0) {
-          calories = nutritionData.foods[0].nf_calories || 0;
-          protein = nutritionData.foods[0].nf_protein || 0;
+        if (nutritionixResponse.ok) {
+          const nutritionData: NutritionixResponse = await nutritionixResponse.json();
+          if (nutritionData.foods && nutritionData.foods.length > 0) {
+            totalCalories += nutritionData.foods[0].nf_calories || 0;
+            totalProtein += nutritionData.foods[0].nf_protein || 0;
+          }
+        } else {
+          const errorText = await nutritionixResponse.text();
+          console.error(`Nutritionix API for ingredient \'${ingredient}\' responded with an error:`, nutritionixResponse.status, errorText);
         }
-      } else {
-        const errorText = await nutritionixResponse.text();
-        console.error('Nutritionix API responded with an error:', nutritionixResponse.status, errorText);
+      } catch (error) {
+        console.warn(`Nutritionix API request error for ingredient \'${ingredient}\' :`, error);
       }
-    } catch (error) {
-      console.warn('Nutritionix API request error:', error);
-      // Use default values if API fails or request error
-      calories = 250; // Default estimate
-      protein = 10; // Default estimate
     }
 
-    // Calculate environmental impact (simplified estimates)
-    const carbonImpact = calories * 0.002; // kg CO2e per calorie (rough estimate)
-    const waterImpact = calories * 0.5; // liters per calorie (rough estimate)
+    // Calculate environmental impact (simplified estimates based on total calories)
+    const carbonImpact = totalCalories * 0.002; // kg CO2e per calorie (rough estimate)
+    const waterImpact = totalCalories * 0.5; // liters per calorie (rough estimate)
 
     // Save meal to database
     const { data: meal, error: dbError } = await supabase
@@ -107,8 +115,8 @@ Deno.serve(async (req: Request) => {
       .insert({
         user_id: user.id,
         name: mealName,
-        calories,
-        protein,
+        calories: totalCalories,
+        protein: totalProtein,
         carbon_impact: carbonImpact,
         water_impact: waterImpact,
       })

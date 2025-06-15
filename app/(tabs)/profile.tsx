@@ -256,25 +256,35 @@ export default function ProfileScreen() {
   };
 
   const handleSignOut = async () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
-          style: 'destructive',
-          onPress: async () => {
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-              Alert.alert('Error', error.message);
-            } else {
-              router.replace('/auth');
-            }
-          }
-        },
-      ]
-    );
+    console.log('Sign out button pressed');
+    try {
+      // First clear the local state
+      setProfile(null);
+      setUserStats(null);
+      setAchievements([]);
+      
+      // Then sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      console.log('Sign out response:', error ? 'Error' : 'Success');
+      
+      if (error) {
+        console.error('Sign out error:', error);
+        return;
+      }
+      
+      console.log('Sign out successful, navigating to auth screen...');
+      
+      // Try multiple navigation approaches
+      try {
+        router.replace('/auth');
+      } catch (navError) {
+        console.error('Navigation error:', navError);
+        // Fallback navigation
+        router.push('/auth');
+      }
+    } catch (err) {
+      console.error('Unexpected error during sign out:', err);
+    }
   };
 
   const StatCard = ({ title, value, subtitle, icon: Icon, color }: any) => (
