@@ -2,23 +2,16 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 interface LogMealRequest {
   mealName: string;
-  ingredients: string[];
 }
 
-interface NutritionixResponse {
-  foods: Array<{
-    food_name: string;
-    nf_calories: number;
-    nf_protein: number;
-    nf_total_carbohydrate: number;
-    nf_total_fat: number;
-    nf_saturated_fat: number;
-    nf_cholesterol: number;
-    nf_sodium: number;
-    nf_sugars: number;
-    nf_dietary_fiber: number;
-    nf_potassium: number;
-  }>;
+interface NutritionixNutrients {
+  calories: number;
+  protein: number;
+}
+
+interface EnvironmentalImpacts {
+  carbon_impact: number;
+  water_impact: number;
 }
 
 const corsHeaders = {
@@ -27,6 +20,112 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': '*',
   'Access-Control-Max-Age': '86400',
 };
+
+async function fetchNutritionixData(query: string): Promise<NutritionixNutrients> {
+  const NUTRITIONIX_APP_ID = Deno.env.get('NUTRITIONIX_APP_ID');
+  const NUTRITIONIX_API_KEY = Deno.env.get('NUTRITIONIX_API_KEY');
+
+  if (!NUTRITIONIX_APP_ID || !NUTRITIONIX_API_KEY) {
+    console.error('Nutritionix API keys not set.');
+    return { calories: 0, protein: 0 };
+  }
+
+  console.log('Nutritionix Query:', query);
+
+  try {
+    const response = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-app-id': NUTRITIONIX_APP_ID,
+        'x-app-key': NUTRITIONIX_API_KEY,
+      },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Nutritionix API error:', response.status, errorText);
+      // Return default values in case of API error
+      return { calories: 0, protein: 0 };
+    }
+
+    const data = await response.json();
+    console.log('Nutritionix Raw Response:', JSON.stringify(data, null, 2));
+
+    let totalCalories = 0;
+    let totalProtein = 0;
+
+    if (data.foods && Array.isArray(data.foods)) {
+      data.foods.forEach((food: any) => {
+        totalCalories += food.nf_calories || 0;
+        totalProtein += food.nf_protein || 0;
+      });
+    }
+
+    return { calories: totalCalories, protein: totalProtein };
+  } catch (error) {
+    console.error('Error fetching from Nutritionix API:', error);
+    // Return default values in case of fetch error
+    return { calories: 0, protein: 0 };
+  }
+}
+
+async function fetchEnvironmentalImpacts(query: string): Promise<EnvironmentalImpacts> {
+  const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY');
+
+  if (!DEEPSEEK_API_KEY) {
+    console.error('DeepSeek API key not set for environmental impact.');
+    return { carbon_impact: 0, water_impact: 0 };
+  }
+
+  console.log('DeepSeek Environmental Impact Query:', query);
+  try {
+    const prompt = `Estimate the carbon footprint (in kg CO2) and water usage (in liters) for a meal consisting of: ${query}. Provide only a JSON object with 'carbon_impact' (number, in kg CO2) and 'water_impact' (number, in liters) fields.`;
+
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [
+          {
+            role: "system",
+            content: "You are an environmental scientist who provides accurate estimates of the environmental impact of food. Respond only with valid JSON."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.5,
+        response_format: { type: "json_object" }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('DeepSeek API error for environmental impact:', response.status, errorText);
+      return { carbon_impact: 0, water_impact: 0 };
+    }
+
+    const data = await response.json();
+    console.log('DeepSeek Raw Response:', JSON.stringify(data, null, 2));
+    const impactData = JSON.parse(data.choices[0].message.content);
+    console.log('DeepSeek Parsed Impact Data:', JSON.stringify(impactData, null, 2));
+
+    return {
+      carbon_impact: parseFloat(impactData.carbon_impact) || 0,
+      water_impact: parseFloat(impactData.water_impact) || 0,
+    };
+  } catch (error) {
+    console.error('Error fetching environmental impacts from DeepSeek API:', error);
+    return { carbon_impact: 0, water_impact: 0 };
+  }
+}
 
 Deno.serve(async (req: Request) => {
   // Handle preflight requests
@@ -62,52 +161,20 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { mealName, ingredients }: LogMealRequest = await req.json();
+    const { mealName }: LogMealRequest = await req.json();
 
-    if (!mealName || !ingredients || ingredients.length === 0) {
-      return new Response('Meal name and ingredients are required', { 
-        status: 400,
-        headers: corsHeaders
-      });
-    }
-
-    let totalCalories = 0;
-    let totalProtein = 0;
-    const nutritionixAppId = Deno.env.get('NUTRITIONIX_APP_ID') || 'demo_app_id';
-    const nutritionixApiKey = Deno.env.get('NUTRITIONIX_API_KEY') || 'demo_api_key';
-
-    for (const ingredient of ingredients) {
-      try {
-        const nutritionixResponse = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-app-id': nutritionixAppId,
-            'x-app-key': nutritionixApiKey,
-          },
-          body: JSON.stringify({
-            query: ingredient,
-          }),
+    if (!mealName) {
+        return new Response('Meal name is required', {
+            status: 400,
+            headers: corsHeaders
         });
-
-        if (nutritionixResponse.ok) {
-          const nutritionData: NutritionixResponse = await nutritionixResponse.json();
-          if (nutritionData.foods && nutritionData.foods.length > 0) {
-            totalCalories += nutritionData.foods[0].nf_calories || 0;
-            totalProtein += nutritionData.foods[0].nf_protein || 0;
-          }
-        } else {
-          const errorText = await nutritionixResponse.text();
-          console.error(`Nutritionix API for ingredient \'${ingredient}\' responded with an error:`, nutritionixResponse.status, errorText);
-        }
-      } catch (error) {
-        console.warn(`Nutritionix API request error for ingredient \'${ingredient}\' :`, error);
-      }
     }
 
-    // Calculate environmental impact (simplified estimates based on total calories)
-    const carbonImpact = totalCalories * 0.002; // kg CO2e per calorie (rough estimate)
-    const waterImpact = totalCalories * 0.5; // liters per calorie (rough estimate)
+    // Fetch nutrition data from Nutritionix and environmental impacts from DeepSeek concurrently
+    const [{ calories, protein }, { carbon_impact, water_impact }] = await Promise.all([
+      fetchNutritionixData(mealName),
+      fetchEnvironmentalImpacts(mealName)
+    ]);
 
     // Save meal to database
     const { data: meal, error: dbError } = await supabase
@@ -115,10 +182,10 @@ Deno.serve(async (req: Request) => {
       .insert({
         user_id: user.id,
         name: mealName,
-        calories: totalCalories,
-        protein: totalProtein,
-        carbon_impact: carbonImpact,
-        water_impact: waterImpact,
+        calories: calories,
+        protein: protein,
+        carbon_impact: carbon_impact,
+        water_impact: water_impact,
       })
       .select()
       .single();
