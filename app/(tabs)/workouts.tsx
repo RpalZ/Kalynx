@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Search, Dumbbell, Clock, Flame, Timer } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 interface Workout {
   id: string;
@@ -40,6 +40,12 @@ export default function WorkoutsScreen() {
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      checkAuth(); // Re-run auth check and data fetch on focus
+    }, [])
+  );
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();

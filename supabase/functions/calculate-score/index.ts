@@ -138,8 +138,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Calculate Fitness Score (0-100)
-    // Based on calories burned vs target (500 calories = 100 points)
-    const fitnessScore = Math.min(100, Math.round((summary.caloriesBurned / 500) * 100));
+    // Based on calories burned vs target (1000 calories = 100 points)
+    const fitnessScore = Math.min(100, Math.round((summary.caloriesBurned / 1000) * 100));
 
     // Calculate Eco Score (0-100)
     // Lower carbon impact = higher score

@@ -131,6 +131,28 @@ export default function ProfileScreen() {
         .select('*')
         .eq('user_id', userId);
 
+      // Fetch today's summary to get saved totals
+      const today = new Date().toISOString().split('T')[0];
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        console.error('No session found for fetching daily summary');
+        return;
+      }
+      const summaryResponse = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-daily-summary?date=${today}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.session.access_token}`,
+          },
+        }
+      );
+      let summaryData = { totalCarbonSaved: 0, totalWaterSaved: 0 };
+      if (summaryResponse.ok) {
+        summaryData = await summaryResponse.json();
+      } else {
+        console.error('Failed to fetch daily summary for profile stats:', await summaryResponse.text());
+      }
+
       // Calculate stats
       const totalMeals = meals?.length || 0;
       const totalWorkouts = workouts?.length || 0;
@@ -141,8 +163,6 @@ export default function ProfileScreen() {
       
       // Mock additional stats
       const currentStreak = 7; // Days of consecutive logging
-      const totalCO2Saved = meals?.reduce((sum, meal) => sum + (meal.carbon_impact || 0), 0) || 0;
-      const totalWaterSaved = meals?.reduce((sum, meal) => sum + (meal.water_impact || 0), 0) || 0;
       const rank = 42; // Mock leaderboard rank
 
       setUserStats({
@@ -151,8 +171,8 @@ export default function ProfileScreen() {
         avgFitnessScore: Math.round(avgFitnessScore),
         avgEcoScore: Math.round(avgEcoScore),
         currentStreak,
-        totalCO2Saved,
-        totalWaterSaved,
+        totalCO2Saved: summaryData.totalCarbonSaved,
+        totalWaterSaved: summaryData.totalWaterSaved,
         rank,
       });
     } catch (error) {
