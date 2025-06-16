@@ -25,6 +25,9 @@ interface Recipe {
   estimated_cost: number;
   carbon_impact: number;
   water_impact: number;
+  calories: number;
+  protein: number;
+  detailed_ingredients: { ingredient: string; amount: string; unit: string }[];
   created_at: string;
 }
 
@@ -153,6 +156,11 @@ export default function CameraScreen() {
           body: JSON.stringify({
             mealName: recipe.title,
             ingredients: recipe.ingredients,
+            calories: recipe.calories,
+            protein: recipe.protein,
+            carbon_impact: recipe.carbon_impact,
+            water_impact: recipe.water_impact,
+            detailed_ingredients: recipe.detailed_ingredients,
           }),
         }
       );

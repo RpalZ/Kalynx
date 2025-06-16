@@ -2,6 +2,11 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 interface LogMealRequest {
   mealName: string;
+  calories?: number;
+  protein?: number;
+  carbon_impact?: number;
+  water_impact?: number;
+  detailed_ingredients?: { ingredient: string; amount: string; unit: string }[];
 }
 
 interface NutritionixNutrients {
@@ -161,7 +166,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { mealName }: LogMealRequest = await req.json();
+    const { mealName, calories, protein, carbon_impact, water_impact, detailed_ingredients }: LogMealRequest = await req.json();
 
     if (!mealName) {
         return new Response('Meal name is required', {
@@ -170,11 +175,24 @@ Deno.serve(async (req: Request) => {
         });
     }
 
-    // Fetch nutrition data from Nutritionix and environmental impacts from DeepSeek concurrently
-    const [{ calories, protein }, { carbon_impact, water_impact }] = await Promise.all([
-      fetchNutritionixData(mealName),
-      fetchEnvironmentalImpacts(mealName)
-    ]);
+    let finalCalories = calories || 0;
+    let finalProtein = protein || 0;
+    let finalCarbonImpact = carbon_impact || 0;
+    let finalWaterImpact = water_impact || 0;
+
+    // If calories or protein are not provided, fetch from Nutritionix
+    if (typeof calories === 'undefined' || typeof protein === 'undefined') {
+      const nutritionData = await fetchNutritionixData(mealName);
+      finalCalories = nutritionData.calories;
+      finalProtein = nutritionData.protein;
+    }
+
+    // If carbon_impact or water_impact are not provided, fetch from DeepSeek
+    if (typeof carbon_impact === 'undefined' || typeof water_impact === 'undefined') {
+      const environmentalData = await fetchEnvironmentalImpacts(mealName);
+      finalCarbonImpact = environmentalData.carbon_impact;
+      finalWaterImpact = environmentalData.water_impact;
+    }
 
     // Save meal to database
     const { data: meal, error: dbError } = await supabase
@@ -182,10 +200,11 @@ Deno.serve(async (req: Request) => {
       .insert({
         user_id: user.id,
         name: mealName,
-        calories: calories,
-        protein: protein,
-        carbon_impact: carbon_impact,
-        water_impact: water_impact,
+        calories: finalCalories,
+        protein: finalProtein,
+        carbon_impact: finalCarbonImpact,
+        water_impact: finalWaterImpact,
+        detailed_ingredients: detailed_ingredients || [],
       })
       .select()
       .single();
