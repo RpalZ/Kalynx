@@ -53,6 +53,11 @@ export default function ProfileScreen() {
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
   const [isPro, setIsPro] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+  const [units, setUnits] = useState('metric');
+  const [language, setLanguage] = useState('en');
 
   useEffect(() => {
     checkAuth();
@@ -471,7 +476,7 @@ export default function ProfileScreen() {
               <Text style={styles.menuText}>Detailed Statistics</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity style={styles.menuItem} onPress={() => setShowSettingsModal(true)}>
               <Settings size={20} color="#6B7280" />
               <Text style={styles.menuText}>Settings</Text>
             </TouchableOpacity>
@@ -577,6 +582,134 @@ export default function ProfileScreen() {
                   </View>
                 </View>
               ))}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Settings Modal */}
+      <Modal
+        visible={showSettingsModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowSettingsModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Settings</Text>
+            <TouchableOpacity onPress={() => setShowSettingsModal(false)}>
+              <X size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.settingsSection}>
+              <Text style={styles.settingsSectionTitle}>Preferences</Text>
+              
+              <View style={styles.settingItem}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Notifications</Text>
+                  <Text style={styles.settingDescription}>Receive updates about your progress and achievements</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.toggle, notificationsEnabled && styles.toggleActive]}
+                  onPress={() => setNotificationsEnabled(!notificationsEnabled)}
+                >
+                  <View style={[styles.toggleKnob, notificationsEnabled && styles.toggleKnobActive]} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.settingItem}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Dark Mode</Text>
+                  <Text style={styles.settingDescription}>Switch between light and dark theme</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.toggle, darkModeEnabled && styles.toggleActive]}
+                  onPress={() => setDarkModeEnabled(!darkModeEnabled)}
+                >
+                  <View style={[styles.toggleKnob, darkModeEnabled && styles.toggleKnobActive]} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.settingItem}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Units</Text>
+                  <Text style={styles.settingDescription}>Choose your preferred measurement system</Text>
+                </View>
+                <View style={styles.unitSelector}>
+                  <TouchableOpacity
+                    style={[styles.unitButton, units === 'metric' && styles.unitButtonActive]}
+                    onPress={() => setUnits('metric')}
+                  >
+                    <Text style={[styles.unitButtonText, units === 'metric' && styles.unitButtonTextActive]}>
+                      Metric
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.unitButton, units === 'imperial' && styles.unitButtonActive]}
+                    onPress={() => setUnits('imperial')}
+                  >
+                    <Text style={[styles.unitButtonText, units === 'imperial' && styles.unitButtonTextActive]}>
+                      Imperial
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.settingItem}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Language</Text>
+                  <Text style={styles.settingDescription}>Select your preferred language</Text>
+                </View>
+                <View style={styles.languageSelector}>
+                  <TouchableOpacity
+                    style={[styles.languageButton, language === 'en' && styles.languageButtonActive]}
+                    onPress={() => setLanguage('en')}
+                  >
+                    <Text style={[styles.languageButtonText, language === 'en' && styles.languageButtonTextActive]}>
+                      English
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.languageButton, language === 'es' && styles.languageButtonActive]}
+                    onPress={() => setLanguage('es')}
+                  >
+                    <Text style={[styles.languageButtonText, language === 'es' && styles.languageButtonTextActive]}>
+                      Español
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.settingsSection}>
+              <Text style={styles.settingsSectionTitle}>Account</Text>
+              
+              <TouchableOpacity style={styles.settingItem}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Privacy Policy</Text>
+                  <Text style={styles.settingDescription}>Read our privacy policy</Text>
+                </View>
+                <Text style={styles.settingArrow}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.settingItem}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Terms of Service</Text>
+                  <Text style={styles.settingDescription}>Read our terms of service</Text>
+                </View>
+                <Text style={styles.settingArrow}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.settingItem}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Delete Account</Text>
+                  <Text style={[styles.settingDescription, { color: '#EF4444' }]}>
+                    Permanently delete your account and all data
+                  </Text>
+                </View>
+                <Text style={[styles.settingArrow, { color: '#EF4444' }]}>›</Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </SafeAreaView>
@@ -858,5 +991,110 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#16A34A',
     fontWeight: '500',
+  },
+  settingsSection: {
+    marginBottom: 24,
+  },
+  settingsSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
+  },
+  settingInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  settingArrow: {
+    fontSize: 24,
+    color: '#6B7280',
+  },
+  toggle: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#E5E7EB',
+    padding: 2,
+  },
+  toggleActive: {
+    backgroundColor: '#7C3AED',
+  },
+  toggleKnob: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  toggleKnobActive: {
+    transform: [{ translateX: 22 }],
+  },
+  unitSelector: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  unitButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#F3F4F6',
+  },
+  unitButtonActive: {
+    backgroundColor: '#7C3AED',
+  },
+  unitButtonText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  unitButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  languageSelector: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  languageButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#F3F4F6',
+  },
+  languageButtonActive: {
+    backgroundColor: '#7C3AED',
+  },
+  languageButtonText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  languageButtonTextActive: {
+    color: '#FFFFFF',
   },
 });
