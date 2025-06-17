@@ -26,6 +26,7 @@ import {
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface EcoStats {
   totalCO2e: number;
@@ -61,6 +62,7 @@ interface EcoChallenge {
 }
 
 export default function EcoScreen() {
+  const { theme } = useTheme();
   const [ecoStats, setEcoStats] = useState<EcoStats | null>(null);
   const [weeklyStats, setWeeklyStats] = useState<EcoStats | null>(null);
   const [milestones, setMilestones] = useState<EcoMilestone[]>([]);
@@ -162,7 +164,9 @@ export default function EcoScreen() {
 
   const fetchMilestones = async () => {
     // Mock milestones data - in production, fetch from database
-    const mockMilestones: EcoMilestone[] = [
+    const mockMilestones: EcoM
+
+ilestone[] = [
       {
         id: '1',
         name: 'Carbon Saver',
@@ -321,14 +325,14 @@ export default function EcoScreen() {
   };
 
   const EcoCard = ({ title, value, unit, icon: Icon, color, bgColor, subtitle }: any) => (
-    <View style={[styles.ecoCard, { backgroundColor: bgColor }]}>
+    <View style={[styles.ecoCard, { backgroundColor: bgColor || theme.colors.card, borderColor: theme.colors.border }]}>
       <View style={styles.cardHeader}>
         <Icon size={24} color={color} />
-        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={[styles.cardTitle, { color: theme.colors.textSecondary }]}>{title}</Text>
       </View>
       <Text style={[styles.cardValue, { color }]}>{value}</Text>
-      <Text style={styles.cardUnit}>{unit}</Text>
-      {subtitle && <Text style={styles.cardSubtitle}>{subtitle}</Text>}
+      <Text style={[styles.cardUnit, { color: theme.colors.placeholder }]}>{unit}</Text>
+      {subtitle && <Text style={[styles.cardSubtitle, { color: theme.colors.textSecondary }]}>{subtitle}</Text>}
     </View>
   );
 
@@ -337,20 +341,20 @@ export default function EcoScreen() {
     const isCompleted = progress >= 100;
 
     return (
-      <View style={[styles.milestoneCard, isCompleted && styles.completedMilestone]}>
+      <View style={[styles.milestoneCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }, isCompleted && styles.completedMilestone]}>
         <View style={styles.milestoneHeader}>
-          <View style={styles.milestoneIcon}>
-            {milestone.icon === 'leaf' && <Leaf size={20} color="#16A34A" />}
-            {milestone.icon === 'droplet' && <Droplet size={20} color="#06B6D4" />}
-            {milestone.icon === 'target' && <Target size={20} color="#F59E0B" />}
+          <View style={[styles.milestoneIcon, { backgroundColor: theme.colors.surface }]}>
+            {milestone.icon === 'leaf' && <Leaf size={20} color={theme.colors.success} />}
+            {milestone.icon === 'droplet' && <Droplet size={20} color={theme.colors.info} />}
+            {milestone.icon === 'target' && <Target size={20} color={theme.colors.warning} />}
           </View>
           <View style={styles.milestoneInfo}>
-            <Text style={styles.milestoneName}>{milestone.name}</Text>
-            <Text style={styles.milestoneDescription}>{milestone.description}</Text>
+            <Text style={[styles.milestoneName, { color: theme.colors.text }]}>{milestone.name}</Text>
+            <Text style={[styles.milestoneDescription, { color: theme.colors.textSecondary }]}>{milestone.description}</Text>
           </View>
           {isCompleted && (
             <TouchableOpacity
-              style={styles.claimButton}
+              style={[styles.claimButton, { backgroundColor: theme.colors.success }]}
               onPress={() => claimReward(milestone)}
             >
               <Gift size={16} color="#FFFFFF" />
@@ -359,20 +363,20 @@ export default function EcoScreen() {
         </View>
         
         <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
+          <View style={[styles.progressBar, { backgroundColor: theme.colors.border }]}>
             <View 
               style={[
                 styles.progressFill, 
-                { width: `${Math.min(100, progress)}%` }
+                { width: `${Math.min(100, progress)}%`, backgroundColor: theme.colors.success }
               ]} 
             />
           </View>
-          <Text style={styles.progressText}>
+          <Text style={[styles.progressText, { color: theme.colors.textSecondary }]}>
             {milestone.current}/{milestone.target}
           </Text>
         </View>
         
-        <Text style={styles.rewardText}>Reward: {milestone.reward}</Text>
+        <Text style={[styles.rewardText, { color: theme.colors.warning }]}>Reward: {milestone.reward}</Text>
       </View>
     );
   };
@@ -382,54 +386,54 @@ export default function EcoScreen() {
     const daysLeft = Math.ceil((new Date(challenge.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
     return (
-      <View style={styles.challengeCard}>
+      <View style={[styles.challengeCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
         <View style={styles.challengeHeader}>
-          <View style={styles.challengeIcon}>
-            <Zap size={20} color="#7C3AED" />
+          <View style={[styles.challengeIcon, { backgroundColor: theme.colors.surface }]}>
+            <Zap size={20} color={theme.colors.accent} />
           </View>
           <View style={styles.challengeInfo}>
-            <Text style={styles.challengeTitle}>{challenge.title}</Text>
-            <Text style={styles.challengeDescription}>{challenge.description}</Text>
+            <Text style={[styles.challengeTitle, { color: theme.colors.text }]}>{challenge.title}</Text>
+            <Text style={[styles.challengeDescription, { color: theme.colors.textSecondary }]}>{challenge.description}</Text>
           </View>
           <View style={styles.challengeTime}>
-            <Calendar size={16} color="#6B7280" />
-            <Text style={styles.timeLeft}>{daysLeft}d left</Text>
+            <Calendar size={16} color={theme.colors.textSecondary} />
+            <Text style={[styles.timeLeft, { color: theme.colors.textSecondary }]}>{daysLeft}d left</Text>
           </View>
         </View>
         
         <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
+          <View style={[styles.progressBar, { backgroundColor: theme.colors.border }]}>
             <View 
               style={[
                 styles.challengeProgressFill, 
-                { width: `${Math.min(100, progress)}%` }
+                { width: `${Math.min(100, progress)}%`, backgroundColor: theme.colors.accent }
               ]} 
             />
           </View>
-          <Text style={styles.progressText}>
+          <Text style={[styles.progressText, { color: theme.colors.textSecondary }]}>
             {challenge.current}/{challenge.target}
           </Text>
         </View>
         
-        <Text style={styles.rewardText}>Reward: {challenge.reward}</Text>
+        <Text style={[styles.rewardText, { color: theme.colors.warning }]}>Reward: {challenge.reward}</Text>
       </View>
     );
   };
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading environmental data...</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading environmental data...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <LinearGradient
-        colors={['#16A34A', '#22C55E']}
+        colors={theme.colors.gradient.success}
         style={styles.header}
       >
         <Text style={styles.headerTitle}>Environmental Impact</Text>
@@ -444,15 +448,15 @@ export default function EcoScreen() {
       >
         {/* Today's Impact */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Today's Impact</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Impact</Text>
           <View style={styles.cardsGrid}>
             <EcoCard
               title="Carbon Footprint"
               value={ecoStats?.totalCO2e.toFixed(2) || '0.00'}
               unit="kg CO₂e"
               icon={Leaf}
-              color="#16A34A"
-              bgColor="#F0FDF4"
+              color={theme.colors.success}
+              bgColor={theme.colors.surface}
               subtitle={`${ecoStats?.mealsCount || 0} meals logged`}
             />
             <EcoCard
@@ -460,8 +464,8 @@ export default function EcoScreen() {
               value={ecoStats?.totalWater.toFixed(1) || '0.0'}
               unit="liters"
               icon={Droplet}
-              color="#06B6D4"
-              bgColor="#ECFEFF"
+              color={theme.colors.info}
+              bgColor={theme.colors.surface}
               subtitle={`Avg ${ecoStats?.avgWaterPerMeal.toFixed(1) || '0.0'}L per meal`}
             />
           </View>
@@ -469,7 +473,7 @@ export default function EcoScreen() {
 
         {/* Eco Milestones */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Eco Milestones</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Eco Milestones</Text>
           <View style={styles.milestonesContainer}>
             {milestones.map((milestone) => (
               <MilestoneCard key={milestone.id} milestone={milestone} />
@@ -479,7 +483,7 @@ export default function EcoScreen() {
 
         {/* Active Challenges */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Active Challenges</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Active Challenges</Text>
           <View style={styles.challengesContainer}>
             {challenges.map((challenge) => (
               <ChallengeCard key={challenge.id} challenge={challenge} />
@@ -489,31 +493,31 @@ export default function EcoScreen() {
 
         {/* Environmental Tips */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sustainability Tips</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Sustainability Tips</Text>
           <View style={styles.tipsContainer}>
-            <View style={styles.tipCard}>
-              <TreePine size={20} color="#16A34A" />
+            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <TreePine size={20} color={theme.colors.success} />
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Choose Plant-Based</Text>
-                <Text style={styles.tipText}>
+                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Choose Plant-Based</Text>
+                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
                   Plant-based meals typically have 50% lower carbon footprint than meat-based meals
                 </Text>
               </View>
             </View>
-            <View style={styles.tipCard}>
-              <Recycle size={20} color="#059669" />
+            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <Recycle size={20} color={theme.colors.success} />
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Reduce Food Waste</Text>
-                <Text style={styles.tipText}>
+                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Reduce Food Waste</Text>
+                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
                   Plan your meals and use leftovers to minimize environmental impact
                 </Text>
               </View>
             </View>
-            <View style={styles.tipCard}>
-              <Droplet size={20} color="#06B6D4" />
+            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <Droplet size={20} color={theme.colors.info} />
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Choose Local & Seasonal</Text>
-                <Text style={styles.tipText}>
+                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Choose Local & Seasonal</Text>
+                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
                   Local and seasonal foods require less water and transportation
                 </Text>
               </View>
@@ -523,28 +527,28 @@ export default function EcoScreen() {
 
         {/* Impact Equivalents */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What Your Impact Means</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>What Your Impact Means</Text>
           <View style={styles.equivalentsContainer}>
-            <View style={styles.equivalentCard}>
-              <Text style={styles.equivalentValue}>
+            <View style={[styles.equivalentCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <Text style={[styles.equivalentValue, { color: theme.colors.success }]}>
                 {((ecoStats?.totalCO2e || 0) * 365).toFixed(0)}
               </Text>
-              <Text style={styles.equivalentLabel}>kg CO₂e per year</Text>
-              <Text style={styles.equivalentSubtext}>at current daily rate</Text>
+              <Text style={[styles.equivalentLabel, { color: theme.colors.text }]}>kg CO₂e per year</Text>
+              <Text style={[styles.equivalentSubtext, { color: theme.colors.textSecondary }]}>at current daily rate</Text>
             </View>
-            <View style={styles.equivalentCard}>
-              <Text style={styles.equivalentValue}>
+            <View style={[styles.equivalentCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <Text style={[styles.equivalentValue, { color: theme.colors.success }]}>
                 {Math.round((ecoStats?.totalCO2e || 0) / 0.4)}
               </Text>
-              <Text style={styles.equivalentLabel}>km driven</Text>
-              <Text style={styles.equivalentSubtext}>car equivalent</Text>
+              <Text style={[styles.equivalentLabel, { color: theme.colors.text }]}>km driven</Text>
+              <Text style={[styles.equivalentSubtext, { color: theme.colors.textSecondary }]}>car equivalent</Text>
             </View>
-            <View style={styles.equivalentCard}>
-              <Text style={styles.equivalentValue}>
+            <View style={[styles.equivalentCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <Text style={[styles.equivalentValue, { color: theme.colors.success }]}>
                 {Math.round((ecoStats?.totalWater || 0) / 8)}
               </Text>
-              <Text style={styles.equivalentLabel}>showers</Text>
-              <Text style={styles.equivalentSubtext}>water equivalent</Text>
+              <Text style={[styles.equivalentLabel, { color: theme.colors.text }]}>showers</Text>
+              <Text style={[styles.equivalentSubtext, { color: theme.colors.textSecondary }]}>water equivalent</Text>
             </View>
           </View>
         </View>
@@ -557,18 +561,18 @@ export default function EcoScreen() {
         animationType="fade"
         onRequestClose={() => setShowRewardModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Trophy size={48} color="#F59E0B" />
-            <Text style={styles.modalTitle}>Congratulations!</Text>
-            <Text style={styles.modalText}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+            <Trophy size={48} color={theme.colors.warning} />
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Congratulations!</Text>
+            <Text style={[styles.modalText, { color: theme.colors.textSecondary }]}>
               You've completed the "{selectedReward?.name}" milestone!
             </Text>
-            <Text style={styles.modalReward}>
+            <Text style={[styles.modalReward, { color: theme.colors.warning }]}>
               Reward: {selectedReward?.reward}
             </Text>
             <TouchableOpacity
-              style={styles.modalButton}
+              style={[styles.modalButton, { backgroundColor: theme.colors.success }]}
               onPress={() => setShowRewardModal(false)}
             >
               <Text style={styles.modalButtonText}>Awesome!</Text>
@@ -583,7 +587,6 @@ export default function EcoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   loadingContainer: {
     flex: 1,
@@ -592,7 +595,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
   },
   header: {
     padding: 24,
@@ -617,7 +619,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 16,
   },
   cardsGrid: {
@@ -629,7 +630,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -640,7 +640,6 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
   },
   cardValue: {
     fontSize: 28,
@@ -649,22 +648,18 @@ const styles = StyleSheet.create({
   },
   cardUnit: {
     fontSize: 12,
-    color: '#9CA3AF',
     marginBottom: 4,
   },
   cardSubtitle: {
     fontSize: 11,
-    color: '#6B7280',
   },
   milestonesContainer: {
     gap: 12,
   },
   milestoneCard: {
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   completedMilestone: {
     borderColor: '#16A34A',
@@ -679,7 +674,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -690,15 +684,12 @@ const styles = StyleSheet.create({
   milestoneName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 4,
   },
   milestoneDescription: {
     fontSize: 14,
-    color: '#6B7280',
   },
   claimButton: {
-    backgroundColor: '#16A34A',
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -713,39 +704,32 @@ const styles = StyleSheet.create({
   progressBar: {
     flex: 1,
     height: 8,
-    backgroundColor: '#E5E7EB',
     borderRadius: 4,
     marginRight: 12,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#16A34A',
     borderRadius: 4,
   },
   challengeProgressFill: {
     height: '100%',
-    backgroundColor: '#7C3AED',
     borderRadius: 4,
   },
   progressText: {
     fontSize: 12,
-    color: '#6B7280',
     fontWeight: '500',
   },
   rewardText: {
     fontSize: 12,
-    color: '#F59E0B',
     fontWeight: '500',
   },
   challengesContainer: {
     gap: 12,
   },
   challengeCard: {
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   challengeHeader: {
     flexDirection: 'row',
@@ -756,7 +740,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F5F3FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -767,12 +750,10 @@ const styles = StyleSheet.create({
   challengeTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 4,
   },
   challengeDescription: {
     fontSize: 14,
-    color: '#6B7280',
   },
   challengeTime: {
     flexDirection: 'row',
@@ -781,7 +762,6 @@ const styles = StyleSheet.create({
   },
   timeLeft: {
     fontSize: 12,
-    color: '#6B7280',
     fontWeight: '500',
   },
   tipsContainer: {
@@ -789,11 +769,9 @@ const styles = StyleSheet.create({
   },
   tipCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     gap: 12,
   },
   tipContent: {
@@ -802,12 +780,10 @@ const styles = StyleSheet.create({
   tipTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 4,
   },
   tipText: {
     fontSize: 14,
-    color: '#6B7280',
     lineHeight: 20,
   },
   equivalentsContainer: {
@@ -819,40 +795,33 @@ const styles = StyleSheet.create({
   equivalentCard: {
     flex: 1,
     minWidth: 120,
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     alignItems: 'center',
   },
   equivalentValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#16A34A',
     marginBottom: 4,
   },
   equivalentLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#111827',
     textAlign: 'center',
     flexWrap: 'wrap',
   },
   equivalentSubtext: {
     fontSize: 11,
-    color: '#6B7280',
     textAlign: 'center',
     flexWrap: 'wrap',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
     padding: 32,
     borderRadius: 16,
     alignItems: 'center',
@@ -862,24 +831,20 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
     marginTop: 16,
     marginBottom: 8,
   },
   modalText: {
     fontSize: 16,
-    color: '#6B7280',
     textAlign: 'center',
     marginBottom: 16,
   },
   modalReward: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#F59E0B',
     marginBottom: 24,
   },
   modalButton: {
-    backgroundColor: '#16A34A',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

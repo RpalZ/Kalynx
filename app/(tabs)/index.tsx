@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Plus, Camera, TrendingUp, Leaf, Flame, Target, RefreshCw } from 'lucide-react-native';
 import { router, Link, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface DailySummary {
   date: string;
@@ -34,6 +35,7 @@ interface DailyScore {
 }
 
 export default function HomeScreen() {
+  const { theme, isDark } = useTheme();
   const [summary, setSummary] = useState<DailySummary | null>(null);
   const [score, setScore] = useState<DailyScore | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -120,21 +122,21 @@ export default function HomeScreen() {
   };
 
   const StatCard = ({ title, value, unit, icon: Icon, color, bgColor }: any) => (
-    <View style={[styles.statCard, { backgroundColor: bgColor }]}>
+    <View style={[styles.statCard, { backgroundColor: bgColor || theme.colors.card, borderColor: theme.colors.border }]}>
       <View style={styles.statHeader}>
         <Icon size={20} color={color} />
-        <Text style={styles.statTitle}>{title}</Text>
+        <Text style={[styles.statTitle, { color: theme.colors.textSecondary }]}>{title}</Text>
       </View>
       <Text style={[styles.statValue, { color }]}>{value}</Text>
-      <Text style={styles.statUnit}>{unit}</Text>
+      <Text style={[styles.statUnit, { color: theme.colors.placeholder }]}>{unit}</Text>
     </View>
   );
 
   const ScoreCard = ({ title, score, color, bgColor }: any) => (
-    <View style={[styles.scoreCard, { backgroundColor: bgColor }]}>
-      <Text style={styles.scoreTitle}>{title}</Text>
+    <View style={[styles.scoreCard, { backgroundColor: bgColor || theme.colors.card, borderColor: theme.colors.border }]}>
+      <Text style={[styles.scoreTitle, { color: theme.colors.textSecondary }]}>{title}</Text>
       <Text style={[styles.scoreValue, { color }]}>{score}</Text>
-      <View style={styles.scoreBar}>
+      <View style={[styles.scoreBar, { backgroundColor: theme.colors.border }]}>
         <View 
           style={[
             styles.scoreProgress, 
@@ -147,16 +149,16 @@ export default function HomeScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading dashboard...</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading dashboard...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView
         style={styles.scrollView}
         refreshControl={
@@ -165,7 +167,7 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <LinearGradient
-          colors={['#16A34A', '#22C55E']}
+          colors={theme.colors.gradient.primary}
           style={styles.header}
         >
           <View style={styles.headerContent}>
@@ -185,24 +187,24 @@ export default function HomeScreen() {
 
         {/* Quick Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Actions</Text>
           <View style={styles.actionButtons}>
             <TouchableOpacity 
-              style={styles.actionButton}
+              style={[styles.actionButton, { backgroundColor: theme.colors.success }]}
               onPress={() => router.push('/meals')}
             >
               <Plus size={24} color="#FFFFFF" />
               <Text style={styles.actionButtonText}>Log Meal</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.actionButton}
+              style={[styles.actionButton, { backgroundColor: theme.colors.success }]}
               onPress={() => router.push('/workouts')}
             >
               <Target size={24} color="#FFFFFF" />
               <Text style={styles.actionButtonText}>Log Workout</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.actionButton, styles.cameraButton]}
+              style={[styles.actionButton, styles.cameraButton, { backgroundColor: theme.colors.secondary }]}
               onPress={() => router.push('/(tabs)/camera' as any)}
             >
               <Camera size={24} color="#FFFFFF" />
@@ -214,25 +216,25 @@ export default function HomeScreen() {
         {/* Daily Scores */}
         {score && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Today's Scores</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Scores</Text>
             <View style={styles.scoresContainer}>
               <ScoreCard
                 title="Fitness Score"
                 score={score.fitness_score}
-                color="#2563EB"
-                bgColor="#EBF5FF"
+                color={theme.colors.secondary}
+                bgColor={isDark ? theme.colors.surface : '#EBF5FF'}
               />
               <ScoreCard
                 title="Eco Score"
                 score={score.eco_score}
-                color="#16A34A"
-                bgColor="#F0FDF4"
+                color={theme.colors.success}
+                bgColor={isDark ? theme.colors.surface : '#F0FDF4'}
               />
               <ScoreCard
                 title="Combined Score"
                 score={score.combined_score}
-                color="#7C3AED"
-                bgColor="#F5F3FF"
+                color={theme.colors.accent}
+                bgColor={isDark ? theme.colors.surface : '#F5F3FF'}
               />
             </View>
           </View>
@@ -241,39 +243,39 @@ export default function HomeScreen() {
         {/* Daily Stats */}
         {summary && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Today's Overview</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Overview</Text>
             <View style={styles.statsGrid}>
               <StatCard
                 title="Calories"
                 value={summary.totalCalories.toFixed(0)}
                 unit="kcal"
                 icon={Flame}
-                color="#EF4444"
-                bgColor="#FEF2F2"
+                color={theme.colors.error}
+                bgColor={isDark ? theme.colors.surface : '#FEF2F2'}
               />
               <StatCard
                 title="Protein"
                 value={Math.round(summary.totalProtein)}
                 unit="g"
                 icon={TrendingUp}
-                color="#2563EB"
-                bgColor="#EBF5FF"
+                color={theme.colors.secondary}
+                bgColor={isDark ? theme.colors.surface : '#EBF5FF'}
               />
               <StatCard
                 title="CO₂ Impact"
                 value={summary.totalCO2e.toFixed(1)}
                 unit="kg"
                 icon={Leaf}
-                color="#16A34A"
-                bgColor="#F0FDF4"
+                color={theme.colors.success}
+                bgColor={isDark ? theme.colors.surface : '#F0FDF4'}
               />
               <StatCard
                 title="Burned"
                 value={summary.caloriesBurned}
                 unit="kcal"
                 icon={Target}
-                color="#F59E0B"
-                bgColor="#FFFBEB"
+                color={theme.colors.warning}
+                bgColor={isDark ? theme.colors.surface : '#FFFBEB'}
               />
             </View>
           </View>
@@ -282,21 +284,21 @@ export default function HomeScreen() {
         {/* Activity Summary */}
         {summary && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Activity Summary</Text>
-            <View style={styles.activitySummary}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Activity Summary</Text>
+            <View style={[styles.activitySummary, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <View style={styles.activityItem}>
-                <Text style={styles.activityCount}>{summary.mealsCount}</Text>
-                <Text style={styles.activityLabel}>Meals Logged</Text>
+                <Text style={[styles.activityCount, { color: theme.colors.text }]}>{summary.mealsCount}</Text>
+                <Text style={[styles.activityLabel, { color: theme.colors.textSecondary }]}>Meals Logged</Text>
               </View>
               <View style={styles.activityItem}>
-                <Text style={styles.activityCount}>{summary.workoutsCount}</Text>
-                <Text style={styles.activityLabel}>Workouts Done</Text>
+                <Text style={[styles.activityCount, { color: theme.colors.text }]}>{summary.workoutsCount}</Text>
+                <Text style={[styles.activityLabel, { color: theme.colors.textSecondary }]}>Workouts Done</Text>
               </View>
               <View style={styles.activityItem}>
-                <Text style={[styles.activityCount, { color: summary.netCalories > 0 ? '#EF4444' : '#16A34A' }]}>
+                <Text style={[styles.activityCount, { color: summary.netCalories > 0 ? theme.colors.error : theme.colors.success }]}>
                   {summary.netCalories > 0 ? '+' : ''}{summary.netCalories.toFixed(0)}
                 </Text>
-                <Text style={styles.activityLabel}>Net Calories</Text>
+                <Text style={[styles.activityLabel, { color: theme.colors.textSecondary }]}>Net Calories</Text>
               </View>
             </View>
           </View>
@@ -309,7 +311,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   scrollView: {
     flex: 1,
@@ -321,7 +322,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
   },
   header: {
     padding: 24,
@@ -348,7 +348,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 16,
   },
   actionButtons: {
@@ -360,7 +359,6 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     minWidth: '30%',
-    backgroundColor: '#16A34A',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -381,12 +379,10 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   scoreTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
     marginBottom: 8,
   },
   scoreValue: {
@@ -396,7 +392,6 @@ const styles = StyleSheet.create({
   },
   scoreBar: {
     height: 6,
-    backgroundColor: '#E5E7EB',
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -415,7 +410,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   statHeader: {
     flexDirection: 'row',
@@ -426,7 +420,6 @@ const styles = StyleSheet.create({
   statTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
   },
   statValue: {
     fontSize: 24,
@@ -435,15 +428,12 @@ const styles = StyleSheet.create({
   },
   statUnit: {
     fontSize: 12,
-    color: '#9CA3AF',
   },
   activitySummary: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   activityItem: {
     flex: 1,
@@ -452,12 +442,10 @@ const styles = StyleSheet.create({
   activityCount: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
     marginBottom: 4,
   },
   activityLabel: {
     fontSize: 12,
-    color: '#6B7280',
     textAlign: 'center',
   },
   refreshButton: {

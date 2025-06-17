@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface LeaderboardEntry {
   rank: number;
@@ -36,6 +37,7 @@ interface LeaderboardData {
 }
 
 export default function LeaderboardScreen() {
+  const { theme } = useTheme();
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userRank, setUserRank] = useState<LeaderboardEntry | null>(null);
@@ -108,7 +110,7 @@ export default function LeaderboardScreen() {
       case 3:
         return <Award size={24} color="#CD7F32" />;
       default:
-        return <Text style={styles.rankNumber}>{rank}</Text>;
+        return <Text style={[styles.rankNumber, { color: theme.colors.textSecondary }]}>{rank}</Text>;
     }
   };
 
@@ -121,13 +123,14 @@ export default function LeaderboardScreen() {
       case 3:
         return '#CD7F32';
       default:
-        return '#6B7280';
+        return theme.colors.textSecondary;
     }
   };
 
   const LeaderboardItem = ({ entry, isCurrentUser = false }: { entry: LeaderboardEntry; isCurrentUser?: boolean }) => (
     <View style={[
       styles.leaderboardItem,
+      { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
       isCurrentUser && styles.currentUserItem,
       entry.rank <= 3 && styles.topThreeItem
     ]}>
@@ -136,10 +139,10 @@ export default function LeaderboardScreen() {
       </View>
       
       <View style={styles.userInfo}>
-        <Text style={[styles.userName, isCurrentUser && styles.currentUserText]}>
+        <Text style={[styles.userName, { color: theme.colors.text }, isCurrentUser && styles.currentUserText]}>
           {entry.name}
         </Text>
-        <Text style={styles.userStats}>
+        <Text style={[styles.userStats, { color: theme.colors.textSecondary }]}>
           {entry.days_active} days active • Avg: {entry.avg_combined_score}
         </Text>
       </View>
@@ -150,12 +153,12 @@ export default function LeaderboardScreen() {
         </Text>
         <View style={styles.subScores}>
           <View style={styles.subScore}>
-            <Text style={styles.subScoreLabel}>Fitness</Text>
-            <Text style={styles.subScoreValue}>{entry.avg_fitness_score}</Text>
+            <Text style={[styles.subScoreLabel, { color: theme.colors.placeholder }]}>Fitness</Text>
+            <Text style={[styles.subScoreValue, { color: theme.colors.textSecondary }]}>{entry.avg_fitness_score}</Text>
           </View>
           <View style={styles.subScore}>
-            <Text style={styles.subScoreLabel}>Eco</Text>
-            <Text style={styles.subScoreValue}>{entry.avg_eco_score}</Text>
+            <Text style={[styles.subScoreLabel, { color: theme.colors.placeholder }]}>Eco</Text>
+            <Text style={[styles.subScoreValue, { color: theme.colors.textSecondary }]}>{entry.avg_eco_score}</Text>
           </View>
         </View>
       </View>
@@ -164,18 +167,18 @@ export default function LeaderboardScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading leaderboard...</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading leaderboard...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <LinearGradient
-        colors={['#7C3AED', '#A855F7']}
+        colors={theme.colors.gradient.primary}
         style={styles.header}
       >
         <View style={styles.headerContent}>
@@ -204,7 +207,7 @@ export default function LeaderboardScreen() {
         {/* Current User's Rank */}
         {userRank && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Ranking</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Your Ranking</Text>
             <LeaderboardItem entry={userRank} isCurrentUser={true} />
           </View>
         )}
@@ -212,7 +215,7 @@ export default function LeaderboardScreen() {
         {/* Top Performers */}
         {leaderboardData && leaderboardData.leaderboard.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Top Performers</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Top Performers</Text>
             <View style={styles.leaderboardContainer}>
               {leaderboardData.leaderboard.map((entry) => (
                 <LeaderboardItem
@@ -227,31 +230,31 @@ export default function LeaderboardScreen() {
 
         {/* Achievement Tips */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>How to Climb the Ranks</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>How to Climb the Ranks</Text>
           <View style={styles.tipsContainer}>
-            <View style={styles.tipCard}>
-              <TrendingUp size={20} color="#16A34A" />
+            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <TrendingUp size={20} color={theme.colors.success} />
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Stay Active Daily</Text>
-                <Text style={styles.tipText}>
+                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Stay Active Daily</Text>
+                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
                   Log workouts and meals consistently to maintain your score
                 </Text>
               </View>
             </View>
-            <View style={styles.tipCard}>
-              <Trophy size={20} color="#F59E0B" />
+            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <Trophy size={20} color={theme.colors.warning} />
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Balance Fitness & Eco</Text>
-                <Text style={styles.tipText}>
+                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Balance Fitness & Eco</Text>
+                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
                   High scores come from both burning calories and making sustainable choices
                 </Text>
               </View>
             </View>
-            <View style={styles.tipCard}>
-              <Award size={20} color="#7C3AED" />
+            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <Award size={20} color={theme.colors.accent} />
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Consistency is Key</Text>
-                <Text style={styles.tipText}>
+                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Consistency is Key</Text>
+                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
                   Regular activity over 7 days counts more than one perfect day
                 </Text>
               </View>
@@ -262,9 +265,9 @@ export default function LeaderboardScreen() {
         {/* Empty State */}
         {(!leaderboardData || leaderboardData.leaderboard.length === 0) && (
           <View style={styles.emptyState}>
-            <Trophy size={48} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>No Rankings Yet</Text>
-            <Text style={styles.emptySubtitle}>
+            <Trophy size={48} color={theme.colors.disabled} />
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Rankings Yet</Text>
+            <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
               Start logging meals and workouts to see community rankings
             </Text>
           </View>
@@ -277,7 +280,6 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   loadingContainer: {
     flex: 1,
@@ -286,7 +288,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
   },
   header: {
     padding: 24,
@@ -316,7 +317,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 16,
   },
   leaderboardContainer: {
@@ -325,11 +325,9 @@ const styles = StyleSheet.create({
   leaderboardItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   currentUserItem: {
     backgroundColor: '#F0FDF4',
@@ -348,7 +346,6 @@ const styles = StyleSheet.create({
   rankNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#6B7280',
   },
   userInfo: {
     flex: 1,
@@ -357,7 +354,6 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 4,
   },
   currentUserText: {
@@ -365,7 +361,6 @@ const styles = StyleSheet.create({
   },
   userStats: {
     fontSize: 12,
-    color: '#6B7280',
   },
   scoreContainer: {
     alignItems: 'flex-end',
@@ -387,24 +382,20 @@ const styles = StyleSheet.create({
   },
   subScoreLabel: {
     fontSize: 10,
-    color: '#9CA3AF',
     marginBottom: 2,
   },
   subScoreValue: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
   },
   tipsContainer: {
     gap: 12,
   },
   tipCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     gap: 12,
   },
   tipContent: {
@@ -413,12 +404,10 @@ const styles = StyleSheet.create({
   tipTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 4,
   },
   tipText: {
     fontSize: 14,
-    color: '#6B7280',
     lineHeight: 20,
   },
   emptyState: {
@@ -429,13 +418,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
   },

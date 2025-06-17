@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Search, Dumbbell, Clock, Flame, Timer } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Workout {
   id: string;
@@ -28,6 +29,7 @@ const WORKOUT_TYPES = [
 ];
 
 export default function WorkoutsScreen() {
+  const { theme } = useTheme();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -147,22 +149,22 @@ export default function WorkoutsScreen() {
   );
 
   const WorkoutCard = ({ workout }: { workout: Workout }) => (
-    <View style={styles.workoutCard}>
+    <View style={[styles.workoutCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
       <View style={styles.workoutHeader}>
-        <Dumbbell size={20} color="#2563EB" />
-        <Text style={styles.workoutType}>{workout.type}</Text>
+        <Dumbbell size={20} color={theme.colors.secondary} />
+        <Text style={[styles.workoutType, { color: theme.colors.text }]}>{workout.type}</Text>
       </View>
       <View style={styles.workoutStats}>
         <View style={styles.statItem}>
-          <Clock size={16} color="#6B7280" />
-          <Text style={styles.statText}>{workout.duration} min</Text>
+          <Clock size={16} color={theme.colors.textSecondary} />
+          <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{workout.duration} min</Text>
         </View>
         <View style={styles.statItem}>
-          <Flame size={16} color="#EF4444" />
-          <Text style={styles.statText}>{Math.round(workout.calories_burned)} kcal</Text>
+          <Flame size={16} color={theme.colors.error} />
+          <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{Math.round(workout.calories_burned)} kcal</Text>
         </View>
       </View>
-      <Text style={styles.workoutTime}>
+      <Text style={[styles.workoutTime, { color: theme.colors.placeholder }]}>
         {new Date(workout.created_at).toLocaleTimeString([], { 
           hour: '2-digit', 
           minute: '2-digit' 
@@ -173,20 +175,20 @@ export default function WorkoutsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading workouts...</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading workouts...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Today's Workouts</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Today's Workouts</Text>
         <TouchableOpacity
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: theme.colors.secondary }]}
           onPress={() => setShowAddForm(!showAddForm)}
         >
           <Plus size={24} color="#FFFFFF" />
@@ -194,20 +196,22 @@ export default function WorkoutsScreen() {
       </View>
 
       {showAddForm && (
-        <View style={styles.addForm}>
-          <Text style={styles.formLabel}>Workout Type</Text>
+        <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+          <Text style={[styles.formLabel, { color: theme.colors.text }]}>Workout Type</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.workoutTypes}>
             {WORKOUT_TYPES.map((type) => (
               <TouchableOpacity
                 key={type}
                 style={[
                   styles.workoutTypeButton,
-                  selectedWorkoutType === type && styles.workoutTypeButtonActive
+                  { borderColor: theme.colors.border },
+                  selectedWorkoutType === type && { backgroundColor: theme.colors.secondary, borderColor: theme.colors.secondary }
                 ]}
                 onPress={() => setSelectedWorkoutType(type)}
               >
                 <Text style={[
                   styles.workoutTypeButtonText,
+                  { color: theme.colors.textSecondary },
                   selectedWorkoutType === type && styles.workoutTypeButtonTextActive
                 ]}>
                   {type}
@@ -216,10 +220,11 @@ export default function WorkoutsScreen() {
             ))}
           </ScrollView>
           
-          <Text style={styles.formLabel}>Duration (minutes)</Text>
+          <Text style={[styles.formLabel, { color: theme.colors.text }]}>Duration (minutes)</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text }]}
             placeholder="Enter duration in minutes"
+            placeholderTextColor={theme.colors.placeholder}
             value={duration}
             onChangeText={setDuration}
             keyboardType="numeric"
@@ -227,17 +232,17 @@ export default function WorkoutsScreen() {
           
           <View style={styles.formButtons}>
             <TouchableOpacity
-              style={styles.cancelButton}
+              style={[styles.cancelButton, { borderColor: theme.colors.border }]}
               onPress={() => {
                 setShowAddForm(false);
                 setSelectedWorkoutType('');
                 setDuration('');
               }}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.submitButton}
+              style={[styles.submitButton, { backgroundColor: theme.colors.secondary }]}
               onPress={handleAddWorkout}
               disabled={isSubmitting}
             >
@@ -249,11 +254,12 @@ export default function WorkoutsScreen() {
         </View>
       )}
 
-      <View style={styles.searchContainer}>
-        <Search size={20} color="#6B7280" />
+      <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <Search size={20} color={theme.colors.textSecondary} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: theme.colors.text }]}
           placeholder="Search workouts..."
+          placeholderTextColor={theme.colors.placeholder}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -267,9 +273,9 @@ export default function WorkoutsScreen() {
       >
         {filteredWorkouts.length === 0 ? (
           <View style={styles.emptyState}>
-            <Dumbbell size={48} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>No workouts logged yet</Text>
-            <Text style={styles.emptySubtitle}>
+            <Dumbbell size={48} color={theme.colors.disabled} />
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No workouts logged yet</Text>
+            <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
               {searchQuery ? 'No workouts match your search' : 'Start tracking your workouts to see your fitness progress'}
             </Text>
           </View>
@@ -288,7 +294,6 @@ export default function WorkoutsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   loadingContainer: {
     flex: 1,
@@ -297,24 +302,19 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
   },
   addButton: {
-    backgroundColor: '#2563EB',
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -322,15 +322,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addForm: {
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   formLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 8,
   },
   workoutTypes: {
@@ -340,7 +337,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
     borderRadius: 20,
     marginRight: 8,
     minWidth: 100,
@@ -353,14 +349,12 @@ const styles = StyleSheet.create({
   },
   workoutTypeButtonText: {
     fontSize: 14,
-    color: '#6B7280',
   },
   workoutTypeButtonTextActive: {
     color: '#FFFFFF',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -374,19 +368,16 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
     borderRadius: 8,
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6B7280',
   },
   submitButton: {
     flex: 1,
     padding: 12,
-    backgroundColor: '#2563EB',
     borderRadius: 8,
     alignItems: 'center',
   },
@@ -398,19 +389,16 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     margin: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   searchInput: {
     flex: 1,
     marginLeft: 12,
     fontSize: 16,
-    color: '#111827',
   },
   scrollView: {
     flex: 1,
@@ -420,11 +408,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   workoutCard: {
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   workoutHeader: {
     flexDirection: 'row',
@@ -435,7 +421,6 @@ const styles = StyleSheet.create({
   workoutType: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
     flex: 1,
   },
   workoutStats: {
@@ -451,11 +436,9 @@ const styles = StyleSheet.create({
   },
   statText: {
     fontSize: 14,
-    color: '#6B7280',
   },
   workoutTime: {
     fontSize: 12,
-    color: '#9CA3AF',
     textAlign: 'right',
   },
   emptyState: {
@@ -466,13 +449,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
   },
