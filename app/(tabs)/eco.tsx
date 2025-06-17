@@ -76,6 +76,12 @@ export default function EcoScreen() {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    if (ecoStats) {
+      updateMilestones();
+    }
+  }, [ecoStats]);
+
   useFocusEffect(
     React.useCallback(() => {
       checkAuth(); // Re-run auth check and data fetch on focus
@@ -162,9 +168,8 @@ export default function EcoScreen() {
     }
   };
 
-  const fetchMilestones = async () => {
-    // Mock milestones data - in production, fetch from database
-    const mockMilestones: EcoMilestone[] = [
+  const updateMilestones = () => {
+    const updatedMilestones: EcoMilestone[] = [
       {
         id: '1',
         name: 'Carbon Saver',
@@ -200,7 +205,11 @@ export default function EcoScreen() {
       },
     ];
 
-    setMilestones(mockMilestones);
+    setMilestones(updatedMilestones);
+  };
+
+  const fetchMilestones = () => {
+    updateMilestones();
   };
 
   const fetchChallenges = async () => {

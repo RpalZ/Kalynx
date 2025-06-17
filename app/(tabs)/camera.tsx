@@ -158,6 +158,10 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [isGeneratingRecipes, setIsGeneratingRecipes] = useState(false);
+  const [directRecipes, setDirectRecipes] = useState<Recipe[]>([]);
+  const [manualIngredients, setManualIngredients] = useState<string[]>([]);
+  const [manualRecipes, setManualRecipes] = useState<Recipe[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -469,6 +473,119 @@ export default function CameraScreen() {
     </View>
   );
 
+  const generateDirectRecipes = useCallback(async () => {
+    if (isGeneratingRecipes) return;
+
+    setIsGeneratingRecipes(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        router.replace('/auth');
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-recipes-from-fridge`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            useDeepSeek: true, // Flag to indicate direct API usage
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const parsedRecipes = data.recipes.map((recipe: Recipe) => ({
+          ...recipe,
+          estimated_cost: Number(recipe.estimated_cost),
+          carbon_impact: Number(recipe.carbon_impact),
+          water_impact: Number(recipe.water_impact),
+        }));
+        setDirectRecipes(parsedRecipes);
+        Alert.alert(
+          'Success!', 
+          `Generated ${parsedRecipes.length} sustainable recipes!`
+        );
+      } else {
+        const errorText = await response.text();
+        Alert.alert('Error', errorText || 'Failed to generate recipes');
+      }
+    } catch (error) {
+      console.error('Error generating recipes:', error);
+      Alert.alert('Error', 'Failed to generate recipes');
+    } finally {
+      setIsGeneratingRecipes(false);
+    }
+  }, [isGeneratingRecipes]);
+
+  const addManualIngredient = () => {
+    if (newIngredient.trim()) {
+      setManualIngredients([...manualIngredients, newIngredient.trim()]);
+      setNewIngredient('');
+    }
+  };
+
+  const removeManualIngredient = (index: number) => {
+    setManualIngredients(manualIngredients.filter((_, i) => i !== index));
+  };
+
+  const generateManualRecipes = useCallback(async () => {
+    if (isGeneratingRecipes || manualIngredients.length === 0) return;
+
+    setIsGeneratingRecipes(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        router.replace('/auth');
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-recipes-from-fridge`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ingredients: manualIngredients,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const parsedRecipes = data.recipes.map((recipe: Recipe) => ({
+          ...recipe,
+          estimated_cost: Number(recipe.estimated_cost),
+          carbon_impact: Number(recipe.carbon_impact),
+          water_impact: Number(recipe.water_impact),
+        }));
+        setManualRecipes(parsedRecipes);
+        Alert.alert(
+          'Success!', 
+          `Generated ${parsedRecipes.length} sustainable recipes!`
+        );
+      } else {
+        const errorText = await response.text();
+        Alert.alert('Error', errorText || 'Failed to generate recipes');
+      }
+    } catch (error) {
+      console.error('Error generating recipes:', error);
+      Alert.alert('Error', 'Failed to generate recipes');
+    } finally {
+      setIsGeneratingRecipes(false);
+    }
+  }, [isGeneratingRecipes, manualIngredients]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <LinearGradient
@@ -520,6 +637,74 @@ export default function CameraScreen() {
                   <ImageIcon size={24} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
+            </View>
+          )}
+        </View>
+
+        {/* Manual Ingredient Input Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add Ingredients Manually</Text>
+          <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
+            Enter your ingredients to get recipe suggestions
+          </Text>
+          
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[styles.input, { 
+                backgroundColor: theme.colors.surface,
+                color: theme.colors.text,
+                borderColor: theme.colors.border
+              }]}
+              placeholder="Enter ingredient..."
+              placeholderTextColor={theme.colors.placeholder}
+              value={newIngredient}
+              onChangeText={setNewIngredient}
+              onSubmitEditing={addManualIngredient}
+            />
+            <TouchableOpacity 
+              style={[styles.addButton, { backgroundColor: theme.colors.secondary }]}
+              onPress={addManualIngredient}
+            >
+              <Text style={styles.addButtonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+
+          {manualIngredients.length > 0 && (
+            <View style={styles.ingredientsList}>
+              {manualIngredients.map((ingredient, index) => (
+                <View key={index} style={[styles.manualIngredientItem, { backgroundColor: theme.colors.surface }]}>
+                  <Text style={[styles.manualIngredientText, { color: theme.colors.text }]}>{ingredient}</Text>
+                  <TouchableOpacity onPress={() => removeManualIngredient(index)}>
+                    <X size={20} color={theme.colors.error} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.generateButton, { 
+              backgroundColor: theme.colors.secondary,
+              opacity: manualIngredients.length === 0 ? 0.5 : 1 
+            }]}
+            onPress={generateManualRecipes}
+            disabled={isGeneratingRecipes || manualIngredients.length === 0}
+          >
+            {isGeneratingRecipes ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Sparkles size={20} color="white" style={styles.buttonIcon} />
+                <Text style={styles.generateButtonText}>Generate Recipes</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {manualRecipes.length > 0 && (
+            <View style={styles.recipesContainer}>
+              {manualRecipes.map((recipe, index) => (
+                <RecipeCard key={index} recipe={recipe} />
+              ))}
             </View>
           )}
         </View>
@@ -630,7 +815,7 @@ export default function CameraScreen() {
           setIsAddIngredientModalVisible(false);
         }}
         onAdd={(ingredients) => {
-          setIsAddIngredientModalVisible(false); // Close modal immediately
+          setIsAddIngredientModalVisible(false);
           handleAddIngredient(ingredients);
         }}
         newIngredient={newIngredient}
@@ -990,5 +1175,40 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  generateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  generateButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  ingredientsList: {
+    marginVertical: 16,
+  },
+  manualIngredientItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  manualIngredientText: {
+    fontSize: 16,
+    flex: 1,
   },
 });

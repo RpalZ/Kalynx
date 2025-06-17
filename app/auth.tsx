@@ -200,7 +200,7 @@ export default function AuthScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <LinearGradient
-          colors={theme.colors.gradient.primary}
+          colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]] as const}
           style={styles.header}
         >
           <View style={styles.logoContainer}>

@@ -178,7 +178,7 @@ export default function LeaderboardScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <LinearGradient
-        colors={theme.colors.gradient.primary}
+        colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]] as const}
         style={styles.header}
       >
         <View style={styles.headerContent}>
