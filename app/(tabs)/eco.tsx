@@ -164,9 +164,7 @@ export default function EcoScreen() {
 
   const fetchMilestones = async () => {
     // Mock milestones data - in production, fetch from database
-    const mockMilestones: EcoM
-
-ilestone[] = [
+    const mockMilestones: EcoMilestone[] = [
       {
         id: '1',
         name: 'Carbon Saver',
@@ -433,7 +431,7 @@ ilestone[] = [
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <LinearGradient
-        colors={theme.colors.gradient.success}
+        colors={[theme.colors.gradient.success[0], theme.colors.gradient.success[1]]}
         style={styles.header}
       >
         <Text style={styles.headerTitle}>Environmental Impact</Text>

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Settings, LogOut, CreditCard as Edit, Save, X, Mail, Crown, Star, Trophy, Target, Calendar, TrendingUp, Zap } from 'lucide-react-native';
+import { User, Settings, LogOut, CreditCard as Edit, Save, X, Mail, Crown, Star, Trophy, Target, Calendar, TrendingUp, Zap, RefreshCw } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -347,7 +347,7 @@ export default function ProfileScreen() {
       <ScrollView style={styles.scrollView}>
         {/* Header */}
         <LinearGradient
-          colors={theme.colors.gradient.primary}
+          colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
           style={styles.header}
         >
           <View style={styles.profileSection}>
@@ -390,7 +390,7 @@ export default function ProfileScreen() {
               </View>
             ) : (
               <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>{profile?.name}</Text>
+                <Text style={styles.profileName}>{profile?.name || 'User'}</Text>
                 <Text style={styles.profileEmail}>{profile?.email}</Text>
                 {userStats && (
                   <Text style={styles.profileRank}>Rank #{userStats.rank} • {userStats.currentStreak} day streak</Text>
@@ -404,6 +404,19 @@ export default function ProfileScreen() {
             >
               <Edit size={16} color="#FFFFFF" />
               <Text style={styles.editProfileText}>Edit</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={() => {
+                if (profile) {
+                  fetchProfile(profile);
+                  fetchUserStats(profile.id);
+                  fetchAchievements(profile.id);
+                }
+              }}
+            >
+              <RefreshCw size={24} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -457,7 +470,7 @@ export default function ProfileScreen() {
           <View style={styles.section}>
             <TouchableOpacity style={styles.proCard} onPress={handleUpgrade}>
               <LinearGradient
-                colors={theme.colors.gradient.warning}
+                colors={[theme.colors.gradient.warning[0], theme.colors.gradient.warning[1]]}
                 style={styles.proGradient}
               >
                 <Crown size={24} color="#FFFFFF" />
@@ -1059,5 +1072,8 @@ const styles = StyleSheet.create({
   },
   languageButtonTextActive: {
     color: '#FFFFFF',
+  },
+  refreshButton: {
+    padding: 8,
   },
 });

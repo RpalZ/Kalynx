@@ -426,7 +426,7 @@ export default function CameraScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <LinearGradient
-        colors={theme.colors.gradient.secondary}
+        colors={[theme.colors.gradient.secondary[0], theme.colors.gradient.secondary[1]]}
         style={styles.header}
       >
         <Text style={styles.headerTitle}>AI Recipe Generator</Text>

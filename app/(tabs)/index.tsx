@@ -167,7 +167,7 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <LinearGradient
-          colors={theme.colors.gradient.primary}
+          colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
           style={styles.header}
         >
           <View style={styles.headerContent}>
