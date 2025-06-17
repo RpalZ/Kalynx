@@ -2,7 +2,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { ImageAnnotatorClient } from 'npm:@google-cloud/vision'; // For Google Cloud Vision
 
 interface FridgePhotoRequest {
-  imageBase64: string;
+  imageBase64?: string;
+  ingredients?: string[];
   latitude?: number;
   longitude?: number;
 }
@@ -13,6 +14,9 @@ interface Recipe {
   carbon_impact: number;
   water_impact: number;
   estimated_cost: number;
+  calories: number;
+  protein: number;
+  detailed_ingredients: { ingredient: string; amount: string; unit: string }[];
 }
 
 // Price database for common ingredients (in USD)
@@ -277,6 +281,8 @@ async function generateRecipesFromIngredients(
   latitude?: number,
   longitude?: number
 ): Promise<Recipe[]> {
+  console.log('Generating recipes for ingredients:', ingredients);
+
   const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY');
 
   if (!DEEPSEEK_API_KEY) {
@@ -284,28 +290,31 @@ async function generateRecipesFromIngredients(
     throw new Error('DeepSeek API key is missing.');
   }
 
-  try {
-    const prompt = `Generate 3 simple, eco-friendly recipes using these ingredients: ${ingredients.join(', ')}. 
-    For each recipe, provide:
-    1. A creative title
-    2. A list of ingredients (using only the provided ingredients plus basic pantry items like salt, pepper, oil)
-    3. Simple step-by-step instructions
-    4. Environmental impact (carbon footprint in kg CO2)
-    5. Water usage (in liters)
-    
-    Format the response as a JSON array with these fields:
-    {
-      "recipes": [
-        {
-          "title": "string",
-          "ingredients": ["string"],
-          "instructions": ["string"],
-          "carbon_impact": number,
-          "water_impact": number
-        }
-      ]
-    }`;
+  const messages = [
+    { role: 'system', content: `You are a helpful assistant that generates healthy, sustainable, and cost-effective recipes based on a list of ingredients. For each recipe, provide the title, a list of ingredients, estimated carbon impact (in kg CO2e), estimated water impact (in liters), estimated cost (in USD), total calories, total protein (in grams), and a detailed list of ingredients including their specific amounts and units. The detailed ingredients should be a JSON array of objects with 'ingredient', 'amount', and 'unit' fields. The carbon impact, water impact, estimated cost, calories, and protein should be numerical values. The recipe should be suitable for a general audience. If an ingredient is missing, try to suggest a common substitute or indicate it's optional. Focus on providing recipes that are quick to prepare and healthy. Ensure all responses are JSON objects.
 
+Example JSON response format:
+[
+  {
+    "title": "Quick Veggie Stir-Fry",
+    "ingredients": ["broccoli", "carrot", "soy sauce"],
+    "carbon_impact": 0.5,
+    "water_impact": 100,
+    "estimated_cost": 5.25,
+    "calories": 350,
+    "protein": 15,
+    "detailed_ingredients": [
+      { "ingredient": "broccoli florets", "amount": "2", "unit": "cups" },
+      { "ingredient": "carrots", "amount": "1", "unit": "cup" },
+      { "ingredient": "soy sauce", "amount": "2", "unit": "tbsp" }
+    ]
+  }
+]` },
+    { role: 'user', content: `Generate 3 recipes using these ingredients: ${ingredients.join(', ')}. Latitude: ${latitude}, Longitude: ${longitude}` },
+  ];
+
+  try {
+    console.log('Sending request to DeepSeek API with messages:', messages);
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -314,16 +323,7 @@ async function generateRecipesFromIngredients(
       },
       body: JSON.stringify({
         model: "deepseek-chat",
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional chef and environmental scientist who creates eco-friendly recipes. Always provide accurate, practical recipes with realistic environmental impact estimates. Respond only with valid JSON."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
+        messages: messages,
         temperature: 0.7,
         response_format: { type: "json_object" }
       })
@@ -344,110 +344,104 @@ async function generateRecipesFromIngredients(
       estimated_cost: await calculateRecipeCost(recipe.ingredients, latitude, longitude), 
       carbon_impact: recipe.carbon_impact,
       water_impact: recipe.water_impact,
+      calories: recipe.calories,
+      protein: recipe.protein,
+      detailed_ingredients: recipe.detailed_ingredients || [],
       created_at: new Date().toISOString(),
     }));
 
-    const recipes: Recipe[] = await Promise.all(recipesPromises);
+    const generatedRecipes: Recipe[] = await Promise.all(recipesPromises);
 
-    console.log('Generated recipes with estimated costs (before sending to client):', recipes.map(r => ({ title: r.title, estimated_cost: r.estimated_cost })));
+    console.log('Generated recipes with estimated costs (before sending to client):', generatedRecipes.map(r => ({ title: r.title, estimated_cost: r.estimated_cost })));
 
-    return recipes;
+    const recipeObjects: Recipe[] = generatedRecipes.map((recipe: any) => ({
+      title: recipe.title,
+      ingredients: recipe.ingredients,
+      carbon_impact: recipe.carbon_impact,
+      water_impact: recipe.water_impact,
+      estimated_cost: recipe.estimated_cost, // This will be the AI-generated cost for now
+      calories: recipe.calories,
+      protein: recipe.protein,
+      detailed_ingredients: recipe.detailed_ingredients || [], // Ensure it's an array
+    }));
+
+    // After receiving AI-generated recipes, recalculate estimated_cost
+    // This ensures consistency with our internal pricing database
+    const recipesWithAccurateCost: Recipe[] = await Promise.all(
+      recipeObjects.map(async (recipe) => {
+        const accurateCost = await calculateRecipeCost(recipe.ingredients, latitude, longitude);
+        return { ...recipe, estimated_cost: accurateCost };
+      })
+    );
+
+    console.log('Generated recipes with accurate cost:', recipesWithAccurateCost);
+    return recipesWithAccurateCost;
 
   } catch (error) {
-    console.error('Error calling DeepSeek API:', error);
-    throw new Error('Failed to generate recipes from ingredients.');
+    console.error('Error generating recipes:', error);
+    throw error;
   }
 }
 
 // Main Edge Function handler
 Deno.serve(async (req: Request) => {
-  // Handle preflight requests
+  console.log('generate-recipes-from-fridge function started');
+  
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const { imageBase64, ingredients: manualIngredients, latitude, longitude }: FridgePhotoRequest = await req.json();
+    
+    if (!imageBase64 && !manualIngredients) {
+      return new Response(
+        JSON.stringify({ error: 'Either imageBase64 or ingredients must be provided' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    let detectedIngredients: string[] = [];
+    
+    // If image is provided, detect ingredients from it
+    if (imageBase64) {
+      detectedIngredients = await detectIngredientsFromImage(imageBase64);
+    }
+    
+    // If manual ingredients are provided, add them to the detected ones
+    if (manualIngredients) {
+      // Remove duplicates and combine with detected ingredients
+      const allIngredients = new Set([...detectedIngredients, ...manualIngredients]);
+      detectedIngredients = Array.from(allIngredients);
+    }
+
+    console.log('Final ingredients list:', detectedIngredients);
+
+    // Generate recipes using the combined ingredients list
+    const recipes = await generateRecipesFromIngredients(detectedIngredients, latitude, longitude);
+    
+    return new Response(
+      JSON.stringify({
+        ingredients: detectedIngredients,
+        recipes: recipes,
+        savedRecipes: [] // You can implement saved recipes functionality later
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     );
-
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response('Authorization header required', { 
-        status: 401,
-        headers: corsHeaders
-      });
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
-    if (authError || !user) {
-      return new Response('Unauthorized', { 
-        status: 401,
-        headers: corsHeaders
-      });
-    }
-
-    const { imageBase64, latitude, longitude }: FridgePhotoRequest = await req.json();
-
-    if (!imageBase64) {
-      return new Response('Image data is required', { 
-        status: 400,
-        headers: corsHeaders
-      });
-    }
-
-    // Step 1: Extract ingredients from fridge photo
-    const detectedIngredients = await detectIngredientsFromImage(imageBase64);
-
-    if (detectedIngredients.length === 0) {
-      return new Response(JSON.stringify({
-        ingredients: [],
-        recipes: [],
-        savedRecipes: [],
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Step 2: Generate recipes based on ingredients (now with location data)
-    const generatedRecipes = await generateRecipesFromIngredients(
-      detectedIngredients,
-      latitude,
-      longitude
-    );
-
-    // Step 3: Fetch user's saved recipes for comparison or display
-    const { data: savedRecipes, error: savedRecipesError } = await supabase
-      .from('recipes_generated')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    if (savedRecipesError) {
-      console.error('Error fetching saved recipes:', savedRecipesError);
-    }
-
-    return new Response(JSON.stringify({
-      ingredients: detectedIngredients,
-      recipes: generatedRecipes,
-      savedRecipes: savedRecipes || [],
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
   } catch (error) {
-    console.error('Error:', error);
-    return new Response('Internal server error', { 
-      status: 500,
-      headers: corsHeaders
-    });
+    console.error('Error in generate-recipes-from-fridge:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
   }
 });

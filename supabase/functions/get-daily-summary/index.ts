@@ -4,6 +4,11 @@ interface DailySummaryRequest {
   date: string; // YYYY-MM-DD format
 }
 
+// Define baseline average environmental impacts per meal
+// These are rough estimates for a "typical" meal and can be adjusted
+const AVERAGE_CARBON_IMPACT_PER_MEAL = 2.0; // kg CO2e
+const AVERAGE_WATER_IMPACT_PER_MEAL = 500; // liters
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -100,6 +105,15 @@ Deno.serve(async (req: Request) => {
     const totalWater = meals?.reduce((sum, meal) => sum + (meal.water_impact || 0), 0) || 0;
     const caloriesBurned = workouts?.reduce((sum, workout) => sum + (workout.calories_burned || 0), 0) || 0;
 
+    // Calculate environmental savings based on defined baselines
+    const totalCarbonSaved = meals?.reduce((sum, meal) =>
+      sum + (AVERAGE_CARBON_IMPACT_PER_MEAL - (meal.carbon_impact || 0)), 0
+    ) || 0;
+
+    const totalWaterSaved = meals?.reduce((sum, meal) =>
+      sum + (AVERAGE_WATER_IMPACT_PER_MEAL - (meal.water_impact || 0)), 0
+    ) || 0;
+
     const summary = {
       date,
       totalCalories,
@@ -112,6 +126,8 @@ Deno.serve(async (req: Request) => {
       workoutsCount: workouts?.length || 0,
       meals: meals || [],
       workouts: workouts || [],
+      totalCarbonSaved: parseFloat(totalCarbonSaved.toFixed(2)), // Format to 2 decimal places
+      totalWaterSaved: parseFloat(totalWaterSaved.toFixed(2)),   // Format to 2 decimal places
     };
 
     return new Response(JSON.stringify(summary), {

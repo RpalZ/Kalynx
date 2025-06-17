@@ -2,6 +2,11 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 interface LogMealRequest {
   mealName: string;
+  calories?: number;
+  protein?: number;
+  carbon_impact?: number;
+  water_impact?: number;
+  detailed_ingredients?: { ingredient: string; amount: string; unit: string }[];
 }
 
 interface NutritionixNutrients {
@@ -21,7 +26,7 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
-async function fetchNutritionixData(query: string): Promise<NutritionixNutrients> {
+async function fetchNutritionixData(query: string, detailedIngredients?: { ingredient: string; amount: string; unit: string }[]): Promise<NutritionixNutrients> {
   const NUTRITIONIX_APP_ID = Deno.env.get('NUTRITIONIX_APP_ID');
   const NUTRITIONIX_API_KEY = Deno.env.get('NUTRITIONIX_API_KEY');
 
@@ -30,43 +35,70 @@ async function fetchNutritionixData(query: string): Promise<NutritionixNutrients
     return { calories: 0, protein: 0 };
   }
 
-  console.log('Nutritionix Query:', query);
-
   try {
-    const response = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-app-id': NUTRITIONIX_APP_ID,
-        'x-app-key': NUTRITIONIX_API_KEY,
-      },
-      body: JSON.stringify({ query }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Nutritionix API error:', response.status, errorText);
-      // Return default values in case of API error
-      return { calories: 0, protein: 0 };
-    }
-
-    const data = await response.json();
-    console.log('Nutritionix Raw Response:', JSON.stringify(data, null, 2));
-
     let totalCalories = 0;
     let totalProtein = 0;
 
-    if (data.foods && Array.isArray(data.foods)) {
-      data.foods.forEach((food: any) => {
-        totalCalories += food.nf_calories || 0;
-        totalProtein += food.nf_protein || 0;
+    if (detailedIngredients && detailedIngredients.length > 0) {
+      // Process each ingredient individually for more accurate results
+      for (const ing of detailedIngredients) {
+        const formattedQuery = `${ing.amount}${ing.unit} ${ing.ingredient}`;
+        console.log('Nutritionix Query for ingredient:', formattedQuery);
+
+        const response = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-app-id': NUTRITIONIX_APP_ID,
+            'x-app-key': NUTRITIONIX_API_KEY,
+          },
+          body: JSON.stringify({ query: formattedQuery }),
+        });
+
+        if (!response.ok) {
+          console.error('Nutritionix API error for ingredient:', ing.ingredient);
+          continue;
+        }
+
+        const data = await response.json();
+        if (data.foods && Array.isArray(data.foods)) {
+          data.foods.forEach((food: any) => {
+            totalCalories += food.nf_calories || 0;
+            totalProtein += food.nf_protein || 0;
+          });
+        }
+      }
+    } else {
+      // Use the meal name as a fallback
+      console.log('Nutritionix Query for meal:', query);
+      const response = await fetch('https://trackapi.nutritionix.com/v2/natural/nutrients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-app-id': NUTRITIONIX_APP_ID,
+          'x-app-key': NUTRITIONIX_API_KEY,
+        },
+        body: JSON.stringify({ query }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Nutritionix API error:', response.status, errorText);
+        return { calories: 0, protein: 0 };
+      }
+
+      const data = await response.json();
+      if (data.foods && Array.isArray(data.foods)) {
+        data.foods.forEach((food: any) => {
+          totalCalories += food.nf_calories || 0;
+          totalProtein += food.nf_protein || 0;
+        });
+      }
     }
 
     return { calories: totalCalories, protein: totalProtein };
   } catch (error) {
     console.error('Error fetching from Nutritionix API:', error);
-    // Return default values in case of fetch error
     return { calories: 0, protein: 0 };
   }
 }
@@ -161,20 +193,33 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { mealName }: LogMealRequest = await req.json();
+    const { mealName, calories, protein, carbon_impact, water_impact, detailed_ingredients }: LogMealRequest = await req.json();
 
     if (!mealName) {
-        return new Response('Meal name is required', {
-            status: 400,
-            headers: corsHeaders
-        });
+      return new Response('Meal name is required', {
+        status: 400,
+        headers: corsHeaders
+      });
     }
 
-    // Fetch nutrition data from Nutritionix and environmental impacts from DeepSeek concurrently
-    const [{ calories, protein }, { carbon_impact, water_impact }] = await Promise.all([
-      fetchNutritionixData(mealName),
-      fetchEnvironmentalImpacts(mealName)
-    ]);
+    let finalCalories = calories || 0;
+    let finalProtein = protein || 0;
+    let finalCarbonImpact = carbon_impact || 0;
+    let finalWaterImpact = water_impact || 0;
+
+    // If calories or protein are not provided, fetch from Nutritionix
+    if (typeof calories === 'undefined' || typeof protein === 'undefined') {
+      const nutritionData = await fetchNutritionixData(mealName, detailed_ingredients);
+      finalCalories = nutritionData.calories;
+      finalProtein = nutritionData.protein;
+    }
+
+    // If carbon_impact or water_impact are not provided, fetch from DeepSeek
+    if (typeof carbon_impact === 'undefined' || typeof water_impact === 'undefined') {
+      const environmentalData = await fetchEnvironmentalImpacts(mealName);
+      finalCarbonImpact = environmentalData.carbon_impact;
+      finalWaterImpact = environmentalData.water_impact;
+    }
 
     // Save meal to database
     const { data: meal, error: dbError } = await supabase
@@ -182,10 +227,11 @@ Deno.serve(async (req: Request) => {
       .insert({
         user_id: user.id,
         name: mealName,
-        calories: calories,
-        protein: protein,
-        carbon_impact: carbon_impact,
-        water_impact: water_impact,
+        calories: finalCalories,
+        protein: finalProtein,
+        carbon_impact: finalCarbonImpact,
+        water_impact: finalWaterImpact,
+        detailed_ingredients: detailed_ingredients || [],
       })
       .select()
       .single();

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, Camera, TrendingUp, Leaf, Flame, Target } from 'lucide-react-native';
+import { Plus, Camera, TrendingUp, Leaf, Flame, Target, RefreshCw } from 'lucide-react-native';
 import { router, Link, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
@@ -168,8 +168,19 @@ export default function HomeScreen() {
           colors={['#16A34A', '#22C55E']}
           style={styles.header}
         >
-          <Text style={styles.greeting}>Hello, {user?.user_metadata?.name || 'there'}!</Text>
-          <Text style={styles.subtitle}>Track your sustainable health journey</Text>
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.greeting}>Hello, {user?.user_metadata?.name || 'there'}!</Text>
+              <Text style={styles.subtitle}>Track your sustainable health journey</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={onRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </LinearGradient>
 
         {/* Quick Actions */}
@@ -234,7 +245,7 @@ export default function HomeScreen() {
             <View style={styles.statsGrid}>
               <StatCard
                 title="Calories"
-                value={summary.totalCalories}
+                value={summary.totalCalories.toFixed(0)}
                 unit="kcal"
                 icon={Flame}
                 color="#EF4444"
@@ -283,7 +294,7 @@ export default function HomeScreen() {
               </View>
               <View style={styles.activityItem}>
                 <Text style={[styles.activityCount, { color: summary.netCalories > 0 ? '#EF4444' : '#16A34A' }]}>
-                  {summary.netCalories > 0 ? '+' : ''}{summary.netCalories}
+                  {summary.netCalories > 0 ? '+' : ''}{summary.netCalories.toFixed(0)}
                 </Text>
                 <Text style={styles.activityLabel}>Net Calories</Text>
               </View>
@@ -316,6 +327,11 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 32,
   },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   greeting: {
     fontSize: 24,
     fontWeight: '700',
@@ -337,10 +353,13 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
+    justifyContent: 'space-between',
   },
   actionButton: {
     flex: 1,
+    minWidth: '30%',
     backgroundColor: '#16A34A',
     padding: 16,
     borderRadius: 12,
@@ -440,5 +459,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     textAlign: 'center',
+  },
+  refreshButton: {
+    padding: 8,
   },
 });

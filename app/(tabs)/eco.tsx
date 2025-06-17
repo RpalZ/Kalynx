@@ -25,7 +25,7 @@ import {
   Gift
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 interface EcoStats {
   totalCO2e: number;
@@ -33,6 +33,8 @@ interface EcoStats {
   mealsCount: number;
   avgCO2PerMeal: number;
   avgWaterPerMeal: number;
+  totalCarbonSaved: number;
+  totalWaterSaved: number;
 }
 
 interface EcoMilestone {
@@ -71,6 +73,12 @@ export default function EcoScreen() {
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      checkAuth(); // Re-run auth check and data fetch on focus
+    }, [])
+  );
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -112,6 +120,8 @@ export default function EcoScreen() {
           mealsCount: todayData.mealsCount,
           avgCO2PerMeal: todayData.mealsCount > 0 ? todayData.totalCO2e / todayData.mealsCount : 0,
           avgWaterPerMeal: todayData.mealsCount > 0 ? todayData.totalWater / todayData.mealsCount : 0,
+          totalCarbonSaved: todayData.totalCarbonSaved,
+          totalWaterSaved: todayData.totalWaterSaved,
         });
       }
 
@@ -136,6 +146,8 @@ export default function EcoScreen() {
           mealsCount: weeklyMeals.length,
           avgCO2PerMeal: weeklyMeals.length > 0 ? weeklyTotalCO2 / weeklyMeals.length : 0,
           avgWaterPerMeal: weeklyMeals.length > 0 ? weeklyTotalWater / weeklyMeals.length : 0,
+          totalCarbonSaved: weeklyTotalCO2,
+          totalWaterSaved: weeklyTotalWater,
         });
       }
 
@@ -156,10 +168,10 @@ export default function EcoScreen() {
         name: 'Carbon Saver',
         description: 'Save 10kg of CO₂ through sustainable meal choices',
         target: 10,
-        current: ecoStats?.totalCO2e ? Math.max(0, 10 - ecoStats.totalCO2e) : 0,
+        current: ecoStats?.totalCarbonSaved || 0,
         type: 'carbon_saved',
         reward: 'Eco Warrior Badge NFT',
-        completed: false,
+        completed: (ecoStats?.totalCarbonSaved || 0) >= 10,
         icon: 'leaf',
       },
       {
@@ -167,10 +179,10 @@ export default function EcoScreen() {
         name: 'Water Guardian',
         description: 'Save 100L of water through efficient meal planning',
         target: 100,
-        current: weeklyStats?.totalWater ? Math.min(100, weeklyStats.totalWater) : 0,
+        current: ecoStats?.totalWaterSaved || 0,
         type: 'water_saved',
         reward: 'Water Protector Badge NFT',
-        completed: false,
+        completed: (ecoStats?.totalWaterSaved || 0) >= 100,
         icon: 'droplet',
       },
       {
@@ -178,10 +190,10 @@ export default function EcoScreen() {
         name: 'Meal Tracker',
         description: 'Log 50 sustainable meals',
         target: 50,
-        current: 23, // Mock current progress
+        current: ecoStats?.mealsCount || 0,
         type: 'meals_logged',
         reward: 'Nutrition Expert Badge NFT',
-        completed: false,
+        completed: (ecoStats?.mealsCount || 0) >= 50,
         icon: 'target',
       },
     ];
@@ -190,31 +202,88 @@ export default function EcoScreen() {
   };
 
   const fetchChallenges = async () => {
-    // Mock challenges data - in production, fetch from database
-    const mockChallenges: EcoChallenge[] = [
-      {
-        id: '1',
-        title: 'Plant-Based Week',
-        description: 'Log 5 plant-based meals this week',
-        target: 5,
-        current: 2,
-        endDate: '2024-01-14',
-        reward: '50 Eco Points',
-        type: 'weekly',
-      },
-      {
-        id: '2',
-        title: 'Low Carbon Month',
-        description: 'Keep daily CO₂ under 2kg for 20 days this month',
-        target: 20,
-        current: 8,
-        endDate: '2024-01-31',
-        reward: 'Carbon Neutral Champion NFT',
-        type: 'monthly',
-      },
-    ];
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        router.replace('/auth');
+        return;
+      }
+      const userId = session.session.user.id;
 
-    setChallenges(mockChallenges);
+      const today = new Date();
+
+      // Calculate Plant-Based Week progress
+      const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1))); // Monday
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      
+      const { data: weeklyMeals, error: weeklyMealsError } = await supabase
+        .from('meals')
+        .select('name')
+        .eq('user_id', userId)
+        .gte('created_at', startOfWeek.toISOString())
+        .lt('created_at', endOfWeek.toISOString());
+      
+      let plantBasedMealsCount = 0;
+      if (!weeklyMealsError && weeklyMeals) {
+        const plantBasedKeywords = ['plant-based', 'vegan', 'vegetarian', 'tofu', 'lentil', 'bean', 'chickpea', 'vegetable'];
+        plantBasedMealsCount = weeklyMeals.filter(meal => 
+          plantBasedKeywords.some(keyword => meal.name.toLowerCase().includes(keyword))
+        ).length;
+      }
+
+      // Calculate Low Carbon Month progress
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      
+      const { data: dailyScores, error: dailyScoresError } = await supabase
+        .from('daily_scores')
+        .select('date, eco_score')
+        .eq('user_id', userId)
+        .gte('date', startOfMonth.toISOString().split('T')[0])
+        .lt('date', endOfMonth.toISOString().split('T')[0]);
+
+      let lowCarbonDaysCount = 0;
+      if (!dailyScoresError && dailyScores) {
+        // Count unique days where eco_score is greater than 50 (equivalent to totalCO2e < 2kg)
+        const uniqueLowCarbonDays = new Set<string>();
+        dailyScores.forEach(score => {
+          if ((score.eco_score || 0) > 50) {
+            uniqueLowCarbonDays.add(score.date);
+          }
+        });
+        lowCarbonDaysCount = uniqueLowCarbonDays.size;
+      }
+
+      const updatedChallenges: EcoChallenge[] = [
+        {
+          id: '1',
+          title: 'Plant-Based Week',
+          description: 'Log 5 plant-based meals this week',
+          target: 5,
+          current: plantBasedMealsCount,
+          endDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + (7 - today.getDay())).toISOString().split('T')[0],
+          reward: '50 Eco Points',
+          type: 'weekly',
+        },
+        {
+          id: '2',
+          title: 'Low Carbon Month',
+          description: 'Keep daily CO₂ under 2kg for 20 days this month',
+          target: 20,
+          current: lowCarbonDaysCount,
+          endDate: endOfMonth.toISOString().split('T')[0],
+          reward: 'Carbon Neutral Champion NFT',
+          type: 'monthly',
+        },
+      ];
+
+      setChallenges(updatedChallenges);
+
+    } catch (error) {
+      console.error('Error fetching challenges:', error);
+      Alert.alert('Error', 'Failed to load challenges');
+    }
   };
 
   const onRefresh = () => {
@@ -743,10 +812,13 @@ const styles = StyleSheet.create({
   },
   equivalentsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
+    justifyContent: 'space-around',
   },
   equivalentCard: {
     flex: 1,
+    minWidth: 120,
     backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
@@ -765,12 +837,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#111827',
     textAlign: 'center',
-    marginBottom: 2,
+    flexWrap: 'wrap',
   },
   equivalentSubtext: {
     fontSize: 11,
     color: '#6B7280',
     textAlign: 'center',
+    flexWrap: 'wrap',
   },
   modalOverlay: {
     flex: 1,
