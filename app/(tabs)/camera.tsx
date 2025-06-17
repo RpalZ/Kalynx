@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -160,48 +160,42 @@ export default function CameraScreen() {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!permission?.granted) {
-      requestPermission();
-    }
+    let mounted = true;
+    
+    const checkPermission = async () => {
+      if (!permission?.granted && mounted) {
+        await requestPermission();
+      }
+    };
+    
+    checkPermission();
+    
+    return () => {
+      mounted = false;
+    };
   }, [permission]);
 
-  const takePhoto = async () => {
-    if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync({
-        base64: true,
-        quality: 0.7,
-      });
-      setSelectedImage(photo.uri);
-      if (photo.base64) {
-        processImage(photo.base64);
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
+      // Clear any stored images to free memory
+      setSelectedImage(null);
+      setOriginalImageData(null);
+      setAnalysis(null);
+    };
+  }, []);
+
+  const processImage = useCallback(async (imageBase64: string) => {
+    if (isProcessing) {
+      Alert.alert('Error', 'Already processing an image');
+      return;
     }
-  };
 
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-      base64: true,
-    });
-
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
-      if (result.assets[0].base64) {
-        processImage(result.assets[0].base64);
-      }
-    }
-  };
-
-  const toggleCameraFacing = () => {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  };
-
-  const processImage = async (imageBase64: string) => {
     setIsProcessing(true);
     setAnalysis(null);
+    
     try {
       const { data: session } = await supabase.auth.getSession();
       
@@ -210,8 +204,8 @@ export default function CameraScreen() {
         return;
       }
 
-      // Store the original image data
-      setOriginalImageData(imageBase64);
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController();
 
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-recipes-from-fridge`,
@@ -224,6 +218,7 @@ export default function CameraScreen() {
           body: JSON.stringify({
             imageBase64: imageBase64,
           }),
+          signal: abortControllerRef.current.signal,
         }
       );
 
@@ -246,14 +241,68 @@ export default function CameraScreen() {
         Alert.alert('Error', errorText || 'Failed to analyze image');
       }
     } catch (error) {
-      console.error('Error processing image:', error);
-      Alert.alert('Error', 'Failed to process image');
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Analysis cancelled');
+      } else {
+        console.error('Error processing image:', error);
+        Alert.alert('Error', 'Failed to process image');
+      }
+    } finally {
+      setIsProcessing(false);
+      abortControllerRef.current = null;
+    }
+  }, [isProcessing]);
+
+  const takePhoto = useCallback(async () => {
+    if (!cameraRef.current || isProcessing) return;
+
+    try {
+      setIsProcessing(true);
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.7,
+        base64: true,
+        exif: false,
+        skipProcessing: true, // Skip processing for better performance
+      });
+
+      setSelectedImage(photo.uri);
+      if (photo.base64) {
+        await processImage(photo.base64);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo');
     } finally {
       setIsProcessing(false);
     }
+  }, [isProcessing, processImage]);
+
+  const pickImage = useCallback(async () => {
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+        base64: true,
+        exif: false,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        setSelectedImage(result.assets[0].uri);
+        await processImage(result.assets[0].base64);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  }, [processImage]);
+
+  const toggleCameraFacing = () => {
+    setFacing(current => (current === 'back' ? 'front' : 'back'));
   };
 
-  const logRecipeAsMeal = async (recipe: Recipe) => {
+  const logRecipeAsMeal = useCallback(async (recipe: Recipe) => {
     try {
       const { data: session } = await supabase.auth.getSession();
       
@@ -292,9 +341,9 @@ export default function CameraScreen() {
       console.error('Error logging recipe:', error);
       Alert.alert('Error', 'Failed to log recipe');
     }
-  };
+  }, []);
 
-  const handleAddIngredient = async (ingredients: string[]) => {
+  const handleAddIngredient = useCallback(async (ingredients: string[]) => {
     if (analysis) {
       setIsProcessing(true);
       setIsAnalyzing(true);
@@ -308,10 +357,8 @@ export default function CameraScreen() {
           return;
         }
 
-        // Add all new ingredients to the existing list
         const updatedIngredients = [...analysis.ingredients, ...ingredients];
 
-        // Call the generate-recipes-from-fridge function with the original image data
         const response = await fetch(
           `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-recipes-from-fridge`,
           {
@@ -330,7 +377,6 @@ export default function CameraScreen() {
 
         if (response.ok) {
           const data: FridgeAnalysis = await response.json();
-          // Ensure numeric fields are parsed as numbers
           const parsedRecipes = data.recipes.map(recipe => ({
             ...recipe,
             estimated_cost: Number(recipe.estimated_cost),
@@ -346,7 +392,7 @@ export default function CameraScreen() {
           const errorText = await response.text();
           Alert.alert('Error', errorText || 'Failed to analyze with new ingredients');
         }
-      } catch (error: unknown) {
+      } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           console.log('Analysis cancelled by user');
         } else {
@@ -359,7 +405,7 @@ export default function CameraScreen() {
         abortControllerRef.current = null;
       }
     }
-  };
+  }, [analysis, originalImageData]);
 
   const handleCancelAnalysis = () => {
     if (abortControllerRef.current) {
