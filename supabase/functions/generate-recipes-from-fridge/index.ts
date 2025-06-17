@@ -2,7 +2,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { ImageAnnotatorClient } from 'npm:@google-cloud/vision'; // For Google Cloud Vision
 
 interface FridgePhotoRequest {
-  imageBase64: string;
+  imageBase64?: string;
+  ingredients?: string[];
   latitude?: number;
   longitude?: number;
 }
@@ -385,93 +386,62 @@ Example JSON response format:
 // Main Edge Function handler
 Deno.serve(async (req: Request) => {
   console.log('generate-recipes-from-fridge function started');
-  // Handle preflight requests
+  
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const { imageBase64, ingredients: manualIngredients, latitude, longitude }: FridgePhotoRequest = await req.json();
+    
+    if (!imageBase64 && !manualIngredients) {
+      return new Response(
+        JSON.stringify({ error: 'Either imageBase64 or ingredients must be provided' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    let detectedIngredients: string[] = [];
+    
+    // If image is provided, detect ingredients from it
+    if (imageBase64) {
+      detectedIngredients = await detectIngredientsFromImage(imageBase64);
+    }
+    
+    // If manual ingredients are provided, add them to the detected ones
+    if (manualIngredients) {
+      // Remove duplicates and combine with detected ingredients
+      const allIngredients = new Set([...detectedIngredients, ...manualIngredients]);
+      detectedIngredients = Array.from(allIngredients);
+    }
+
+    console.log('Final ingredients list:', detectedIngredients);
+
+    // Generate recipes using the combined ingredients list
+    const recipes = await generateRecipesFromIngredients(detectedIngredients, latitude, longitude);
+    
+    return new Response(
+      JSON.stringify({
+        ingredients: detectedIngredients,
+        recipes: recipes,
+        savedRecipes: [] // You can implement saved recipes functionality later
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     );
-
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response('Authorization header required', { 
-        status: 401,
-        headers: corsHeaders
-      });
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
-
-    if (authError || !user) {
-      return new Response('Unauthorized', { 
-        status: 401,
-        headers: corsHeaders
-      });
-    }
-
-    const { imageBase64, latitude, longitude }: FridgePhotoRequest = await req.json();
-
-    if (!imageBase64) {
-      return new Response('Image data is required', { 
-        status: 400,
-        headers: corsHeaders
-      });
-    }
-
-    // Step 1: Extract ingredients from fridge photo
-    const detectedIngredients = await detectIngredientsFromImage(imageBase64);
-
-    if (detectedIngredients.length === 0) {
-      return new Response(JSON.stringify({
-        ingredients: [],
-        recipes: [],
-        savedRecipes: [],
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Step 2: Generate recipes based on ingredients (now with location data)
-    const generatedRecipes = await generateRecipesFromIngredients(
-      detectedIngredients,
-      latitude,
-      longitude
-    );
-
-    // Step 3: Fetch user's saved recipes for comparison or display
-    const { data: savedRecipes, error: savedRecipesError } = await supabase
-      .from('recipes_generated')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    if (savedRecipesError) {
-      console.error('Error fetching saved recipes:', savedRecipesError);
-    }
-
-    return new Response(JSON.stringify({
-      ingredients: detectedIngredients,
-      recipes: generatedRecipes,
-      savedRecipes: savedRecipes || [],
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
   } catch (error) {
-    console.error('Error:', error);
-    return new Response('Internal server error', { 
-      status: 500,
-      headers: corsHeaders
-    });
+    console.error('Error in generate-recipes-from-fridge:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
   }
 });

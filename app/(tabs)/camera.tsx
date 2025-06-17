@@ -9,6 +9,8 @@ import {
   Image,
   ActivityIndicator,
   Platform,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,13 +39,121 @@ interface FridgeAnalysis {
   savedRecipes: Recipe[];
 }
 
+interface AddIngredientModalProps {
+  isVisible: boolean;
+  onClose: () => void;
+  onAdd: (ingredients: string[]) => void;
+  newIngredient: string;
+  setNewIngredient: (text: string) => void;
+}
+
+const AddIngredientModal = ({ isVisible, onClose, onAdd, newIngredient, setNewIngredient }: AddIngredientModalProps) => {
+  const [tempIngredients, setTempIngredients] = useState<string[]>([]);
+
+  const handleAddToBatch = () => {
+    if (!newIngredient.trim()) {
+      Alert.alert('Error', 'Please enter an ingredient');
+      return;
+    }
+    setTempIngredients([...tempIngredients, newIngredient.trim()]);
+    setNewIngredient('');
+  };
+
+  const handleRemoveFromBatch = (index: number) => {
+    setTempIngredients(tempIngredients.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = () => {
+    if (tempIngredients.length === 0) {
+      Alert.alert('Error', 'Please add at least one ingredient');
+      return;
+    }
+    onAdd(tempIngredients);
+    setTempIngredients([]);
+  };
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={isVisible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Add Ingredients</Text>
+          
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              value={newIngredient}
+              onChangeText={setNewIngredient}
+              placeholder="Enter ingredient name"
+              autoCapitalize="none"
+              autoCorrect={false}
+              onSubmitEditing={handleAddToBatch}
+            />
+            <TouchableOpacity
+              style={styles.addToBatchButton}
+              onPress={handleAddToBatch}
+            >
+              <Text style={styles.addToBatchButtonText}>Add to List</Text>
+            </TouchableOpacity>
+          </View>
+
+          {tempIngredients.length > 0 && (
+            <View style={styles.batchList}>
+              <Text style={styles.batchListTitle}>Ingredients to Add:</Text>
+              {tempIngredients.map((ingredient, index) => (
+                <View key={index} style={styles.batchItem}>
+                  <Text style={styles.batchItemText}>{ingredient}</Text>
+                  <TouchableOpacity
+                    onPress={() => handleRemoveFromBatch(index)}
+                    style={styles.removeButton}
+                  >
+                    <X size={16} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.cancelButton]}
+              onPress={() => {
+                setNewIngredient('');
+                setTempIngredients([]);
+                onClose();
+              }}
+            >
+              <Text style={[styles.modalButtonText, styles.cancelButtonText]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.addButton]}
+              onPress={handleSubmit}
+            >
+              <Text style={styles.modalButtonText}>Add All ({tempIngredients.length})</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [originalImageData, setOriginalImageData] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<FridgeAnalysis | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAddIngredientModalVisible, setIsAddIngredientModalVisible] = useState(false);
+  const [newIngredient, setNewIngredient] = useState('');
   const cameraRef = useRef<CameraView>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!permission?.granted) {
@@ -95,6 +205,9 @@ export default function CameraScreen() {
         router.replace('/auth');
         return;
       }
+
+      // Store the original image data
+      setOriginalImageData(imageBase64);
 
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-recipes-from-fridge`,
@@ -174,6 +287,82 @@ export default function CameraScreen() {
     } catch (error) {
       console.error('Error logging recipe:', error);
       Alert.alert('Error', 'Failed to log recipe');
+    }
+  };
+
+  const handleAddIngredient = async (ingredients: string[]) => {
+    if (analysis) {
+      setIsProcessing(true);
+      setIsAnalyzing(true);
+      abortControllerRef.current = new AbortController();
+
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        
+        if (!session.session) {
+          router.replace('/auth');
+          return;
+        }
+
+        // Add all new ingredients to the existing list
+        const updatedIngredients = [...analysis.ingredients, ...ingredients];
+
+        // Call the generate-recipes-from-fridge function with the original image data
+        const response = await fetch(
+          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-recipes-from-fridge`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              imageBase64: originalImageData,
+              ingredients: updatedIngredients,
+            }),
+            signal: abortControllerRef.current.signal,
+          }
+        );
+
+        if (response.ok) {
+          const data: FridgeAnalysis = await response.json();
+          // Ensure numeric fields are parsed as numbers
+          const parsedRecipes = data.recipes.map(recipe => ({
+            ...recipe,
+            estimated_cost: Number(recipe.estimated_cost),
+            carbon_impact: Number(recipe.carbon_impact),
+            water_impact: Number(recipe.water_impact),
+          }));
+          setAnalysis({ ...data, recipes: parsedRecipes });
+          Alert.alert(
+            'Success!', 
+            `Added ${ingredients.length} ingredients and generated ${data.recipes.length} new recipes!`
+          );
+        } else {
+          const errorText = await response.text();
+          Alert.alert('Error', errorText || 'Failed to analyze with new ingredients');
+        }
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('Analysis cancelled by user');
+        } else {
+          console.error('Error processing new ingredients:', error);
+          Alert.alert('Error', 'Failed to process new ingredients');
+        }
+      } finally {
+        setIsProcessing(false);
+        setIsAnalyzing(false);
+        abortControllerRef.current = null;
+      }
+    }
+  };
+
+  const handleCancelAnalysis = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsProcessing(false);
+      setIsAnalyzing(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -282,10 +471,18 @@ export default function CameraScreen() {
           <View style={styles.section}>
             <View style={styles.processingCard}>
               <ActivityIndicator size="large" color="#2563EB" />
-              <Text style={styles.processingText}>Analyzing your fridge...</Text>
+              <Text style={styles.processingText}>Analyzing your ingredients...</Text>
               <Text style={styles.processingSubtext}>
-                AI is identifying ingredients and generating sustainable recipes
+                AI is generating sustainable recipes with your new ingredients
               </Text>
+              {isAnalyzing && (
+                <TouchableOpacity
+                  style={styles.cancelAnalysisButton}
+                  onPress={handleCancelAnalysis}
+                >
+                  <Text style={styles.cancelAnalysisButtonText}>Cancel Analysis</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
@@ -295,7 +492,15 @@ export default function CameraScreen() {
           <>
             {/* Detected Ingredients */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Detected Ingredients</Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Detected Ingredients</Text>
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() => setIsAddIngredientModalVisible(true)}
+                >
+                  <Text style={styles.addButtonText}>+ Add</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.ingredientsContainer}>
                 {analysis.ingredients.map((ingredient, index) => (
                   <IngredientCard key={index} ingredient={ingredient} />
@@ -359,6 +564,20 @@ export default function CameraScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <AddIngredientModal
+        isVisible={isAddIngredientModalVisible}
+        onClose={() => {
+          setNewIngredient('');
+          setIsAddIngredientModalVisible(false);
+        }}
+        onAdd={(ingredients) => {
+          setIsAddIngredientModalVisible(false); // Close modal immediately
+          handleAddIngredient(ingredients);
+        }}
+        newIngredient={newIngredient}
+        setNewIngredient={setNewIngredient}
+      />
     </SafeAreaView>
   );
 }
@@ -631,5 +850,121 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+  },
+  addToBatchButton: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    justifyContent: 'center',
+  },
+  addToBatchButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  batchList: {
+    marginBottom: 16,
+  },
+  batchListTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  batchItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F3F4F6',
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  batchItemText: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  removeButton: {
+    padding: 4,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  modalButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+  },
+  addButton: {
+    backgroundColor: '#2563EB',
+  },
+  modalButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cancelButtonText: {
+    color: '#374151',
+  },
+  cancelAnalysisButton: {
+    marginTop: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#EF4444',
+    borderRadius: 6,
+  },
+  cancelAnalysisButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
