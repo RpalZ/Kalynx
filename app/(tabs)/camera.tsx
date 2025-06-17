@@ -382,9 +382,17 @@ export default function CameraScreen() {
       
       <View style={styles.recipeIngredients}>
         <Text style={styles.ingredientsLabel}>Ingredients:</Text>
-        {recipe.ingredients.map((ingredient, index) => (
-          <Text key={index} style={styles.ingredientItem}>• {ingredient}</Text>
-        ))}
+        {recipe.detailed_ingredients && recipe.detailed_ingredients.length > 0 ? (
+          recipe.detailed_ingredients.map((ingredient, index) => (
+            <Text key={index} style={styles.ingredientItem}>
+              • {ingredient.ingredient} ({ingredient.amount}{ingredient.unit})
+            </Text>
+          ))
+        ) : (
+          recipe.ingredients.map((ingredient, index) => (
+            <Text key={index} style={styles.ingredientItem}>• {ingredient}</Text>
+          ))
+        )}
       </View>
 
       <View style={styles.recipeMetrics}>

@@ -7,10 +7,11 @@ import {
   RefreshControl,
   Alert,
   Image,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Trophy, Medal, Award, TrendingUp } from 'lucide-react-native';
+import { Trophy, Medal, Award, TrendingUp, RefreshCw } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 
@@ -177,10 +178,21 @@ export default function LeaderboardScreen() {
         colors={['#7C3AED', '#A855F7']}
         style={styles.header}
       >
-        <Text style={styles.headerTitle}>Leaderboard</Text>
-        <Text style={styles.headerSubtitle}>
-          {leaderboardData ? `Past ${leaderboardData.period.days} days` : 'Community rankings'}
-        </Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.headerTitle}>Leaderboard</Text>
+            <Text style={styles.headerSubtitle}>
+              {leaderboardData ? `Past ${leaderboardData.period.days} days` : 'Community rankings'}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={onRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
 
       <ScrollView
@@ -279,6 +291,11 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingBottom: 32,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 28,
@@ -421,5 +438,8 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  refreshButton: {
+    padding: 8,
   },
 });

@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Search, Utensils, Flame, Activity, Leaf, Droplet } from 'lucide-react-native';
+import { Plus, Search, Utensils, Flame, Activity, Leaf, Droplet, X } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 
@@ -24,6 +24,12 @@ interface Meal {
   created_at: string;
 }
 
+interface DetailedIngredient {
+  ingredient: string;
+  amount: string;
+  unit: string;
+}
+
 export default function MealsScreen() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,6 +38,10 @@ export default function MealsScreen() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newMealName, setNewMealName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [detailedIngredients, setDetailedIngredients] = useState<DetailedIngredient[]>([]);
+  const [currentIngredient, setCurrentIngredient] = useState('');
+  const [currentAmount, setCurrentAmount] = useState('');
+  const [currentUnit, setCurrentUnit] = useState('g');
 
   useEffect(() => {
     checkAuth();
@@ -89,6 +99,39 @@ export default function MealsScreen() {
     fetchMeals();
   };
 
+  const handleAddIngredient = () => {
+    if (!currentIngredient.trim()) {
+      Alert.alert('Error', 'Please enter an ingredient name');
+      return;
+    }
+    
+    if (!currentAmount.trim()) {
+      Alert.alert('Error', 'Please enter an amount');
+      return;
+    }
+
+    if (!currentUnit.trim()) {
+      Alert.alert('Error', 'Please enter a unit (g/ml)');
+      return;
+    }
+    
+    setDetailedIngredients([
+      ...detailedIngredients,
+      {
+        ingredient: currentIngredient.trim(),
+        amount: currentAmount.trim(),
+        unit: currentUnit.trim(),
+      }
+    ]);
+    setCurrentIngredient('');
+    setCurrentAmount('');
+    setCurrentUnit('g');
+  };
+
+  const handleRemoveIngredient = (index: number) => {
+    setDetailedIngredients(detailedIngredients.filter((_, i) => i !== index));
+  };
+
   const handleAddMeal = async () => {
     if (!newMealName.trim()) {
       Alert.alert('Error', 'Please enter a meal name');
@@ -115,12 +158,14 @@ export default function MealsScreen() {
           },
           body: JSON.stringify({
             mealName: newMealName,
+            detailed_ingredients: detailedIngredients.length > 0 ? detailedIngredients : undefined,
           }),
         }
       );
 
       if (response.ok) {
         setNewMealName('');
+        setDetailedIngredients([]);
         setShowAddForm(false);
         fetchMeals();
         Alert.alert('Success', 'Meal logged successfully!');
@@ -199,17 +244,90 @@ export default function MealsScreen() {
         <View style={styles.addForm}>
           <TextInput
             style={styles.input}
-            placeholder="Enter meal name (e.g., chicken breast with rice)"
+            placeholder="Enter meal name"
             value={newMealName}
             onChangeText={setNewMealName}
-            multiline
           />
+          
+          <View style={styles.ingredientsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Add Ingredients (Optional)</Text>
+              <Text style={styles.sectionSubtitle}>
+                Add each ingredient with its amount and unit
+              </Text>
+            </View>
+
+            <View style={styles.ingredientInputContainer}>
+              <View style={styles.ingredientInputRow}>
+                <TextInput
+                  style={[styles.input, styles.ingredientInput]}
+                  placeholder="Ingredient (e.g., chicken)"
+                  value={currentIngredient}
+                  onChangeText={setCurrentIngredient}
+                  onSubmitEditing={() => {
+                    if (currentIngredient.trim()) {
+                      setCurrentAmount('');
+                      setCurrentUnit('g');
+                    }
+                  }}
+                />
+                <TextInput
+                  style={[styles.input, styles.amountInput]}
+                  placeholder="Amount"
+                  value={currentAmount}
+                  onChangeText={setCurrentAmount}
+                  keyboardType="numeric"
+                  onSubmitEditing={() => {
+                    if (currentAmount.trim()) {
+                      setCurrentUnit('g');
+                    }
+                  }}
+                />
+                <TextInput
+                  style={[styles.input, styles.unitInput]}
+                  placeholder="Unit (g/ml)"
+                  value={currentUnit}
+                  onChangeText={setCurrentUnit}
+                  onSubmitEditing={handleAddIngredient}
+                />
+              </View>
+              <TouchableOpacity
+                style={styles.addIngredientButton}
+                onPress={handleAddIngredient}
+              >
+                <Plus size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            {detailedIngredients.length > 0 && (
+              <View style={styles.ingredientsList}>
+                <Text style={styles.ingredientsListTitle}>
+                  Added Ingredients ({detailedIngredients.length})
+                </Text>
+                {detailedIngredients.map((ing, index) => (
+                  <View key={index} style={styles.ingredientItem}>
+                    <Text style={styles.ingredientText}>
+                      {ing.ingredient} ({ing.amount}{ing.unit})
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => handleRemoveIngredient(index)}
+                      style={styles.removeIngredientButton}
+                    >
+                      <X size={16} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
           <View style={styles.formButtons}>
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => {
                 setShowAddForm(false);
                 setNewMealName('');
+                setDetailedIngredients([]);
               }}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -427,5 +545,77 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  ingredientsSection: {
+    marginTop: 16,
+  },
+  sectionHeader: {
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  ingredientInputContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+  },
+  ingredientInputRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  ingredientInput: {
+    flex: 2,
+    minWidth: 100,
+  },
+  amountInput: {
+    flex: 1,
+    minWidth: 60,
+  },
+  unitInput: {
+    flex: 1,
+    minWidth: 60,
+  },
+  addIngredientButton: {
+    backgroundColor: '#16A34A',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 1,
+  },
+  ingredientsList: {
+    marginTop: 12,
+    gap: 8,
+  },
+  ingredientsListTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  ingredientItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F3F4F6',
+    padding: 8,
+    borderRadius: 6,
+  },
+  ingredientText: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  removeIngredientButton: {
+    padding: 4,
   },
 });
