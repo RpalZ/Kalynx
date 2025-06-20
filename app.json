@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Foodprint+Fit",
-    "slug": "foodprint-fit",
+    "name": "Kalyx",
+    "slug": "kalyx",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "foodprint-fit",
+    "scheme": "kalyx",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -30,7 +30,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Foodprint+Fit to use your location to provide accurate pricing for ingredients in your area."
+          "locationAlwaysAndWhenInUsePermission": "Allow Kalyx to use your location to provide accurate pricing for ingredients in your area."
         }
       ]
     ],

@@ -205,7 +205,7 @@ export default function AuthScreen() {
         >
           <View style={styles.logoContainer}>
             <Leaf size={48} color="#FFFFFF" />
-            <Text style={styles.appName}>Foodprint+Fit</Text>
+            <Text style={styles.appName}>Kalyx</Text>
             <Text style={styles.tagline}>Sustainable Health & Fitness</Text>
           </View>
         </LinearGradient>
