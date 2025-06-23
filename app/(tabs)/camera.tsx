@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { Upload, Sparkles, ChefHat, Leaf, Droplet, Clock, DollarSign, CircleChec
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Recipe {
   id: string;
@@ -48,6 +49,7 @@ interface AddIngredientModalProps {
 }
 
 const AddIngredientModal = ({ isVisible, onClose, onAdd, newIngredient, setNewIngredient }: AddIngredientModalProps) => {
+  const { theme } = useTheme();
   const [tempIngredients, setTempIngredients] = useState<string[]>([]);
 
   const handleAddToBatch = () => {
@@ -79,22 +81,23 @@ const AddIngredientModal = ({ isVisible, onClose, onAdd, newIngredient, setNewIn
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Add Ingredients</Text>
+      <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+        <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+          <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Add Ingredients</Text>
           
           <View style={styles.inputContainer}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text }]}
               value={newIngredient}
               onChangeText={setNewIngredient}
               placeholder="Enter ingredient name"
+              placeholderTextColor={theme.colors.placeholder}
               autoCapitalize="none"
               autoCorrect={false}
               onSubmitEditing={handleAddToBatch}
             />
             <TouchableOpacity
-              style={styles.addToBatchButton}
+              style={[styles.addToBatchButton, { backgroundColor: theme.colors.secondary }]}
               onPress={handleAddToBatch}
             >
               <Text style={styles.addToBatchButtonText}>Add to List</Text>
@@ -103,15 +106,15 @@ const AddIngredientModal = ({ isVisible, onClose, onAdd, newIngredient, setNewIn
 
           {tempIngredients.length > 0 && (
             <View style={styles.batchList}>
-              <Text style={styles.batchListTitle}>Ingredients to Add:</Text>
+              <Text style={[styles.batchListTitle, { color: theme.colors.text }]}>Ingredients to Add:</Text>
               {tempIngredients.map((ingredient, index) => (
-                <View key={index} style={styles.batchItem}>
-                  <Text style={styles.batchItemText}>{ingredient}</Text>
+                <View key={index} style={[styles.batchItem, { backgroundColor: theme.colors.surface }]}>
+                  <Text style={[styles.batchItemText, { color: theme.colors.text }]}>{ingredient}</Text>
                   <TouchableOpacity
                     onPress={() => handleRemoveFromBatch(index)}
                     style={styles.removeButton}
                   >
-                    <X size={16} color="#EF4444" />
+                    <X size={16} color={theme.colors.error} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -120,17 +123,17 @@ const AddIngredientModal = ({ isVisible, onClose, onAdd, newIngredient, setNewIn
 
           <View style={styles.modalButtons}>
             <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
+              style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.colors.surface }]}
               onPress={() => {
                 setNewIngredient('');
                 setTempIngredients([]);
                 onClose();
               }}
             >
-              <Text style={[styles.modalButtonText, styles.cancelButtonText]}>Cancel</Text>
+              <Text style={[styles.modalButtonText, styles.cancelButtonText, { color: theme.colors.text }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalButton, styles.addButton]}
+              style={[styles.modalButton, styles.addButton, { backgroundColor: theme.colors.secondary }]}
               onPress={handleSubmit}
             >
               <Text style={styles.modalButtonText}>Add All ({tempIngredients.length})</Text>
@@ -143,6 +146,7 @@ const AddIngredientModal = ({ isVisible, onClose, onAdd, newIngredient, setNewIn
 };
 
 export default function CameraScreen() {
+  const { theme } = useTheme();
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -154,50 +158,48 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [isGeneratingRecipes, setIsGeneratingRecipes] = useState(false);
+  const [directRecipes, setDirectRecipes] = useState<Recipe[]>([]);
+  const [manualIngredients, setManualIngredients] = useState<string[]>([]);
+  const [manualRecipes, setManualRecipes] = useState<Recipe[]>([]);
 
   useEffect(() => {
-    if (!permission?.granted) {
-      requestPermission();
-    }
+    let mounted = true;
+    
+    const checkPermission = async () => {
+      if (!permission?.granted && mounted) {
+        await requestPermission();
+      }
+    };
+    
+    checkPermission();
+    
+    return () => {
+      mounted = false;
+    };
   }, [permission]);
 
-  const takePhoto = async () => {
-    if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync({
-        base64: true,
-        quality: 0.7,
-      });
-      setSelectedImage(photo.uri);
-      if (photo.base64) {
-        processImage(photo.base64);
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
+      // Clear any stored images to free memory
+      setSelectedImage(null);
+      setOriginalImageData(null);
+      setAnalysis(null);
+    };
+  }, []);
+
+  const processImage = useCallback(async (imageBase64: string) => {
+    if (isProcessing) {
+      Alert.alert('Error', 'Already processing an image');
+      return;
     }
-  };
 
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.7,
-      base64: true,
-    });
-
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
-      if (result.assets[0].base64) {
-        processImage(result.assets[0].base64);
-      }
-    }
-  };
-
-  const toggleCameraFacing = () => {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  };
-
-  const processImage = async (imageBase64: string) => {
     setIsProcessing(true);
     setAnalysis(null);
+    
     try {
       const { data: session } = await supabase.auth.getSession();
       
@@ -206,8 +208,8 @@ export default function CameraScreen() {
         return;
       }
 
-      // Store the original image data
-      setOriginalImageData(imageBase64);
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController();
 
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-recipes-from-fridge`,
@@ -220,6 +222,7 @@ export default function CameraScreen() {
           body: JSON.stringify({
             imageBase64: imageBase64,
           }),
+          signal: abortControllerRef.current.signal,
         }
       );
 
@@ -242,14 +245,68 @@ export default function CameraScreen() {
         Alert.alert('Error', errorText || 'Failed to analyze image');
       }
     } catch (error) {
-      console.error('Error processing image:', error);
-      Alert.alert('Error', 'Failed to process image');
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Analysis cancelled');
+      } else {
+        console.error('Error processing image:', error);
+        Alert.alert('Error', 'Failed to process image');
+      }
+    } finally {
+      setIsProcessing(false);
+      abortControllerRef.current = null;
+    }
+  }, [isProcessing]);
+
+  const takePhoto = useCallback(async () => {
+    if (!cameraRef.current || isProcessing) return;
+
+    try {
+      setIsProcessing(true);
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.7,
+        base64: true,
+        exif: false,
+        skipProcessing: true, // Skip processing for better performance
+      });
+
+      setSelectedImage(photo.uri);
+      if (photo.base64) {
+        await processImage(photo.base64);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo');
     } finally {
       setIsProcessing(false);
     }
+  }, [isProcessing, processImage]);
+
+  const pickImage = useCallback(async () => {
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+        base64: true,
+        exif: false,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        setSelectedImage(result.assets[0].uri);
+        await processImage(result.assets[0].base64);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  }, [processImage]);
+
+  const toggleCameraFacing = () => {
+    setFacing(current => (current === 'back' ? 'front' : 'back'));
   };
 
-  const logRecipeAsMeal = async (recipe: Recipe) => {
+  const logRecipeAsMeal = useCallback(async (recipe: Recipe) => {
     try {
       const { data: session } = await supabase.auth.getSession();
       
@@ -288,9 +345,9 @@ export default function CameraScreen() {
       console.error('Error logging recipe:', error);
       Alert.alert('Error', 'Failed to log recipe');
     }
-  };
+  }, []);
 
-  const handleAddIngredient = async (ingredients: string[]) => {
+  const handleAddIngredient = useCallback(async (ingredients: string[]) => {
     if (analysis) {
       setIsProcessing(true);
       setIsAnalyzing(true);
@@ -304,10 +361,8 @@ export default function CameraScreen() {
           return;
         }
 
-        // Add all new ingredients to the existing list
         const updatedIngredients = [...analysis.ingredients, ...ingredients];
 
-        // Call the generate-recipes-from-fridge function with the original image data
         const response = await fetch(
           `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-recipes-from-fridge`,
           {
@@ -326,7 +381,6 @@ export default function CameraScreen() {
 
         if (response.ok) {
           const data: FridgeAnalysis = await response.json();
-          // Ensure numeric fields are parsed as numbers
           const parsedRecipes = data.recipes.map(recipe => ({
             ...recipe,
             estimated_cost: Number(recipe.estimated_cost),
@@ -342,7 +396,7 @@ export default function CameraScreen() {
           const errorText = await response.text();
           Alert.alert('Error', errorText || 'Failed to analyze with new ingredients');
         }
-      } catch (error: unknown) {
+      } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           console.log('Analysis cancelled by user');
         } else {
@@ -355,7 +409,7 @@ export default function CameraScreen() {
         abortControllerRef.current = null;
       }
     }
-  };
+  }, [analysis, originalImageData]);
 
   const handleCancelAnalysis = () => {
     if (abortControllerRef.current) {
@@ -367,51 +421,51 @@ export default function CameraScreen() {
   };
 
   const IngredientCard = ({ ingredient }: { ingredient: string }) => (
-    <View style={styles.ingredientCard}>
-      <CheckCircle size={16} color="#16A34A" />
-      <Text style={styles.ingredientText}>{ingredient}</Text>
+    <View style={[styles.ingredientCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.success }]}>
+      <CheckCircle size={16} color={theme.colors.success} />
+      <Text style={[styles.ingredientText, { color: theme.colors.text }]}>{ingredient}</Text>
     </View>
   );
 
   const RecipeCard = ({ recipe }: { recipe: Recipe }) => (
-    <View style={styles.recipeCard}>
+    <View style={[styles.recipeCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
       <View style={styles.recipeHeader}>
-        <ChefHat size={20} color="#F59E0B" />
-        <Text style={styles.recipeTitle}>{recipe.title}</Text>
+        <ChefHat size={20} color={theme.colors.warning} />
+        <Text style={[styles.recipeTitle, { color: theme.colors.text }]}>{recipe.title}</Text>
       </View>
       
       <View style={styles.recipeIngredients}>
-        <Text style={styles.ingredientsLabel}>Ingredients:</Text>
+        <Text style={[styles.ingredientsLabel, { color: theme.colors.text }]}>Ingredients:</Text>
         {recipe.detailed_ingredients && recipe.detailed_ingredients.length > 0 ? (
           recipe.detailed_ingredients.map((ingredient, index) => (
-            <Text key={index} style={styles.ingredientItem}>
+            <Text key={index} style={[styles.ingredientItem, { color: theme.colors.textSecondary }]}>
               • {ingredient.ingredient} ({ingredient.amount}{ingredient.unit})
             </Text>
           ))
         ) : (
           recipe.ingredients.map((ingredient, index) => (
-            <Text key={index} style={styles.ingredientItem}>• {ingredient}</Text>
+            <Text key={index} style={[styles.ingredientItem, { color: theme.colors.textSecondary }]}>• {ingredient}</Text>
           ))
         )}
       </View>
 
       <View style={styles.recipeMetrics}>
         <View style={styles.metricItem}>
-          <DollarSign size={16} color="#059669" />
-          <Text style={styles.metricText}>${(recipe.estimated_cost ?? 0).toFixed(2)}</Text>
+          <DollarSign size={16} color={theme.colors.success} />
+          <Text style={[styles.metricText, { color: theme.colors.textSecondary }]}>${(recipe.estimated_cost ?? 0).toFixed(2)}</Text>
         </View>
         <View style={styles.metricItem}>
-          <Leaf size={16} color="#16A34A" />
-          <Text style={styles.metricText}>{(recipe.carbon_impact ?? 0).toFixed(2)} kg CO₂</Text>
+          <Leaf size={16} color={theme.colors.success} />
+          <Text style={[styles.metricText, { color: theme.colors.textSecondary }]}>{(recipe.carbon_impact ?? 0).toFixed(2)} kg CO₂</Text>
         </View>
         <View style={styles.metricItem}>
-          <Droplet size={16} color="#06B6D4" />
-          <Text style={styles.metricText}>{(recipe.water_impact ?? 0).toFixed(1)}L</Text>
+          <Droplet size={16} color={theme.colors.info} />
+          <Text style={[styles.metricText, { color: theme.colors.textSecondary }]}>{(recipe.water_impact ?? 0).toFixed(1)}L</Text>
         </View>
       </View>
 
       <TouchableOpacity
-        style={styles.logButton}
+        style={[styles.logButton, { backgroundColor: theme.colors.success }]}
         onPress={() => logRecipeAsMeal(recipe)}
       >
         <Text style={styles.logButtonText}>Log as Meal</Text>
@@ -419,10 +473,123 @@ export default function CameraScreen() {
     </View>
   );
 
+  const generateDirectRecipes = useCallback(async () => {
+    if (isGeneratingRecipes) return;
+
+    setIsGeneratingRecipes(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        router.replace('/auth');
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-recipes-from-fridge`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            useDeepSeek: true, // Flag to indicate direct API usage
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const parsedRecipes = data.recipes.map((recipe: Recipe) => ({
+          ...recipe,
+          estimated_cost: Number(recipe.estimated_cost),
+          carbon_impact: Number(recipe.carbon_impact),
+          water_impact: Number(recipe.water_impact),
+        }));
+        setDirectRecipes(parsedRecipes);
+        Alert.alert(
+          'Success!', 
+          `Generated ${parsedRecipes.length} sustainable recipes!`
+        );
+      } else {
+        const errorText = await response.text();
+        Alert.alert('Error', errorText || 'Failed to generate recipes');
+      }
+    } catch (error) {
+      console.error('Error generating recipes:', error);
+      Alert.alert('Error', 'Failed to generate recipes');
+    } finally {
+      setIsGeneratingRecipes(false);
+    }
+  }, [isGeneratingRecipes]);
+
+  const addManualIngredient = () => {
+    if (newIngredient.trim()) {
+      setManualIngredients([...manualIngredients, newIngredient.trim()]);
+      setNewIngredient('');
+    }
+  };
+
+  const removeManualIngredient = (index: number) => {
+    setManualIngredients(manualIngredients.filter((_, i) => i !== index));
+  };
+
+  const generateManualRecipes = useCallback(async () => {
+    if (isGeneratingRecipes || manualIngredients.length === 0) return;
+
+    setIsGeneratingRecipes(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        router.replace('/auth');
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-recipes-from-fridge`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ingredients: manualIngredients,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const parsedRecipes = data.recipes.map((recipe: Recipe) => ({
+          ...recipe,
+          estimated_cost: Number(recipe.estimated_cost),
+          carbon_impact: Number(recipe.carbon_impact),
+          water_impact: Number(recipe.water_impact),
+        }));
+        setManualRecipes(parsedRecipes);
+        Alert.alert(
+          'Success!', 
+          `Generated ${parsedRecipes.length} sustainable recipes!`
+        );
+      } else {
+        const errorText = await response.text();
+        Alert.alert('Error', errorText || 'Failed to generate recipes');
+      }
+    } catch (error) {
+      console.error('Error generating recipes:', error);
+      Alert.alert('Error', 'Failed to generate recipes');
+    } finally {
+      setIsGeneratingRecipes(false);
+    }
+  }, [isGeneratingRecipes, manualIngredients]);
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <LinearGradient
-        colors={['#2563EB', '#3B82F6']}
+        colors={[theme.colors.gradient.secondary[0], theme.colors.gradient.secondary[1]]}
         style={styles.header}
       >
         <Text style={styles.headerTitle}>AI Recipe Generator</Text>
@@ -432,22 +599,22 @@ export default function CameraScreen() {
       <ScrollView style={styles.scrollView}>
         {/* Camera/Upload Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Capture Fridge Photo</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Capture Fridge Photo</Text>
           
           {permission === null ? (
-            <View style={styles.cameraPlaceholder}>
-              <ActivityIndicator size="large" color="#6B7280" />
-              <Text style={styles.cameraPlaceholderText}>Requesting camera permission...</Text>
+            <View style={[styles.cameraPlaceholder, { backgroundColor: theme.colors.surface }]}>
+              <ActivityIndicator size="large" color={theme.colors.textSecondary} />
+              <Text style={[styles.cameraPlaceholderText, { color: theme.colors.textSecondary }]}>Requesting camera permission...</Text>
             </View>
           ) : !permission.granted ? (
-            <View style={styles.cameraPlaceholder}>
-              <Text style={styles.cameraPlaceholderText}>No access to camera. Please enable in settings.</Text>
+            <View style={[styles.cameraPlaceholder, { backgroundColor: theme.colors.surface }]}>
+              <Text style={[styles.cameraPlaceholderText, { color: theme.colors.textSecondary }]}>No access to camera. Please enable in settings.</Text>
             </View>
           ) : selectedImage ? (
             <View style={styles.imagePreview}>
               <Image source={{ uri: selectedImage }} style={styles.previewImage} />
               <TouchableOpacity
-                style={styles.removeImageButton}
+                style={[styles.removeImageButton, { backgroundColor: theme.colors.error }]}
                 onPress={() => {
                   setSelectedImage(null);
                   setAnalysis(null);
@@ -474,18 +641,86 @@ export default function CameraScreen() {
           )}
         </View>
 
+        {/* Manual Ingredient Input Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add Ingredients Manually</Text>
+          <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
+            Enter your ingredients to get recipe suggestions
+          </Text>
+          
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[styles.input, { 
+                backgroundColor: theme.colors.surface,
+                color: theme.colors.text,
+                borderColor: theme.colors.border
+              }]}
+              placeholder="Enter ingredient..."
+              placeholderTextColor={theme.colors.placeholder}
+              value={newIngredient}
+              onChangeText={setNewIngredient}
+              onSubmitEditing={addManualIngredient}
+            />
+            <TouchableOpacity 
+              style={[styles.addButton, { backgroundColor: theme.colors.secondary }]}
+              onPress={addManualIngredient}
+            >
+              <Text style={styles.addButtonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+
+          {manualIngredients.length > 0 && (
+            <View style={styles.ingredientsList}>
+              {manualIngredients.map((ingredient, index) => (
+                <View key={index} style={[styles.manualIngredientItem, { backgroundColor: theme.colors.surface }]}>
+                  <Text style={[styles.manualIngredientText, { color: theme.colors.text }]}>{ingredient}</Text>
+                  <TouchableOpacity onPress={() => removeManualIngredient(index)}>
+                    <X size={20} color={theme.colors.error} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.generateButton, { 
+              backgroundColor: theme.colors.secondary,
+              opacity: manualIngredients.length === 0 ? 0.5 : 1 
+            }]}
+            onPress={generateManualRecipes}
+            disabled={isGeneratingRecipes || manualIngredients.length === 0}
+          >
+            {isGeneratingRecipes ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Sparkles size={20} color="white" style={styles.buttonIcon} />
+                <Text style={styles.generateButtonText}>Generate Recipes</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {manualRecipes.length > 0 && (
+            <View style={styles.recipesContainer}>
+              {manualRecipes.map((recipe, index) => (
+                <RecipeCard key={index} recipe={recipe} />
+              ))}
+            </View>
+          )}
+        </View>
+
         {/* Processing Status */}
         {isProcessing && (
           <View style={styles.section}>
-            <View style={styles.processingCard}>
-              <ActivityIndicator size="large" color="#2563EB" />
-              <Text style={styles.processingText}>Analyzing your ingredients...</Text>
-              <Text style={styles.processingSubtext}>
+            <View style={[styles.processingCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <ActivityIndicator size="large" color={theme.colors.secondary} />
+              <Text style={[styles.processingText, { color: theme.colors.text }]}>Analyzing your ingredients...</Text>
+              <Text style={[styles.processingSubtext, { color: theme.colors.textSecondary }]}>
                 AI is generating sustainable recipes with your new ingredients
               </Text>
               {isAnalyzing && (
                 <TouchableOpacity
-                  style={styles.cancelAnalysisButton}
+                  style={[styles.cancelAnalysisButton, { backgroundColor: theme.colors.error }]}
                   onPress={handleCancelAnalysis}
                 >
                   <Text style={styles.cancelAnalysisButtonText}>Cancel Analysis</Text>
@@ -501,9 +736,9 @@ export default function CameraScreen() {
             {/* Detected Ingredients */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Detected Ingredients</Text>
+                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Detected Ingredients</Text>
                 <TouchableOpacity
-                  style={styles.addButton}
+                  style={[styles.addButton, { backgroundColor: theme.colors.secondary }]}
                   onPress={() => setIsAddIngredientModalVisible(true)}
                 >
                   <Text style={styles.addButtonText}>+ Add</Text>
@@ -518,7 +753,7 @@ export default function CameraScreen() {
 
             {/* Generated Recipes */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Sustainable Recipe Suggestions</Text>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Sustainable Recipe Suggestions</Text>
               {analysis.recipes.length > 0 ? (
                 <View style={styles.recipesContainer}>
                   {analysis.recipes.map((recipe, index) => (
@@ -527,9 +762,9 @@ export default function CameraScreen() {
                 </View>
               ) : (
                 <View style={styles.emptyState}>
-                  <ChefHat size={48} color="#D1D5DB" />
-                  <Text style={styles.emptyTitle}>No recipes found</Text>
-                  <Text style={styles.emptySubtitle}>
+                  <ChefHat size={48} color={theme.colors.disabled} />
+                  <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No recipes found</Text>
+                  <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
                     Try uploading a clearer photo with more visible ingredients
                   </Text>
                 </View>
@@ -540,31 +775,31 @@ export default function CameraScreen() {
 
         {/* Tips Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tips for Better Results</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Tips for Better Results</Text>
           <View style={styles.tipsContainer}>
-            <View style={styles.tipCard}>
-              <Sparkles size={20} color="#F59E0B" />
+            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <Sparkles size={20} color={theme.colors.warning} />
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Good Lighting</Text>
-                <Text style={styles.tipText}>
+                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Good Lighting</Text>
+                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
                   Take photos in well-lit areas for better ingredient detection
                 </Text>
               </View>
             </View>
-            <View style={styles.tipCard}>
-              <CameraIcon size={20} color="#2563EB" />
+            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <CameraIcon size={20} color={theme.colors.secondary} />
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Clear View</Text>
-                <Text style={styles.tipText}>
+                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Clear View</Text>
+                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
                   Arrange items so labels and ingredients are clearly visible
                 </Text>
               </View>
             </View>
-            <View style={styles.tipCard}>
-              <Leaf size={20} color="#16A34A" />
+            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <Leaf size={20} color={theme.colors.success} />
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Sustainable Choices</Text>
-                <Text style={styles.tipText}>
+                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Sustainable Choices</Text>
+                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
                   Our AI prioritizes recipes with lower environmental impact
                 </Text>
               </View>
@@ -580,7 +815,7 @@ export default function CameraScreen() {
           setIsAddIngredientModalVisible(false);
         }}
         onAdd={(ingredients) => {
-          setIsAddIngredientModalVisible(false); // Close modal immediately
+          setIsAddIngredientModalVisible(false);
           handleAddIngredient(ingredients);
         }}
         newIngredient={newIngredient}
@@ -593,7 +828,6 @@ export default function CameraScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     padding: 24,
@@ -618,7 +852,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 16,
   },
   uploadButton: {
@@ -653,7 +886,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#EF4444',
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -661,23 +893,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   processingCard: {
-    backgroundColor: '#FFFFFF',
     padding: 24,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   processingText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
     marginTop: 16,
     marginBottom: 8,
   },
   processingSubtext: {
     fontSize: 14,
-    color: '#6B7280',
     textAlign: 'center',
   },
   ingredientsContainer: {
@@ -688,28 +916,23 @@ const styles = StyleSheet.create({
   ingredientCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
     gap: 6,
   },
   ingredientText: {
     fontSize: 14,
-    color: '#166534',
     fontWeight: '500',
   },
   recipesContainer: {
     gap: 16,
   },
   recipeCard: {
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   recipeHeader: {
     flexDirection: 'row',
@@ -720,7 +943,6 @@ const styles = StyleSheet.create({
   recipeTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
     flex: 1,
   },
   recipeIngredients: {
@@ -729,12 +951,10 @@ const styles = StyleSheet.create({
   ingredientsLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 8,
   },
   ingredientItem: {
     fontSize: 14,
-    color: '#6B7280',
     marginBottom: 4,
   },
   recipeMetrics: {
@@ -749,11 +969,9 @@ const styles = StyleSheet.create({
   },
   metricText: {
     fontSize: 12,
-    color: '#6B7280',
     fontWeight: '500',
   },
   logButton: {
-    backgroundColor: '#16A34A',
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -768,11 +986,9 @@ const styles = StyleSheet.create({
   },
   tipCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     gap: 12,
   },
   tipContent: {
@@ -781,12 +997,10 @@ const styles = StyleSheet.create({
   tipTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 4,
   },
   tipText: {
     fontSize: 14,
-    color: '#6B7280',
     lineHeight: 20,
   },
   emptyState: {
@@ -797,13 +1011,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -848,7 +1060,6 @@ const styles = StyleSheet.create({
   },
   cameraPlaceholder: {
     aspectRatio: 4 / 3,
-    backgroundColor: '#E5E7EB',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -856,17 +1067,14 @@ const styles = StyleSheet.create({
   },
   cameraPlaceholderText: {
     fontSize: 16,
-    color: '#6B7280',
     textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 24,
     width: '90%',
@@ -875,7 +1083,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 16,
   },
   inputContainer: {
@@ -886,13 +1093,11 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
   },
   addToBatchButton: {
-    backgroundColor: '#2563EB',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
@@ -909,21 +1114,18 @@ const styles = StyleSheet.create({
   batchListTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 8,
   },
   batchItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F3F4F6',
     padding: 8,
     borderRadius: 6,
     marginBottom: 4,
   },
   batchItemText: {
     fontSize: 14,
-    color: '#111827',
   },
   removeButton: {
     padding: 4,
@@ -939,10 +1141,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   cancelButton: {
-    backgroundColor: '#F3F4F6',
   },
   addButton: {
-    backgroundColor: '#2563EB',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
   },
   modalButtonText: {
     fontSize: 14,
@@ -961,18 +1164,51 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   cancelButtonText: {
-    color: '#374151',
   },
   cancelAnalysisButton: {
     marginTop: 16,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: '#EF4444',
     borderRadius: 6,
   },
   cancelAnalysisButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  generateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  generateButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  ingredientsList: {
+    marginVertical: 16,
+  },
+  manualIngredientItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  manualIngredientText: {
+    fontSize: 16,
+    flex: 1,
   },
 });

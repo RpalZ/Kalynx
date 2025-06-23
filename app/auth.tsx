@@ -16,8 +16,10 @@ import { Leaf, Mail, Lock, User } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { Notification } from '../components/Notification';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function AuthScreen() {
+  const { theme } = useTheme();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -185,7 +187,7 @@ export default function AuthScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {notification && (
         <Notification
           message={notification.message}
@@ -198,21 +200,21 @@ export default function AuthScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <LinearGradient
-          colors={['#16A34A', '#22C55E']}
+          colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]] as const}
           style={styles.header}
         >
           <View style={styles.logoContainer}>
             <Leaf size={48} color="#FFFFFF" />
-            <Text style={styles.appName}>Foodprint+Fit</Text>
+            <Text style={styles.appName}>Kalyx</Text>
             <Text style={styles.tagline}>Sustainable Health & Fitness</Text>
           </View>
         </LinearGradient>
 
         <View style={styles.formContainer}>
-          <Text style={styles.formTitle}>
+          <Text style={[styles.formTitle, { color: theme.colors.text }]}>
             {isSignUp ? 'Create Account' : 'Welcome Back'}
           </Text>
-          <Text style={styles.formSubtitle}>
+          <Text style={[styles.formSubtitle, { color: theme.colors.textSecondary }]}>
             {isSignUp 
               ? 'Start your sustainable health journey' 
               : 'Sign in to continue tracking your progress'
@@ -220,11 +222,12 @@ export default function AuthScreen() {
           </Text>
 
           {isSignUp && (
-            <View style={styles.inputContainer}>
-              <User size={20} color="#6B7280" />
+            <View style={[styles.inputContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <User size={20} color={theme.colors.textSecondary} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: theme.colors.text }]}
                 placeholder="Full Name"
+                placeholderTextColor={theme.colors.placeholder}
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
@@ -232,11 +235,12 @@ export default function AuthScreen() {
             </View>
           )}
 
-          <View style={styles.inputContainer}>
-            <Mail size={20} color="#6B7280" />
+          <View style={[styles.inputContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Mail size={20} color={theme.colors.textSecondary} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: theme.colors.text }]}
               placeholder="Email"
+              placeholderTextColor={theme.colors.placeholder}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -244,11 +248,12 @@ export default function AuthScreen() {
             />
           </View>
 
-          <View style={styles.inputContainer}>
-            <Lock size={20} color="#6B7280" />
+          <View style={[styles.inputContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Lock size={20} color={theme.colors.textSecondary} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: theme.colors.text }]}
               placeholder="Password"
+              placeholderTextColor={theme.colors.placeholder}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -256,7 +261,7 @@ export default function AuthScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.authButton, isLoading && styles.buttonDisabled]}
+            style={[styles.authButton, { backgroundColor: theme.colors.success }, isLoading && styles.buttonDisabled]}
             onPress={handleAuth}
             disabled={isLoading}
           >
@@ -278,7 +283,7 @@ export default function AuthScreen() {
               setPassword('');
             }}
           >
-            <Text style={styles.switchButtonText}>
+            <Text style={[styles.switchButtonText, { color: theme.colors.success }]}>
               {isSignUp 
                 ? 'Already have an account? Sign In' 
                 : "Don't have an account? Sign Up"
@@ -288,7 +293,7 @@ export default function AuthScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
+          <Text style={[styles.footerText, { color: theme.colors.placeholder }]}>
             Track your nutrition, fitness, and environmental impact
           </Text>
         </View>
@@ -300,7 +305,6 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   keyboardView: {
     flex: 1,
@@ -334,13 +338,11 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#111827',
     marginBottom: 8,
     textAlign: 'center',
   },
   formSubtitle: {
     fontSize: 16,
-    color: '#6B7280',
     marginBottom: 32,
     textAlign: 'center',
     lineHeight: 24,
@@ -348,9 +350,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -360,10 +360,8 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
     fontSize: 16,
-    color: '#111827',
   },
   authButton: {
-    backgroundColor: '#16A34A',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -380,7 +378,6 @@ const styles = StyleSheet.create({
   },
   switchButtonText: {
     fontSize: 14,
-    color: '#16A34A',
     fontWeight: '500',
   },
   footer: {
@@ -389,7 +386,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: '#9CA3AF',
     textAlign: 'center',
   },
   buttonDisabled: {

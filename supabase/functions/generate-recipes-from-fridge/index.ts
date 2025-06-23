@@ -185,7 +185,112 @@ async function calculateRecipeCost(
   return Number(totalCost.toFixed(2));
 }
 
-// Mock ingredient detection (in production, use Google Cloud Vision or similar)
+// Add cache for recipe generation
+const recipeCache = new Map<string, Recipe[]>();
+
+// Optimize the system prompt to be more concise and focused on manual ingredients
+const SYSTEM_PROMPT = `Generate 3 quick, healthy recipes using these ingredients. For each recipe, provide:
+- Title
+- Ingredients list (only use the provided ingredients)
+- Carbon impact (kg CO2e)
+- Water impact (liters)
+- Cost (USD)
+- Calories
+- Protein (g)
+- Detailed ingredients with amounts
+
+Format as JSON array. Focus on quick recipes with minimal ingredients.`;
+
+async function generateRecipesFromIngredients(
+  ingredients: string[],
+  latitude?: number,
+  longitude?: number
+): Promise<Recipe[]> {
+  console.log('Generating recipes for ingredients:', ingredients);
+
+  const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY');
+
+  if (!DEEPSEEK_API_KEY) {
+    console.error('DeepSeek API key not set.');
+    throw new Error('DeepSeek API key is missing.');
+  }
+
+  // Create cache key from sorted ingredients
+  const cacheKey = ingredients.sort().join(',');
+  
+  // Check cache first
+  if (recipeCache.has(cacheKey)) {
+    console.log('Returning cached recipes');
+    return recipeCache.get(cacheKey)!;
+  }
+
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: `Ingredients: ${ingredients.join(', ')}` },
+  ];
+
+  try {
+    console.log('Sending request to DeepSeek API');
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: messages,
+        temperature: 0.7, // Increased for more variety in recipes
+        max_tokens: 1500, // Increased for more detailed recipes
+        response_format: { type: "json_object" }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('DeepSeek API error:', response.status, errorText);
+      throw new Error(`DeepSeek API call failed with status ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    const recipesData = JSON.parse(data.choices[0].message.content);
+
+    // Process recipes in parallel
+    const recipesPromises = recipesData.recipes.map(async (recipe: any) => {
+      const cost = await calculateRecipeCost(recipe.ingredients, latitude, longitude);
+      return {
+        title: recipe.title,
+        ingredients: recipe.ingredients,
+        estimated_cost: cost,
+        carbon_impact: recipe.carbon_impact,
+        water_impact: recipe.water_impact,
+        calories: recipe.calories,
+        protein: recipe.protein,
+        detailed_ingredients: recipe.detailed_ingredients || [],
+        created_at: new Date().toISOString(),
+      };
+    });
+
+    const generatedRecipes = await Promise.all(recipesPromises);
+
+    // Cache the results
+    recipeCache.set(cacheKey, generatedRecipes);
+
+    // Clear old cache entries (keep last 100)
+    if (recipeCache.size > 100) {
+      const keysToDelete = Array.from(recipeCache.keys()).slice(0, recipeCache.size - 100);
+      keysToDelete.forEach(key => recipeCache.delete(key));
+    }
+
+    return generatedRecipes;
+
+  } catch (error) {
+    console.error('Error generating recipes:', error);
+    throw error;
+  }
+}
+
+// Optimize image detection
 async function detectIngredientsFromImage(imageBase64: string): Promise<string[]> {
   const GOOGLE_VISION_API_KEY = Deno.env.get('GOOGLE_VISION_API_KEY');
 
@@ -195,6 +300,14 @@ async function detectIngredientsFromImage(imageBase64: string): Promise<string[]
   }
 
   try {
+    // Reduce image size if needed
+    const maxSize = 1024 * 1024; // 1MB
+    let processedImage = imageBase64;
+    if (imageBase64.length > maxSize) {
+      // Implement image compression here if needed
+      console.log('Image too large, consider implementing compression');
+    }
+
     const response = await fetch(
       `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
       {
@@ -206,16 +319,16 @@ async function detectIngredientsFromImage(imageBase64: string): Promise<string[]
           requests: [
             {
               image: {
-                content: imageBase64
+                content: processedImage
               },
               features: [
                 {
                   type: 'LABEL_DETECTION',
-                  maxResults: 10
+                  maxResults: 5 // Reduced from 10
                 },
                 {
                   type: 'OBJECT_LOCALIZATION',
-                  maxResults: 10
+                  maxResults: 5 // Reduced from 10
                 }
               ]
             }
@@ -233,39 +346,30 @@ async function detectIngredientsFromImage(imageBase64: string): Promise<string[]
     const data = await response.json();
     const labels = new Set<string>();
 
-    // Extract labels from both label detection and object localization
-    if (data.responses?.[0]?.labelAnnotations) {
-      data.responses[0].labelAnnotations.forEach((label: any) => {
-        if (label.description) {
-          labels.add(label.description.toLowerCase());
+    // Optimize label extraction
+    const extractLabels = (annotations: any[]) => {
+      if (!annotations) return;
+      annotations.forEach((item: any) => {
+        if (item.description || item.name) {
+          labels.add((item.description || item.name).toLowerCase());
         }
       });
-    }
+    };
 
-    if (data.responses?.[0]?.localizedObjectAnnotations) {
-      data.responses[0].localizedObjectAnnotations.forEach((object: any) => {
-        if (object.name) {
-          labels.add(object.name.toLowerCase());
-        }
-      });
-    }
+    extractLabels(data.responses?.[0]?.labelAnnotations);
+    extractLabels(data.responses?.[0]?.localizedObjectAnnotations);
 
-    // Filter for food-related items
-    const foodKeywords = [
+    // Optimize food keyword matching
+    const foodKeywords = new Set([
       'food', 'fruit', 'vegetable', 'meat', 'dairy', 'drink', 'beverage',
       'apple', 'banana', 'orange', 'tomato', 'potato', 'carrot', 'onion',
       'chicken', 'beef', 'pork', 'fish', 'milk', 'cheese', 'yogurt',
       'bread', 'pasta', 'rice', 'egg', 'butter', 'oil', 'sauce'
-    ];
+    ]);
 
     const foodItems = Array.from(labels).filter(label => 
-      foodKeywords.some(keyword => label.includes(keyword))
+      Array.from(foodKeywords).some(keyword => label.includes(keyword))
     );
-
-    if (foodItems.length === 0) {
-      console.warn('No food items detected in the image.');
-      return [];
-    }
 
     return foodItems;
 
@@ -275,126 +379,19 @@ async function detectIngredientsFromImage(imageBase64: string): Promise<string[]
   }
 }
 
-// Mock recipe generation (in production, use Spoonacular or Edamam API)
-async function generateRecipesFromIngredients(
-  ingredients: string[],
-  latitude?: number,
-  longitude?: number
-): Promise<Recipe[]> {
-  console.log('Generating recipes for ingredients:', ingredients);
-
-  const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY');
-
-  if (!DEEPSEEK_API_KEY) {
-    console.error('DeepSeek API key not set.');
-    throw new Error('DeepSeek API key is missing.');
-  }
-
-  const messages = [
-    { role: 'system', content: `You are a helpful assistant that generates healthy, sustainable, and cost-effective recipes based on a list of ingredients. For each recipe, provide the title, a list of ingredients, estimated carbon impact (in kg CO2e), estimated water impact (in liters), estimated cost (in USD), total calories, total protein (in grams), and a detailed list of ingredients including their specific amounts and units. The detailed ingredients should be a JSON array of objects with 'ingredient', 'amount', and 'unit' fields. The carbon impact, water impact, estimated cost, calories, and protein should be numerical values. The recipe should be suitable for a general audience. If an ingredient is missing, try to suggest a common substitute or indicate it's optional. Focus on providing recipes that are quick to prepare and healthy. Ensure all responses are JSON objects.
-
-Example JSON response format:
-[
-  {
-    "title": "Quick Veggie Stir-Fry",
-    "ingredients": ["broccoli", "carrot", "soy sauce"],
-    "carbon_impact": 0.5,
-    "water_impact": 100,
-    "estimated_cost": 5.25,
-    "calories": 350,
-    "protein": 15,
-    "detailed_ingredients": [
-      { "ingredient": "broccoli florets", "amount": "2", "unit": "cups" },
-      { "ingredient": "carrots", "amount": "1", "unit": "cup" },
-      { "ingredient": "soy sauce", "amount": "2", "unit": "tbsp" }
-    ]
-  }
-]` },
-    { role: 'user', content: `Generate 3 recipes using these ingredients: ${ingredients.join(', ')}. Latitude: ${latitude}, Longitude: ${longitude}` },
-  ];
-
-  try {
-    console.log('Sending request to DeepSeek API with messages:', messages);
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: messages,
-        temperature: 0.7,
-        response_format: { type: "json_object" }
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('DeepSeek API error:', response.status, errorText);
-      throw new Error(`DeepSeek API call failed with status ${response.status}: ${errorText}`);
-    }
-
-    const data = await response.json();
-    const recipesData = JSON.parse(data.choices[0].message.content);
-
-    const recipesPromises: Promise<Recipe>[] = recipesData.recipes.map(async (recipe: any) => ({
-      title: recipe.title,
-      ingredients: recipe.ingredients,
-      estimated_cost: await calculateRecipeCost(recipe.ingredients, latitude, longitude), 
-      carbon_impact: recipe.carbon_impact,
-      water_impact: recipe.water_impact,
-      calories: recipe.calories,
-      protein: recipe.protein,
-      detailed_ingredients: recipe.detailed_ingredients || [],
-      created_at: new Date().toISOString(),
-    }));
-
-    const generatedRecipes: Recipe[] = await Promise.all(recipesPromises);
-
-    console.log('Generated recipes with estimated costs (before sending to client):', generatedRecipes.map(r => ({ title: r.title, estimated_cost: r.estimated_cost })));
-
-    const recipeObjects: Recipe[] = generatedRecipes.map((recipe: any) => ({
-      title: recipe.title,
-      ingredients: recipe.ingredients,
-      carbon_impact: recipe.carbon_impact,
-      water_impact: recipe.water_impact,
-      estimated_cost: recipe.estimated_cost, // This will be the AI-generated cost for now
-      calories: recipe.calories,
-      protein: recipe.protein,
-      detailed_ingredients: recipe.detailed_ingredients || [], // Ensure it's an array
-    }));
-
-    // After receiving AI-generated recipes, recalculate estimated_cost
-    // This ensures consistency with our internal pricing database
-    const recipesWithAccurateCost: Recipe[] = await Promise.all(
-      recipeObjects.map(async (recipe) => {
-        const accurateCost = await calculateRecipeCost(recipe.ingredients, latitude, longitude);
-        return { ...recipe, estimated_cost: accurateCost };
-      })
-    );
-
-    console.log('Generated recipes with accurate cost:', recipesWithAccurateCost);
-    return recipesWithAccurateCost;
-
-  } catch (error) {
-    console.error('Error generating recipes:', error);
-    throw error;
-  }
-}
-
 // Main Edge Function handler
 Deno.serve(async (req: Request) => {
   console.log('generate-recipes-from-fridge function started');
   
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    // 1. Extract request data
     const { imageBase64, ingredients: manualIngredients, latitude, longitude }: FridgePhotoRequest = await req.json();
     
+    // 2. Initial validation - only fails if BOTH image and ingredients are missing
     if (!imageBase64 && !manualIngredients) {
       return new Response(
         JSON.stringify({ error: 'Either imageBase64 or ingredients must be provided' }),
@@ -407,28 +404,46 @@ Deno.serve(async (req: Request) => {
 
     let detectedIngredients: string[] = [];
     
-    // If image is provided, detect ingredients from it
-    if (imageBase64) {
+    // 3. Process ingredients based on what's provided
+    if (imageBase64 && manualIngredients) {
+      // Case 1: Both image and manual ingredients provided
+      const [imageIngredients] = await Promise.all([
+        detectIngredientsFromImage(imageBase64)
+      ]);
+      detectedIngredients = [...new Set([...imageIngredients, ...manualIngredients])];
+    } else if (imageBase64) {
+      // Case 2: Only image provided
       detectedIngredients = await detectIngredientsFromImage(imageBase64);
+    } else if (manualIngredients) {
+      // Case 3: Only manual ingredients provided - this is the manual input case
+      console.log('Processing manual ingredients:', manualIngredients);
+      detectedIngredients = manualIngredients
+        .map(ing => ing.trim().toLowerCase())
+        .filter(ing => ing.length > 0);
+      console.log('Cleaned manual ingredients:', detectedIngredients);
     }
-    
-    // If manual ingredients are provided, add them to the detected ones
-    if (manualIngredients) {
-      // Remove duplicates and combine with detected ingredients
-      const allIngredients = new Set([...detectedIngredients, ...manualIngredients]);
-      detectedIngredients = Array.from(allIngredients);
+
+    // 4. Validate that we have at least one valid ingredient
+    if (detectedIngredients.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'No valid ingredients detected' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     console.log('Final ingredients list:', detectedIngredients);
 
-    // Generate recipes using the combined ingredients list
+    // 5. Generate recipes with the ingredients
     const recipes = await generateRecipesFromIngredients(detectedIngredients, latitude, longitude);
     
     return new Response(
       JSON.stringify({
         ingredients: detectedIngredients,
         recipes: recipes,
-        savedRecipes: [] // You can implement saved recipes functionality later
+        savedRecipes: []
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
