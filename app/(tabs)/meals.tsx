@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Search, Utensils, Flame, Activity, Leaf, Droplet, X } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Meal {
   id: string;
@@ -31,6 +32,7 @@ interface DetailedIngredient {
 }
 
 export default function MealsScreen() {
+  const { theme } = useTheme();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -186,30 +188,30 @@ export default function MealsScreen() {
   );
 
   const MealCard = ({ meal }: { meal: Meal }) => (
-    <View style={styles.mealCard}>
+    <View style={[styles.mealCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
       <View style={styles.mealHeader}>
-        <Utensils size={20} color="#16A34A" />
-        <Text style={styles.mealName}>{meal.name}</Text>
+        <Utensils size={20} color={theme.colors.success} />
+        <Text style={[styles.mealName, { color: theme.colors.text }]}>{meal.name}</Text>
       </View>
       <View style={styles.mealStats}>
         <View style={styles.statItem}>
-          <Flame size={16} color="#EF4444" />
-          <Text style={styles.statText}>{Math.round(meal.calories)} kcal</Text>
+          <Flame size={16} color={theme.colors.error} />
+          <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{Math.round(meal.calories)} kcal</Text>
         </View>
         <View style={styles.statItem}>
-          <Activity size={16} color="#2563EB" />
-          <Text style={styles.statText}>{meal.protein.toFixed(1)}g protein</Text>
+          <Activity size={16} color={theme.colors.secondary} />
+          <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.protein.toFixed(1)}g protein</Text>
         </View>
         <View style={styles.statItem}>
-          <Leaf size={16} color="#16A34A" />
-          <Text style={styles.statText}>{meal.carbon_impact.toFixed(2)} kg CO₂</Text>
+          <Leaf size={16} color={theme.colors.success} />
+          <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.carbon_impact.toFixed(2)} kg CO₂</Text>
         </View>
         <View style={styles.statItem}>
-          <Droplet size={16} color="#06B6D4" />
-          <Text style={styles.statText}>{meal.water_impact.toFixed(1)}L water</Text>
+          <Droplet size={16} color={theme.colors.info} />
+          <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.water_impact.toFixed(1)}L water</Text>
         </View>
       </View>
-      <Text style={styles.mealTime}>
+      <Text style={[styles.mealTime, { color: theme.colors.placeholder }]}>
         {new Date(meal.created_at).toLocaleTimeString([], { 
           hour: '2-digit', 
           minute: '2-digit' 
@@ -220,20 +222,20 @@ export default function MealsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading meals...</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading meals...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Today's Meals</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Today's Meals</Text>
         <TouchableOpacity
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: theme.colors.success }]}
           onPress={() => setShowAddForm(!showAddForm)}
         >
           <Plus size={24} color="#FFFFFF" />
@@ -241,18 +243,19 @@ export default function MealsScreen() {
       </View>
 
       {showAddForm && (
-        <View style={styles.addForm}>
+        <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text }]}
             placeholder="Enter meal name"
+            placeholderTextColor={theme.colors.placeholder}
             value={newMealName}
             onChangeText={setNewMealName}
           />
           
           <View style={styles.ingredientsSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Add Ingredients (Optional)</Text>
-              <Text style={styles.sectionSubtitle}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add Ingredients (Optional)</Text>
+              <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
                 Add each ingredient with its amount and unit
               </Text>
             </View>
@@ -260,8 +263,9 @@ export default function MealsScreen() {
             <View style={styles.ingredientInputContainer}>
               <View style={styles.ingredientInputRow}>
                 <TextInput
-                  style={[styles.input, styles.ingredientInput]}
+                  style={[styles.input, styles.ingredientInput, { borderColor: theme.colors.border, color: theme.colors.text }]}
                   placeholder="Ingredient (e.g., chicken)"
+                  placeholderTextColor={theme.colors.placeholder}
                   value={currentIngredient}
                   onChangeText={setCurrentIngredient}
                   onSubmitEditing={() => {
@@ -272,8 +276,9 @@ export default function MealsScreen() {
                   }}
                 />
                 <TextInput
-                  style={[styles.input, styles.amountInput]}
+                  style={[styles.input, styles.amountInput, { borderColor: theme.colors.border, color: theme.colors.text }]}
                   placeholder="Amount"
+                  placeholderTextColor={theme.colors.placeholder}
                   value={currentAmount}
                   onChangeText={setCurrentAmount}
                   keyboardType="numeric"
@@ -284,15 +289,16 @@ export default function MealsScreen() {
                   }}
                 />
                 <TextInput
-                  style={[styles.input, styles.unitInput]}
+                  style={[styles.input, styles.unitInput, { borderColor: theme.colors.border, color: theme.colors.text }]}
                   placeholder="Unit (g/ml)"
+                  placeholderTextColor={theme.colors.placeholder}
                   value={currentUnit}
                   onChangeText={setCurrentUnit}
                   onSubmitEditing={handleAddIngredient}
                 />
               </View>
               <TouchableOpacity
-                style={styles.addIngredientButton}
+                style={[styles.addIngredientButton, { backgroundColor: theme.colors.success }]}
                 onPress={handleAddIngredient}
               >
                 <Plus size={20} color="#FFFFFF" />
@@ -301,19 +307,19 @@ export default function MealsScreen() {
 
             {detailedIngredients.length > 0 && (
               <View style={styles.ingredientsList}>
-                <Text style={styles.ingredientsListTitle}>
+                <Text style={[styles.ingredientsListTitle, { color: theme.colors.text }]}>
                   Added Ingredients ({detailedIngredients.length})
                 </Text>
                 {detailedIngredients.map((ing, index) => (
-                  <View key={index} style={styles.ingredientItem}>
-                    <Text style={styles.ingredientText}>
+                  <View key={index} style={[styles.ingredientItem, { backgroundColor: theme.colors.surface }]}>
+                    <Text style={[styles.ingredientText, { color: theme.colors.text }]}>
                       {ing.ingredient} ({ing.amount}{ing.unit})
                     </Text>
                     <TouchableOpacity
                       onPress={() => handleRemoveIngredient(index)}
                       style={styles.removeIngredientButton}
                     >
-                      <X size={16} color="#EF4444" />
+                      <X size={16} color={theme.colors.error} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -323,17 +329,17 @@ export default function MealsScreen() {
 
           <View style={styles.formButtons}>
             <TouchableOpacity
-              style={styles.cancelButton}
+              style={[styles.cancelButton, { borderColor: theme.colors.border }]}
               onPress={() => {
                 setShowAddForm(false);
                 setNewMealName('');
                 setDetailedIngredients([]);
               }}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.submitButton}
+              style={[styles.submitButton, { backgroundColor: theme.colors.success }]}
               onPress={handleAddMeal}
               disabled={isSubmitting}
             >
@@ -345,11 +351,12 @@ export default function MealsScreen() {
         </View>
       )}
 
-      <View style={styles.searchContainer}>
-        <Search size={20} color="#6B7280" />
+      <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <Search size={20} color={theme.colors.textSecondary} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: theme.colors.text }]}
           placeholder="Search meals..."
+          placeholderTextColor={theme.colors.placeholder}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -363,9 +370,9 @@ export default function MealsScreen() {
       >
         {filteredMeals.length === 0 ? (
           <View style={styles.emptyState}>
-            <Utensils size={48} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>No meals logged yet</Text>
-            <Text style={styles.emptySubtitle}>
+            <Utensils size={48} color={theme.colors.disabled} />
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No meals logged yet</Text>
+            <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
               {searchQuery ? 'No meals match your search' : 'Start tracking your meals to see your nutrition and environmental impact'}
             </Text>
           </View>
@@ -384,7 +391,6 @@ export default function MealsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   loadingContainer: {
     flex: 1,
@@ -393,24 +399,19 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
   },
   addButton: {
-    backgroundColor: '#16A34A',
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -418,14 +419,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addForm: {
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -441,19 +439,16 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
     borderRadius: 8,
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6B7280',
   },
   submitButton: {
     flex: 1,
     padding: 12,
-    backgroundColor: '#16A34A',
     borderRadius: 8,
     alignItems: 'center',
   },
@@ -465,19 +460,16 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     margin: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   searchInput: {
     flex: 1,
     marginLeft: 12,
     fontSize: 16,
-    color: '#111827',
   },
   scrollView: {
     flex: 1,
@@ -487,11 +479,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   mealCard: {
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   mealHeader: {
     flexDirection: 'row',
@@ -502,7 +492,6 @@ const styles = StyleSheet.create({
   mealName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
     flex: 1,
   },
   mealStats: {
@@ -520,12 +509,10 @@ const styles = StyleSheet.create({
   },
   statText: {
     fontSize: 14,
-    color: '#6B7280',
     flexWrap: 'wrap',
   },
   mealTime: {
     fontSize: 12,
-    color: '#9CA3AF',
     textAlign: 'right',
   },
   emptyState: {
@@ -536,13 +523,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -555,11 +540,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
     marginTop: 4,
   },
   ingredientInputContainer: {
@@ -585,7 +568,6 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   addIngredientButton: {
-    backgroundColor: '#16A34A',
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -600,20 +582,17 @@ const styles = StyleSheet.create({
   ingredientsListTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 8,
   },
   ingredientItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F3F4F6',
     padding: 8,
     borderRadius: 6,
   },
   ingredientText: {
     fontSize: 14,
-    color: '#111827',
   },
   removeIngredientButton: {
     padding: 4,

@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Settings, LogOut, CreditCard as Edit, Save, X, Mail, Crown, Star, Trophy, Target, Calendar, TrendingUp, Zap } from 'lucide-react-native';
+import { User, Settings, LogOut, CreditCard as Edit, Save, X, Mail, Crown, Star, Trophy, Target, Calendar, TrendingUp, Zap, RefreshCw } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface UserProfile {
   id: string;
@@ -43,6 +44,7 @@ interface Achievement {
 }
 
 export default function ProfileScreen() {
+  const { theme, isDark, toggleTheme } = useTheme();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -53,6 +55,10 @@ export default function ProfileScreen() {
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
   const [isPro, setIsPro] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [units, setUnits] = useState('metric');
+  const [language, setLanguage] = useState('en');
 
   useEffect(() => {
     checkAuth();
@@ -308,40 +314,40 @@ export default function ProfileScreen() {
   };
 
   const StatCard = ({ title, value, subtitle, icon: Icon, color }: any) => (
-    <View style={styles.statCard}>
+    <View style={[styles.statCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
       <Icon size={24} color={color} />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statTitle}>{title}</Text>
-      {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
+      <Text style={[styles.statValue, { color: theme.colors.text }]}>{value}</Text>
+      <Text style={[styles.statTitle, { color: theme.colors.textSecondary }]}>{title}</Text>
+      {subtitle && <Text style={[styles.statSubtitle, { color: theme.colors.placeholder }]}>{subtitle}</Text>}
     </View>
   );
 
   const AchievementBadge = ({ achievement }: { achievement: Achievement }) => (
-    <View style={[styles.achievementBadge, !achievement.earned && styles.lockedBadge]}>
-      {achievement.icon === 'target' && <Target size={20} color={achievement.earned ? '#F59E0B' : '#9CA3AF'} />}
-      {achievement.icon === 'leaf' && <Star size={20} color={achievement.earned ? '#16A34A' : '#9CA3AF'} />}
-      {achievement.icon === 'zap' && <Zap size={20} color={achievement.earned ? '#2563EB' : '#9CA3AF'} />}
-      {achievement.icon === 'calendar' && <Calendar size={20} color={achievement.earned ? '#7C3AED' : '#9CA3AF'} />}
-      {achievement.icon === 'trophy' && <Trophy size={20} color={achievement.earned ? '#F59E0B' : '#9CA3AF'} />}
+    <View style={[styles.achievementBadge, !achievement.earned && styles.lockedBadge, { backgroundColor: theme.colors.card, borderColor: achievement.earned ? theme.colors.border : theme.colors.disabled }]}>
+      {achievement.icon === 'target' && <Target size={20} color={achievement.earned ? theme.colors.warning : theme.colors.disabled} />}
+      {achievement.icon === 'leaf' && <Star size={20} color={achievement.earned ? theme.colors.success : theme.colors.disabled} />}
+      {achievement.icon === 'zap' && <Zap size={20} color={achievement.earned ? theme.colors.secondary : theme.colors.disabled} />}
+      {achievement.icon === 'calendar' && <Calendar size={20} color={achievement.earned ? theme.colors.accent : theme.colors.disabled} />}
+      {achievement.icon === 'trophy' && <Trophy size={20} color={achievement.earned ? theme.colors.warning : theme.colors.disabled} />}
     </View>
   );
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading profile...</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading profile...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView style={styles.scrollView}>
         {/* Header */}
         <LinearGradient
-          colors={['#7C3AED', '#A855F7']}
+          colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
           style={styles.header}
         >
           <View style={styles.profileSection}>
@@ -349,7 +355,7 @@ export default function ProfileScreen() {
               <User size={48} color="#FFFFFF" />
               {isPro && (
                 <View style={styles.proIndicator}>
-                  <Crown size={16} color="#F59E0B" />
+                  <Crown size={16} color={theme.colors.warning} />
                 </View>
               )}
             </View>
@@ -357,23 +363,24 @@ export default function ProfileScreen() {
             {isEditing ? (
               <View style={styles.editNameContainer}>
                 <TextInput
-                  style={styles.nameInput}
+                  style={[styles.nameInput, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
                   value={editedName}
                   onChangeText={setEditedName}
                   placeholder="Enter your name"
+                  placeholderTextColor={theme.colors.placeholder}
                 />
                 <View style={styles.editButtons}>
                   <TouchableOpacity
-                    style={styles.cancelButton}
+                    style={[styles.cancelButton, { borderColor: '#FFFFFF' }]}
                     onPress={() => {
                       setIsEditing(false);
                       setEditedName(profile?.name || '');
                     }}
                   >
-                    <X size={16} color="#6B7280" />
+                    <X size={16} color="#FFFFFF" />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.saveButton}
+                    style={[styles.saveButton, { backgroundColor: theme.colors.success }]}
                     onPress={handleSaveProfile}
                     disabled={isSaving}
                   >
@@ -383,7 +390,7 @@ export default function ProfileScreen() {
               </View>
             ) : (
               <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>{profile?.name}</Text>
+                <Text style={styles.profileName}>{profile?.name || 'User'}</Text>
                 <Text style={styles.profileEmail}>{profile?.email}</Text>
                 {userStats && (
                   <Text style={styles.profileRank}>Rank #{userStats.rank} • {userStats.currentStreak} day streak</Text>
@@ -398,6 +405,19 @@ export default function ProfileScreen() {
               <Edit size={16} color="#FFFFFF" />
               <Text style={styles.editProfileText}>Edit</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={() => {
+                if (profile) {
+                  fetchProfile(profile);
+                  fetchUserStats(profile.id);
+                  fetchAchievements(profile.id);
+                }
+              }}
+            >
+              <RefreshCw size={24} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
         </LinearGradient>
 
@@ -410,21 +430,21 @@ export default function ProfileScreen() {
                 value={userStats.totalMeals}
                 subtitle="logged"
                 icon={Target}
-                color="#16A34A"
+                color={theme.colors.success}
               />
               <StatCard
                 title="Workouts"
                 value={userStats.totalWorkouts}
                 subtitle="completed"
                 icon={Zap}
-                color="#2563EB"
+                color={theme.colors.secondary}
               />
               <StatCard
                 title="Eco Score"
                 value={userStats.avgEcoScore}
                 subtitle="average"
                 icon={Star}
-                color="#059669"
+                color={theme.colors.success}
               />
             </View>
           </View>
@@ -433,9 +453,9 @@ export default function ProfileScreen() {
         {/* Achievements Preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Achievements</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Achievements</Text>
             <TouchableOpacity onPress={() => setShowAchievementsModal(true)}>
-              <Text style={styles.viewAllText}>View All</Text>
+              <Text style={[styles.viewAllText, { color: theme.colors.accent }]}>View All</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.achievementsPreview}>
@@ -450,7 +470,7 @@ export default function ProfileScreen() {
           <View style={styles.section}>
             <TouchableOpacity style={styles.proCard} onPress={handleUpgrade}>
               <LinearGradient
-                colors={['#F59E0B', '#F97316']}
+                colors={[theme.colors.gradient.warning[0], theme.colors.gradient.warning[1]]}
                 style={styles.proGradient}
               >
                 <Crown size={24} color="#FFFFFF" />
@@ -465,20 +485,20 @@ export default function ProfileScreen() {
 
         {/* Menu Options */}
         <View style={styles.section}>
-          <View style={styles.menuContainer}>
-            <TouchableOpacity style={styles.menuItem} onPress={() => setShowStatsModal(true)}>
-              <TrendingUp size={20} color="#6B7280" />
-              <Text style={styles.menuText}>Detailed Statistics</Text>
+          <View style={[styles.menuContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.colors.border }]} onPress={() => setShowStatsModal(true)}>
+              <TrendingUp size={20} color={theme.colors.textSecondary} />
+              <Text style={[styles.menuText, { color: theme.colors.text }]}>Detailed Statistics</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.menuItem}>
-              <Settings size={20} color="#6B7280" />
-              <Text style={styles.menuText}>Settings</Text>
+            <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.colors.border }]} onPress={() => setShowSettingsModal(true)}>
+              <Settings size={20} color={theme.colors.textSecondary} />
+              <Text style={[styles.menuText, { color: theme.colors.text }]}>Settings</Text>
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
-              <LogOut size={20} color="#EF4444" />
-              <Text style={[styles.menuText, { color: '#EF4444' }]}>Sign Out</Text>
+              <LogOut size={20} color={theme.colors.error} />
+              <Text style={[styles.menuText, { color: theme.colors.error }]}>Sign Out</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -491,11 +511,11 @@ export default function ProfileScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowStatsModal(false)}
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Detailed Statistics</Text>
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: theme.colors.background }]}>
+          <View style={[styles.modalHeader, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Detailed Statistics</Text>
             <TouchableOpacity onPress={() => setShowStatsModal(false)}>
-              <X size={24} color="#6B7280" />
+              <X size={24} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
           {userStats && (
@@ -505,37 +525,37 @@ export default function ProfileScreen() {
                   title="Total Meals"
                   value={userStats.totalMeals}
                   icon={Target}
-                  color="#16A34A"
+                  color={theme.colors.success}
                 />
                 <StatCard
                   title="Total Workouts"
                   value={userStats.totalWorkouts}
                   icon={Zap}
-                  color="#2563EB"
+                  color={theme.colors.secondary}
                 />
                 <StatCard
                   title="Avg Fitness Score"
                   value={userStats.avgFitnessScore}
                   icon={TrendingUp}
-                  color="#F59E0B"
+                  color={theme.colors.warning}
                 />
                 <StatCard
                   title="Avg Eco Score"
                   value={userStats.avgEcoScore}
                   icon={Star}
-                  color="#059669"
+                  color={theme.colors.success}
                 />
                 <StatCard
                   title="CO₂ Impact"
                   value={`${userStats.totalCO2Saved.toFixed(1)}kg`}
                   icon={Star}
-                  color="#16A34A"
+                  color={theme.colors.success}
                 />
                 <StatCard
                   title="Water Impact"
                   value={`${userStats.totalWaterSaved.toFixed(0)}L`}
                   icon={Star}
-                  color="#06B6D4"
+                  color={theme.colors.info}
                 />
               </View>
             </ScrollView>
@@ -550,33 +570,161 @@ export default function ProfileScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowAchievementsModal(false)}
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Achievements</Text>
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: theme.colors.background }]}>
+          <View style={[styles.modalHeader, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Achievements</Text>
             <TouchableOpacity onPress={() => setShowAchievementsModal(false)}>
-              <X size={24} color="#6B7280" />
+              <X size={24} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.modalContent}>
             <View style={styles.achievementsList}>
               {achievements.map((achievement) => (
-                <View key={achievement.id} style={styles.achievementItem}>
+                <View key={achievement.id} style={[styles.achievementItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
                   <AchievementBadge achievement={achievement} />
                   <View style={styles.achievementInfo}>
-                    <Text style={[styles.achievementName, !achievement.earned && styles.lockedText]}>
+                    <Text style={[styles.achievementName, !achievement.earned && styles.lockedText, { color: achievement.earned ? theme.colors.text : theme.colors.disabled }]}>
                       {achievement.name}
                     </Text>
-                    <Text style={styles.achievementDescription}>
+                    <Text style={[styles.achievementDescription, { color: theme.colors.textSecondary }]}>
                       {achievement.description}
                     </Text>
                     {achievement.earned && achievement.earnedDate && (
-                      <Text style={styles.earnedDate}>
+                      <Text style={[styles.earnedDate, { color: theme.colors.success }]}>
                         Earned on {new Date(achievement.earnedDate).toLocaleDateString()}
                       </Text>
                     )}
                   </View>
                 </View>
               ))}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Settings Modal */}
+      <Modal
+        visible={showSettingsModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowSettingsModal(false)}
+      >
+        <SafeAreaView style={[styles.modalContainer, { backgroundColor: theme.colors.background }]}>
+          <View style={[styles.modalHeader, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Settings</Text>
+            <TouchableOpacity onPress={() => setShowSettingsModal(false)}>
+              <X size={24} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.settingsSection}>
+              <Text style={[styles.settingsSectionTitle, { color: theme.colors.text }]}>Preferences</Text>
+              
+              <View style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Notifications</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Receive updates about your progress and achievements</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.toggle, notificationsEnabled && styles.toggleActive, { backgroundColor: notificationsEnabled ? theme.colors.primary : theme.colors.border }]}
+                  onPress={() => setNotificationsEnabled(!notificationsEnabled)}
+                >
+                  <View style={[styles.toggleKnob, notificationsEnabled && styles.toggleKnobActive]} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Dark Mode</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Switch between light and dark theme</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.toggle, isDark && styles.toggleActive, { backgroundColor: isDark ? theme.colors.primary : theme.colors.border }]}
+                  onPress={toggleTheme}
+                >
+                  <View style={[styles.toggleKnob, isDark && styles.toggleKnobActive]} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Units</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Choose your preferred measurement system</Text>
+                </View>
+                <View style={styles.unitSelector}>
+                  <TouchableOpacity
+                    style={[styles.unitButton, units === 'metric' && styles.unitButtonActive, { backgroundColor: units === 'metric' ? theme.colors.accent : theme.colors.surface }]}
+                    onPress={() => setUnits('metric')}
+                  >
+                    <Text style={[styles.unitButtonText, units === 'metric' && styles.unitButtonTextActive, { color: units === 'metric' ? '#FFFFFF' : theme.colors.textSecondary }]}>
+                      Metric
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.unitButton, units === 'imperial' && styles.unitButtonActive, { backgroundColor: units === 'imperial' ? theme.colors.accent : theme.colors.surface }]}
+                    onPress={() => setUnits('imperial')}
+                  >
+                    <Text style={[styles.unitButtonText, units === 'imperial' && styles.unitButtonTextActive, { color: units === 'imperial' ? '#FFFFFF' : theme.colors.textSecondary }]}>
+                      Imperial
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Language</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Select your preferred language</Text>
+                </View>
+                <View style={styles.languageSelector}>
+                  <TouchableOpacity
+                    style={[styles.languageButton, language === 'en' && styles.languageButtonActive, { backgroundColor: language === 'en' ? theme.colors.accent : theme.colors.surface }]}
+                    onPress={() => setLanguage('en')}
+                  >
+                    <Text style={[styles.languageButtonText, language === 'en' && styles.languageButtonTextActive, { color: language === 'en' ? '#FFFFFF' : theme.colors.textSecondary }]}>
+                      English
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.languageButton, language === 'es' && styles.languageButtonActive, { backgroundColor: language === 'es' ? theme.colors.accent : theme.colors.surface }]}
+                    onPress={() => setLanguage('es')}
+                  >
+                    <Text style={[styles.languageButtonText, language === 'es' && styles.languageButtonTextActive, { color: language === 'es' ? '#FFFFFF' : theme.colors.textSecondary }]}>
+                      Español
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.settingsSection}>
+              <Text style={[styles.settingsSectionTitle, { color: theme.colors.text }]}>Account</Text>
+              
+              <TouchableOpacity style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Privacy Policy</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Read our privacy policy</Text>
+                </View>
+                <Text style={[styles.settingArrow, { color: theme.colors.textSecondary }]}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Terms of Service</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Read our terms of service</Text>
+                </View>
+                <Text style={[styles.settingArrow, { color: theme.colors.textSecondary }]}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Delete Account</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.error }]}>
+                    Permanently delete your account and all data
+                  </Text>
+                </View>
+                <Text style={[styles.settingArrow, { color: theme.colors.error }]}>›</Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </SafeAreaView>
@@ -588,7 +736,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   loadingContainer: {
     flex: 1,
@@ -597,7 +744,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#6B7280',
   },
   scrollView: {
     flex: 1,
@@ -651,7 +797,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   nameInput: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     padding: 12,
     fontSize: 18,
@@ -667,12 +812,10 @@ const styles = StyleSheet.create({
   cancelButton: {
     padding: 8,
     borderWidth: 1,
-    borderColor: '#FFFFFF',
     borderRadius: 6,
   },
   saveButton: {
     padding: 8,
-    backgroundColor: '#16A34A',
     borderRadius: 6,
   },
   editProfileButton: {
@@ -701,11 +844,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
   },
   viewAllText: {
     fontSize: 14,
-    color: '#7C3AED',
     fontWeight: '500',
   },
   quickStats: {
@@ -716,28 +857,23 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   statValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
     marginTop: 8,
     marginBottom: 4,
   },
   statTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
   },
   statSubtitle: {
     fontSize: 12,
-    color: '#9CA3AF',
   },
   achievementsPreview: {
     flexDirection: 'row',
@@ -749,16 +885,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#E5E7EB',
     flexBasis: 'auto',
   },
   lockedBadge: {
     backgroundColor: '#F3F4F6',
-    borderColor: '#D1D5DB',
   },
   proCard: {
     borderRadius: 12,
@@ -781,26 +914,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   menuContainer: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
     gap: 12,
   },
   menuText: {
     fontSize: 16,
-    color: '#111827',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -808,13 +936,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
   },
   modalContent: {
     flex: 1,
@@ -830,11 +955,9 @@ const styles = StyleSheet.create({
   },
   achievementItem: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     gap: 16,
   },
   achievementInfo: {
@@ -843,7 +966,6 @@ const styles = StyleSheet.create({
   achievementName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
     marginBottom: 4,
   },
   lockedText: {
@@ -851,12 +973,107 @@ const styles = StyleSheet.create({
   },
   achievementDescription: {
     fontSize: 14,
-    color: '#6B7280',
     marginBottom: 4,
   },
   earnedDate: {
     fontSize: 12,
-    color: '#16A34A',
     fontWeight: '500',
+  },
+  settingsSection: {
+    marginBottom: 24,
+  },
+  settingsSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  settingInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 14,
+  },
+  settingArrow: {
+    fontSize: 24,
+  },
+  toggle: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    padding: 2,
+  },
+  toggleActive: {
+    backgroundColor: '#7C3AED',
+  },
+  toggleKnob: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  toggleKnobActive: {
+    transform: [{ translateX: 22 }],
+  },
+  unitSelector: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  unitButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  unitButtonActive: {
+    backgroundColor: '#7C3AED',
+  },
+  unitButtonText: {
+    fontSize: 14,
+  },
+  unitButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  languageSelector: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  languageButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  languageButtonActive: {
+    backgroundColor: '#7C3AED',
+  },
+  languageButtonText: {
+    fontSize: 14,
+  },
+  languageButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  refreshButton: {
+    padding: 8,
   },
 });
