@@ -12,11 +12,19 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to provide accurate pricing for ingredients in your area.",
-        "NSLocationAlwaysUsageDescription": "We need your location to provide accurate pricing for ingredients in your area."
-      }
+        "NSLocationAlwaysUsageDescription": "We need your location to provide accurate pricing for ingredients in your area.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.rpalq.kalyx"
     },
     "android": {
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.rpalq.kalyx"
     },
     "web": {
       "bundler": "metro",
@@ -39,7 +47,12 @@
     },
     "extra": {
       "supabaseUrl": "${NEXT_PUBLIC_SUPABASE_URL}",
-      "supabaseAnonKey": "${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
-    }
+      "supabaseAnonKey": "${NEXT_PUBLIC_SUPABASE_ANON_KEY}",
+      "router": {},
+      "eas": {
+        "projectId": "fd66e484-1b9c-4826-ab74-308082c70ac4"
+      }
+    },
+    "owner": "rpalq"
   }
 }
