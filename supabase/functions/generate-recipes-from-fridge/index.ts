@@ -257,10 +257,25 @@ async function generateRecipesFromIngredients(
 
     // Process recipes in parallel
     const recipesPromises = recipesData.recipes.map(async (recipe: any) => {
-      const cost = await calculateRecipeCost(recipe.ingredients, latitude, longitude);
+      let normalizedIngredients: string[];
+      if (Array.isArray(recipe.ingredients)) {
+        normalizedIngredients = recipe.ingredients.map((ing: any) => {
+          if (typeof ing === 'string') return ing;
+          if (ing && typeof ing === 'object') {
+            // Format as 'ingredient (amount unit)' if possible
+            const name = ing.name || JSON.stringify(ing.name);
+            const amount = ing.amount ? ` (${ing.amount}${ing.unit || ''})` : '';
+            return `${name}${amount}`;
+          }
+          return String(ing);
+        });
+      } else {
+        normalizedIngredients = [];
+      }
+      const cost = await calculateRecipeCost(normalizedIngredients, latitude, longitude);
       return {
         title: recipe.title,
-        ingredients: recipe.ingredients,
+        ingredients: normalizedIngredients,
         estimated_cost: cost,
         carbon_impact: recipe.carbon_impact,
         water_impact: recipe.water_impact,
