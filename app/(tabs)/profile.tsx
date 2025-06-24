@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Settings, LogOut, Edit, Save, X, Mail, Crown, Star, Trophy, Target, Calendar, TrendingUp, Zap, RefreshCw, Sparkles, Shield } from 'lucide-react-native';
+import { User, Settings, LogOut, CreditCard as Edit, Save, X, Mail, Crown, Star, Trophy, Target, Calendar, TrendingUp, Zap, RefreshCw, Sparkles, Shield } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
