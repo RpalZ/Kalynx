@@ -48,7 +48,9 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { userMessage, context, userStats }: ChatRequest = await req.json();
+    // Remove userStats from request body and always fetch from DB
+    // const { userMessage, context, userStats }: ChatRequest = await req.json();
+    const { userMessage, context }: { userMessage: string; context: Array<{ role: string; content: string }> } = await req.json();
 
     if (!userMessage) {
       return new Response('User message is required', {
@@ -65,6 +67,21 @@ Deno.serve(async (req: Request) => {
         status: 503,
         headers: corsHeaders
       });
+    }
+
+    // Fetch user stats from DB
+    let userStats = null;
+    try {
+      const { data: stats, error: statsError } = await supabase
+        .from('user_stats')
+        .select('totalCO2e, totalWater, mealsCount, workoutsCount, caloriesBurned')
+        .eq('user_id', user.id)
+        .single();
+      if (!statsError && stats) {
+        userStats = stats;
+      }
+    } catch (e) {
+      // If stats fetch fails, just leave userStats as null
     }
 
     // Build system prompt with user context
@@ -98,8 +115,8 @@ Current user data this week:
 - Meals logged: ${userStats.mealsCount}
 - Workouts completed: ${userStats.workoutsCount}
 - Calories burned: ${userStats.caloriesBurned}
-- Carbon footprint: ${userStats.totalCO2e.toFixed(2)} kg CO₂
-- Water usage: ${userStats.totalWater.toFixed(1)} liters
+- Carbon footprint: ${userStats.totalCO2e?.toFixed ? userStats.totalCO2e.toFixed(2) : userStats.totalCO2e} kg CO₂
+- Water usage: ${userStats.totalWater?.toFixed ? userStats.totalWater.toFixed(1) : userStats.totalWater} liters
 
 Use this data to provide personalized advice and encouragement.`;
     }
@@ -121,7 +138,7 @@ Use this data to provide personalized advice and encouragement.`;
       body: JSON.stringify({
         model: "deepseek-chat",
         messages: messages,
-        temperature: 0.7,
+        temperature: 0.3,
         max_tokens: 500
       })
     });
