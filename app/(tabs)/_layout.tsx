@@ -1,9 +1,12 @@
 import { Tabs } from 'expo-router';
 import { Chrome as Home, Utensils, Dumbbell, Leaf, User, Trophy, Camera } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useResponsive } from '@/hooks/useResponsive';
+import { Platform } from 'react-native';
 
 export default function TabLayout() {
   const { theme } = useTheme();
+  const { isDesktop, isMobile } = useResponsive();
   
   return (
     <Tabs
@@ -15,21 +18,43 @@ export default function TabLayout() {
           backgroundColor: theme.colors.surface,
           borderTopWidth: 1,
           borderTopColor: theme.colors.border,
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 80,
+          paddingBottom: isDesktop ? 12 : 8,
+          paddingTop: isDesktop ? 12 : 8,
+          height: isDesktop ? 90 : isMobile ? 80 : 85,
+          ...(isDesktop && {
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            marginHorizontal: 20,
+            marginBottom: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 8,
+          }),
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
+          fontSize: isDesktop ? 14 : 12,
+          fontWeight: '600',
+          marginTop: isDesktop ? 4 : 2,
         },
+        tabBarIconStyle: {
+          marginBottom: isDesktop ? 4 : 2,
+        },
+        ...(isDesktop && {
+          tabBarItemStyle: {
+            paddingVertical: 8,
+            borderRadius: 12,
+            marginHorizontal: 4,
+          },
+        }),
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Dashboard',
           tabBarIcon: ({ size, color }) => (
-            <Home size={size} color={color} />
+            <Home size={isDesktop ? size + 2 : size} color={color} />
           ),
         }}
       />
@@ -38,7 +63,7 @@ export default function TabLayout() {
         options={{
           title: 'Meals',
           tabBarIcon: ({ size, color }) => (
-            <Utensils size={size} color={color} />
+            <Utensils size={isDesktop ? size + 2 : size} color={color} />
           ),
         }}
       />
@@ -47,16 +72,25 @@ export default function TabLayout() {
         options={{
           title: 'Workouts',
           tabBarIcon: ({ size, color }) => (
-            <Dumbbell size={size} color={color} />
+            <Dumbbell size={isDesktop ? size + 2 : size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="camera"
+        options={{
+          title: 'AI Recipes',
+          tabBarIcon: ({ size, color }) => (
+            <Camera size={isDesktop ? size + 2 : size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="eco"
         options={{
-          title: 'Eco Impact',
+          title: 'KaliAI',
           tabBarIcon: ({ size, color }) => (
-            <Leaf size={size} color={color} />
+            <Leaf size={isDesktop ? size + 2 : size} color={color} />
           ),
         }}
       />
@@ -65,16 +99,7 @@ export default function TabLayout() {
         options={{
           title: 'Leaderboard',
           tabBarIcon: ({ size, color }) => (
-            <Trophy size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="camera"
-        options={{
-          title: 'Camera',
-          tabBarIcon: ({ size, color }) => (
-            <Camera size={size} color={color} />
+            <Trophy size={isDesktop ? size + 2 : size} color={color} />
           ),
         }}
       />
@@ -83,7 +108,7 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ size, color }) => (
-            <User size={size} color={color} />
+            <User size={isDesktop ? size + 2 : size} color={color} />
           ),
         }}
       />
