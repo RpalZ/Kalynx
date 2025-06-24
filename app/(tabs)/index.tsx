@@ -532,6 +532,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    alignItems: 'stretch',
   },
   quickActionCard: {
     flex: 1,
@@ -545,13 +546,16 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   quickActionGradient: {
+    flex: 1,
     padding: 20,
     minHeight: 100,
+    justifyContent: 'center',
   },
   quickActionContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
   quickActionIcon: {
     width: 48,
