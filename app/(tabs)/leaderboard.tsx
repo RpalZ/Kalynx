@@ -4,15 +4,15 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  RefreshControl,
-  Alert,
   TouchableOpacity,
+  Alert,
+  RefreshControl,
   Dimensions,
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Trophy, Medal, Award, TrendingUp, RefreshCw, Crown, Star, Target, Zap, Flame, Sparkles } from 'lucide-react-native';
+import { Trophy, Medal, Award, TrendingUp, RefreshCw, Crown, Star, Target, Zap, Flame, Sparkles, Shield } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -302,10 +302,10 @@ export default function LeaderboardScreen() {
             </TouchableOpacity>
           </View>
           
-          {/* Hero Image */}
+          {/* Hero Image - Updated to food theme */}
           <View style={styles.heroImageContainer}>
             <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1552617/pexels-photo-1552617.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
               style={styles.heroImage}
             />
             <View style={styles.heroOverlay} />
