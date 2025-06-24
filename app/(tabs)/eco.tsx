@@ -260,7 +260,12 @@ export default function KaliAIScreen() {
       }
     }
 
-    return { cleanResponse: cleanResponse.trim(), systemActions };
+    // Ensure cleanResponse is never empty or just whitespace/dots
+    const finalResponse = cleanResponse.trim();
+    return { 
+      cleanResponse: finalResponse || "I'm here to help! What would you like to know?", 
+      systemActions 
+    };
   };
 
   const handleSystemAction = (action: string) => {
