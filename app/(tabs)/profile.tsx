@@ -8,13 +8,17 @@ import {
   Alert,
   TextInput,
   Modal,
+  Dimensions,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Settings, LogOut, CreditCard as Edit, Save, X, Mail, Crown, Star, Trophy, Target, Calendar, TrendingUp, Zap, RefreshCw } from 'lucide-react-native';
+import { User, Settings, LogOut, Edit, Save, X, Mail, Crown, Star, Trophy, Target, Calendar, TrendingUp, Zap, RefreshCw, Sparkles, Shield } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+
+const { width } = Dimensions.get('window');
 
 interface UserProfile {
   id: string;
@@ -78,7 +82,6 @@ export default function ProfileScreen() {
 
   const fetchProfile = async (user: any) => {
     try {
-      // Try to get user profile from database
       const { data: profileData, error } = await supabase
         .from('users')
         .select('*')
@@ -86,7 +89,6 @@ export default function ProfileScreen() {
         .single();
 
       if (error && error.code === 'PGRST116') {
-        // User doesn't exist in users table, create it
         const { data: newProfile, error: createError } = await supabase
           .from('users')
           .insert({
@@ -121,7 +123,6 @@ export default function ProfileScreen() {
 
   const fetchUserStats = async (userId: string) => {
     try {
-      // Fetch user statistics
       const { data: meals } = await supabase
         .from('meals')
         .select('*')
@@ -137,7 +138,6 @@ export default function ProfileScreen() {
         .select('*')
         .eq('user_id', userId);
 
-      // Fetch today's summary to get saved totals
       const today = new Date().toISOString().split('T')[0];
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
@@ -159,7 +159,6 @@ export default function ProfileScreen() {
         console.error('Failed to fetch daily summary for profile stats:', await summaryResponse.text());
       }
 
-      // Calculate stats
       const totalMeals = meals?.length || 0;
       const totalWorkouts = workouts?.length || 0;
       const avgFitnessScore = scores?.length ? 
@@ -167,9 +166,8 @@ export default function ProfileScreen() {
       const avgEcoScore = scores?.length ? 
         scores.reduce((sum, score) => sum + (score.eco_score || 0), 0) / scores.length : 0;
       
-      // Mock additional stats
-      const currentStreak = 7; // Days of consecutive logging
-      const rank = 42; // Mock leaderboard rank
+      const currentStreak = 7;
+      const rank = 42;
 
       setUserStats({
         totalMeals,
@@ -187,7 +185,6 @@ export default function ProfileScreen() {
   };
 
   const fetchAchievements = async (userId: string) => {
-    // Mock achievements data - in production, fetch from database
     const mockAchievements: Achievement[] = [
       {
         id: '1',
@@ -232,8 +229,7 @@ export default function ProfileScreen() {
   };
 
   const checkSubscription = async (userId: string) => {
-    // Mock subscription check - in production, integrate with RevenueCat
-    setIsPro(false); // Default to free tier
+    setIsPro(false);
   };
 
   const handleSaveProfile = async () => {
@@ -274,7 +270,6 @@ export default function ProfileScreen() {
       [
         { text: 'Maybe Later', style: 'cancel' },
         { text: 'Upgrade Now', onPress: () => {
-          // In production, integrate with RevenueCat
           Alert.alert('Coming Soon', 'Pro features will be available soon!');
         }},
       ]
@@ -284,12 +279,10 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     console.log('Sign out button pressed');
     try {
-      // First clear the local state
       setProfile(null);
       setUserStats(null);
       setAchievements([]);
       
-      // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
       console.log('Sign out response:', error ? 'Error' : 'Success');
       
@@ -300,12 +293,10 @@ export default function ProfileScreen() {
       
       console.log('Sign out successful, navigating to auth screen...');
       
-      // Try multiple navigation approaches
       try {
         router.replace('/auth');
       } catch (navError) {
         console.error('Navigation error:', navError);
-        // Fallback navigation
         router.push('/auth');
       }
     } catch (err) {
@@ -315,15 +306,29 @@ export default function ProfileScreen() {
 
   const StatCard = ({ title, value, subtitle, icon: Icon, color }: any) => (
     <View style={[styles.statCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-      <Icon size={24} color={color} />
-      <Text style={[styles.statValue, { color: theme.colors.text }]}>{value}</Text>
-      <Text style={[styles.statTitle, { color: theme.colors.textSecondary }]}>{title}</Text>
-      {subtitle && <Text style={[styles.statSubtitle, { color: theme.colors.placeholder }]}>{subtitle}</Text>}
+      <LinearGradient
+        colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+        style={styles.statCardGradient}
+      >
+        <View style={[styles.statIcon, { backgroundColor: `${color}20` }]}>
+          <Icon size={24} color={color} />
+        </View>
+        <Text style={[styles.statValue, { color: theme.colors.text }]}>{value}</Text>
+        <Text style={[styles.statTitle, { color: theme.colors.textSecondary }]}>{title}</Text>
+        {subtitle && <Text style={[styles.statSubtitle, { color: theme.colors.placeholder }]}>{subtitle}</Text>}
+      </LinearGradient>
     </View>
   );
 
   const AchievementBadge = ({ achievement }: { achievement: Achievement }) => (
-    <View style={[styles.achievementBadge, !achievement.earned && styles.lockedBadge, { backgroundColor: theme.colors.card, borderColor: achievement.earned ? theme.colors.border : theme.colors.disabled }]}>
+    <View style={[
+      styles.achievementBadge, 
+      !achievement.earned && styles.lockedBadge, 
+      { 
+        backgroundColor: achievement.earned ? theme.colors.card : theme.colors.surface, 
+        borderColor: achievement.earned ? theme.colors.border : theme.colors.disabled 
+      }
+    ]}>
       {achievement.icon === 'target' && <Target size={20} color={achievement.earned ? theme.colors.warning : theme.colors.disabled} />}
       {achievement.icon === 'leaf' && <Star size={20} color={achievement.earned ? theme.colors.success : theme.colors.disabled} />}
       {achievement.icon === 'zap' && <Zap size={20} color={achievement.earned ? theme.colors.secondary : theme.colors.disabled} />}
@@ -336,7 +341,10 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading profile...</Text>
+          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
+            <User size={48} color={theme.colors.accent} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading profile...</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -344,86 +352,99 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <LinearGradient
-          colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
+          colors={[theme.colors.gradient.accent[0], theme.colors.gradient.accent[1]]}
           style={styles.header}
         >
-          <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              <User size={48} color="#FFFFFF" />
-              {isPro && (
-                <View style={styles.proIndicator}>
-                  <Crown size={16} color={theme.colors.warning} />
-                </View>
-              )}
-            </View>
-            
-            {isEditing ? (
-              <View style={styles.editNameContainer}>
-                <TextInput
-                  style={[styles.nameInput, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
-                  value={editedName}
-                  onChangeText={setEditedName}
-                  placeholder="Enter your name"
-                  placeholderTextColor={theme.colors.placeholder}
-                />
-                <View style={styles.editButtons}>
-                  <TouchableOpacity
-                    style={[styles.cancelButton, { borderColor: '#FFFFFF' }]}
-                    onPress={() => {
-                      setIsEditing(false);
-                      setEditedName(profile?.name || '');
-                    }}
-                  >
-                    <X size={16} color="#FFFFFF" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.saveButton, { backgroundColor: theme.colors.success }]}
-                    onPress={handleSaveProfile}
-                    disabled={isSaving}
-                  >
-                    <Save size={16} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>{profile?.name || 'User'}</Text>
-                <Text style={styles.profileEmail}>{profile?.email}</Text>
-                {userStats && (
-                  <Text style={styles.profileRank}>Rank #{userStats.rank} • {userStats.currentStreak} day streak</Text>
+          <View style={styles.headerContent}>
+            <View style={styles.profileSection}>
+              <View style={styles.avatarContainer}>
+                <User size={48} color="#FFFFFF" />
+                {isPro && (
+                  <View style={styles.proIndicator}>
+                    <Crown size={16} color={theme.colors.warning} />
+                  </View>
                 )}
               </View>
-            )}
+              
+              {isEditing ? (
+                <View style={styles.editNameContainer}>
+                  <TextInput
+                    style={[styles.nameInput, { backgroundColor: theme.colors.surface, color: theme.colors.text }]}
+                    value={editedName}
+                    onChangeText={setEditedName}
+                    placeholder="Enter your name"
+                    placeholderTextColor={theme.colors.placeholder}
+                  />
+                  <View style={styles.editButtons}>
+                    <TouchableOpacity
+                      style={[styles.cancelButton, { borderColor: '#FFFFFF' }]}
+                      onPress={() => {
+                        setIsEditing(false);
+                        setEditedName(profile?.name || '');
+                      }}
+                    >
+                      <X size={16} color="#FFFFFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.saveButton, { backgroundColor: theme.colors.success }]}
+                      onPress={handleSaveProfile}
+                      disabled={isSaving}
+                    >
+                      <Save size={16} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.profileInfo}>
+                  <Text style={styles.profileName}>{profile?.name || 'User'}</Text>
+                  <Text style={styles.profileEmail}>{profile?.email}</Text>
+                  {userStats && (
+                    <Text style={styles.profileRank}>Rank #{userStats.rank} • {userStats.currentStreak} day streak</Text>
+                  )}
+                </View>
+              )}
 
-            <TouchableOpacity
-              style={styles.editProfileButton}
-              onPress={() => setIsEditing(!isEditing)}
-            >
-              <Edit size={16} color="#FFFFFF" />
-              <Text style={styles.editProfileText}>Edit</Text>
-            </TouchableOpacity>
+              <View style={styles.headerActions}>
+                <TouchableOpacity
+                  style={styles.editProfileButton}
+                  onPress={() => setIsEditing(!isEditing)}
+                >
+                  <Edit size={16} color="#FFFFFF" />
+                  <Text style={styles.editProfileText}>Edit</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.refreshButton}
-              onPress={() => {
-                if (profile) {
-                  fetchProfile(profile);
-                  fetchUserStats(profile.id);
-                  fetchAchievements(profile.id);
-                }
-              }}
-            >
-              <RefreshCw size={24} color="#FFFFFF" />
-            </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.refreshButton}
+                  onPress={() => {
+                    if (profile) {
+                      fetchProfile(profile);
+                      fetchUserStats(profile.id);
+                      fetchAchievements(profile.id);
+                    }
+                  }}
+                >
+                  <RefreshCw size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+          
+          {/* Hero Image */}
+          <View style={styles.heroImageContainer}>
+            <Image 
+              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+              style={styles.heroImage}
+            />
           </View>
         </LinearGradient>
 
         {/* Quick Stats */}
         {userStats && (
           <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Your Progress</Text>
             <View style={styles.quickStats}>
               <StatCard
                 title="Meals"
@@ -486,22 +507,35 @@ export default function ProfileScreen() {
         {/* Menu Options */}
         <View style={styles.section}>
           <View style={[styles.menuContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-            <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.colors.border }]} onPress={() => setShowStatsModal(true)}>
-              <TrendingUp size={20} color={theme.colors.textSecondary} />
-              <Text style={[styles.menuText, { color: theme.colors.text }]}>Detailed Statistics</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.colors.border }]} onPress={() => setShowSettingsModal(true)}>
-              <Settings size={20} color={theme.colors.textSecondary} />
-              <Text style={[styles.menuText, { color: theme.colors.text }]}>Settings</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
-              <LogOut size={20} color={theme.colors.error} />
-              <Text style={[styles.menuText, { color: theme.colors.error }]}>Sign Out</Text>
-            </TouchableOpacity>
+            <LinearGradient
+              colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+              style={styles.menuGradient}
+            >
+              <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.colors.border }]} onPress={() => setShowStatsModal(true)}>
+                <View style={[styles.menuIcon, { backgroundColor: `${theme.colors.info}20` }]}>
+                  <TrendingUp size={20} color={theme.colors.info} />
+                </View>
+                <Text style={[styles.menuText, { color: theme.colors.text }]}>Detailed Statistics</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.colors.border }]} onPress={() => setShowSettingsModal(true)}>
+                <View style={[styles.menuIcon, { backgroundColor: `${theme.colors.textSecondary}20` }]}>
+                  <Settings size={20} color={theme.colors.textSecondary} />
+                </View>
+                <Text style={[styles.menuText, { color: theme.colors.text }]}>Settings</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
+                <View style={[styles.menuIcon, { backgroundColor: `${theme.colors.error}20` }]}>
+                  <LogOut size={20} color={theme.colors.error} />
+                </View>
+                <Text style={[styles.menuText, { color: theme.colors.error }]}>Sign Out</Text>
+              </TouchableOpacity>
+            </LinearGradient>
           </View>
         </View>
+
+        <View style={styles.bottomSpacing} />
       </ScrollView>
 
       {/* Stats Modal */}
@@ -622,19 +656,6 @@ export default function ProfileScreen() {
               
               <View style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
                 <View style={styles.settingInfo}>
-                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Notifications</Text>
-                  <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Receive updates about your progress and achievements</Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.toggle, notificationsEnabled && styles.toggleActive, { backgroundColor: notificationsEnabled ? theme.colors.primary : theme.colors.border }]}
-                  onPress={() => setNotificationsEnabled(!notificationsEnabled)}
-                >
-                  <View style={[styles.toggleKnob, notificationsEnabled && styles.toggleKnobActive]} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                <View style={styles.settingInfo}>
                   <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Dark Mode</Text>
                   <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Switch between light and dark theme</Text>
                 </View>
@@ -648,52 +669,15 @@ export default function ProfileScreen() {
 
               <View style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
                 <View style={styles.settingInfo}>
-                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Units</Text>
-                  <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Choose your preferred measurement system</Text>
+                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Notifications</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Receive updates about your progress</Text>
                 </View>
-                <View style={styles.unitSelector}>
-                  <TouchableOpacity
-                    style={[styles.unitButton, units === 'metric' && styles.unitButtonActive, { backgroundColor: units === 'metric' ? theme.colors.accent : theme.colors.surface }]}
-                    onPress={() => setUnits('metric')}
-                  >
-                    <Text style={[styles.unitButtonText, units === 'metric' && styles.unitButtonTextActive, { color: units === 'metric' ? '#FFFFFF' : theme.colors.textSecondary }]}>
-                      Metric
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.unitButton, units === 'imperial' && styles.unitButtonActive, { backgroundColor: units === 'imperial' ? theme.colors.accent : theme.colors.surface }]}
-                    onPress={() => setUnits('imperial')}
-                  >
-                    <Text style={[styles.unitButtonText, units === 'imperial' && styles.unitButtonTextActive, { color: units === 'imperial' ? '#FFFFFF' : theme.colors.textSecondary }]}>
-                      Imperial
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                <View style={styles.settingInfo}>
-                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Language</Text>
-                  <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Select your preferred language</Text>
-                </View>
-                <View style={styles.languageSelector}>
-                  <TouchableOpacity
-                    style={[styles.languageButton, language === 'en' && styles.languageButtonActive, { backgroundColor: language === 'en' ? theme.colors.accent : theme.colors.surface }]}
-                    onPress={() => setLanguage('en')}
-                  >
-                    <Text style={[styles.languageButtonText, language === 'en' && styles.languageButtonTextActive, { color: language === 'en' ? '#FFFFFF' : theme.colors.textSecondary }]}>
-                      English
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.languageButton, language === 'es' && styles.languageButtonActive, { backgroundColor: language === 'es' ? theme.colors.accent : theme.colors.surface }]}
-                    onPress={() => setLanguage('es')}
-                  >
-                    <Text style={[styles.languageButtonText, language === 'es' && styles.languageButtonTextActive, { color: language === 'es' ? '#FFFFFF' : theme.colors.textSecondary }]}>
-                      Español
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  style={[styles.toggle, notificationsEnabled && styles.toggleActive, { backgroundColor: notificationsEnabled ? theme.colors.primary : theme.colors.border }]}
+                  onPress={() => setNotificationsEnabled(!notificationsEnabled)}
+                >
+                  <View style={[styles.toggleKnob, notificationsEnabled && styles.toggleKnobActive]} />
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -701,29 +685,23 @@ export default function ProfileScreen() {
               <Text style={[styles.settingsSectionTitle, { color: theme.colors.text }]}>Account</Text>
               
               <TouchableOpacity style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <View style={[styles.settingIcon, { backgroundColor: `${theme.colors.info}20` }]}>
+                  <Shield size={20} color={theme.colors.info} />
+                </View>
                 <View style={styles.settingInfo}>
                   <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Privacy Policy</Text>
                   <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Read our privacy policy</Text>
                 </View>
-                <Text style={[styles.settingArrow, { color: theme.colors.textSecondary }]}>›</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                <View style={styles.settingInfo}>
-                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Terms of Service</Text>
-                  <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Read our terms of service</Text>
+                <View style={[styles.settingIcon, { backgroundColor: `${theme.colors.warning}20` }]}>
+                  <Mail size={20} color={theme.colors.warning} />
                 </View>
-                <Text style={[styles.settingArrow, { color: theme.colors.textSecondary }]}>›</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={[styles.settingItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
                 <View style={styles.settingInfo}>
-                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Delete Account</Text>
-                  <Text style={[styles.settingDescription, { color: theme.colors.error }]}>
-                    Permanently delete your account and all data
-                  </Text>
+                  <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Contact Support</Text>
+                  <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Get help with your account</Text>
                 </View>
-                <Text style={[styles.settingArrow, { color: theme.colors.error }]}>›</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -741,16 +719,35 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 32,
+  },
+  loadingCard: {
+    padding: 32,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
   loadingText: {
     fontSize: 16,
+    marginTop: 16,
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
   },
   header: {
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 20,
     paddingBottom: 32,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  headerContent: {
+    marginBottom: 20,
   },
   profileSection: {
     alignItems: 'center',
@@ -818,6 +815,10 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 6,
   },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   editProfileButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -832,8 +833,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  refreshButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+  },
+  heroImageContainer: {
+    height: 100,
+    borderRadius: 16,
+    overflow: 'hidden',
+    opacity: 0.8,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
   section: {
-    padding: 16,
+    padding: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -843,11 +859,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   viewAllText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   quickStats: {
     flexDirection: 'row',
@@ -856,24 +872,41 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    minWidth: '45%',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
+    minWidth: (width - 64) / 3,
+    borderRadius: 16,
     borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  statCardGradient: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    marginTop: 8,
     marginBottom: 4,
   },
   statTitle: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   statSubtitle: {
-    fontSize: 12,
+    fontSize: 10,
+    textAlign: 'center',
   },
   achievementsPreview: {
     flexDirection: 'row',
@@ -888,17 +921,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    flexBasis: 'auto',
   },
   lockedBadge: {
-    backgroundColor: '#F3F4F6',
+    opacity: 0.5,
   },
   proCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   proGradient: {
-    padding: 20,
+    padding: 24,
     alignItems: 'center',
   },
   proTitle: {
@@ -914,18 +951,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   menuContainer: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  menuGradient: {
+    padding: 4,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    gap: 12,
+    gap: 16,
+  },
+  menuIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   menuText: {
     fontSize: 16,
+    fontWeight: '500',
   },
   modalContainer: {
     flex: 1,
@@ -934,16 +988,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     borderBottomWidth: 1,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   modalContent: {
     flex: 1,
-    padding: 16,
+    padding: 20,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -969,7 +1023,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   lockedText: {
-    color: '#9CA3AF',
+    opacity: 0.5,
   },
   achievementDescription: {
     fontSize: 14,
@@ -984,32 +1038,35 @@ const styles = StyleSheet.create({
   },
   settingsSectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 16,
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: 12,
+    gap: 16,
+  },
+  settingIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   settingInfo: {
     flex: 1,
-    marginRight: 16,
   },
   settingTitle: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     marginBottom: 4,
   },
   settingDescription: {
     fontSize: 14,
-  },
-  settingArrow: {
-    fontSize: 24,
   },
   toggle: {
     width: 50,
@@ -1037,43 +1094,7 @@ const styles = StyleSheet.create({
   toggleKnobActive: {
     transform: [{ translateX: 22 }],
   },
-  unitSelector: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  unitButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  unitButtonActive: {
-    backgroundColor: '#7C3AED',
-  },
-  unitButtonText: {
-    fontSize: 14,
-  },
-  unitButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  languageSelector: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  languageButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  languageButtonActive: {
-    backgroundColor: '#7C3AED',
-  },
-  languageButtonText: {
-    fontSize: 14,
-  },
-  languageButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  refreshButton: {
-    padding: 8,
+  bottomSpacing: {
+    height: 32,
   },
 });
