@@ -108,7 +108,7 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       if (isSignUp) {
-        console.log('Attempting sign up with:', { email, name, passwordLength: password.length });
+        // console.log('Attempting sign up with:', { email, name, passwordLength: password.length });
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -133,7 +133,7 @@ export default function AuthScreen() {
           
           showNotification(errorMessage, 'error');
         } else if (data.user) {
-          console.log('Supabase signUp data:', data);
+          // console.log('Supabase signUp data:', data);
           showNotification('Your account has been created! Please check your email for verification.', 'success');
           
           const { error: profileError } = await supabase.functions.invoke('create-user-profile', {
@@ -153,7 +153,7 @@ export default function AuthScreen() {
           }
         }
       } else {
-        console.log('Attempting sign in with:', { email });
+        // console.log('Attempting sign in with:', { email });
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -173,7 +173,7 @@ export default function AuthScreen() {
           
           showNotification(errorMessage, 'error');
         } else if (data.user) {
-          console.log('Supabase signIn data:', data);
+          // console.log('Supabase signIn data:', data);
           showNotification(`Welcome back, ${data.user.user_metadata.name || email}!`, 'success');
           router.replace('/(tabs)');
         }
