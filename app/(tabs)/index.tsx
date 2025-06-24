@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, Camera, TrendingUp, Leaf, Flame, Target, RefreshCw, Utensils, Dumbbell, Droplet, Award, Calendar, Zap, Star, Clock, Users, ChevronRight } from 'lucide-react-native';
+import { Plus, Camera, TrendingUp, Leaf, Flame, Target, RefreshCw, Utensils, Dumbbell, Droplet, Award, Calendar, Zap } from 'lucide-react-native';
 import { router, Link, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -132,16 +132,6 @@ export default function HomeScreen() {
     return 'Good evening';
   };
 
-  const getMotivationalMessage = () => {
-    const messages = [
-      "Every small step counts towards a healthier planet! 🌱",
-      "Your sustainable choices are making a difference! ✨",
-      "Keep up the amazing work on your wellness journey! 💪",
-      "Together we're building a more sustainable future! 🌍"
-    ];
-    return messages[Math.floor(Math.random() * messages.length)];
-  };
-
   const ScoreRing = ({ score, size = 80, strokeWidth = 8, color }: any) => {
     const radius = (size - strokeWidth) / 2;
     const circumference = radius * 2 * Math.PI;
@@ -214,25 +204,9 @@ export default function HomeScreen() {
             <Text style={styles.quickActionTitle}>{title}</Text>
             <Text style={styles.quickActionSubtitle}>{subtitle}</Text>
           </View>
-          <ChevronRight size={16} color="rgba(255,255,255,0.8)" />
         </View>
       </LinearGradient>
     </TouchableOpacity>
-  );
-
-  const InsightCard = ({ title, description, icon: Icon, color }: any) => (
-    <View style={[styles.insightCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-      <LinearGradient
-        colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
-        style={styles.insightGradient}
-      >
-        <View style={[styles.insightIcon, { backgroundColor: `${color}20` }]}>
-          <Icon size={20} color={color} />
-        </View>
-        <Text style={[styles.insightTitle, { color: theme.colors.text }]}>{title}</Text>
-        <Text style={[styles.insightDescription, { color: theme.colors.textSecondary }]}>{description}</Text>
-      </LinearGradient>
-    </View>
   );
 
   if (isLoading) {
@@ -267,10 +241,6 @@ export default function HomeScreen() {
               <Text style={styles.greeting}>{getGreeting()},</Text>
               <Text style={styles.userName}>{user?.user_metadata?.name || 'there'}!</Text>
               <Text style={styles.subtitle}>Ready to make a positive impact today?</Text>
-              <View style={styles.motivationalContainer}>
-                <Star size={16} color="#FEF3C7" />
-                <Text style={styles.motivationalText}>{getMotivationalMessage()}</Text>
-              </View>
             </View>
             <TouchableOpacity 
               style={styles.refreshButton}
@@ -287,27 +257,12 @@ export default function HomeScreen() {
               source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
               style={styles.heroImage}
             />
-            <View style={styles.heroOverlay}>
-              <View style={styles.heroStats}>
-                <View style={styles.heroStat}>
-                  <Users size={16} color="#FFFFFF" />
-                  <Text style={styles.heroStatText}>Join 10K+ users</Text>
-                </View>
-                <View style={styles.heroStat}>
-                  <Leaf size={16} color="#FFFFFF" />
-                  <Text style={styles.heroStatText}>Save the planet</Text>
-                </View>
-              </View>
-            </View>
           </View>
         </LinearGradient>
 
         {/* Quick Actions */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Actions</Text>
-            <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>Start tracking your impact</Text>
-          </View>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
             <QuickActionCard
               title="Log Meal"
@@ -343,10 +298,7 @@ export default function HomeScreen() {
         {/* Performance Scores */}
         {score && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Performance</Text>
-              <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>Your daily impact scores</Text>
-            </View>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Performance</Text>
             <View style={[styles.scoresCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <LinearGradient
                 colors={isDark ? ['#1E293B', '#334155'] : ['#F8FAFC', '#F1F5F9']}
@@ -356,17 +308,14 @@ export default function HomeScreen() {
                   <View style={styles.scoreItem}>
                     <ScoreRing score={score.fitness_score} color={theme.colors.secondary} />
                     <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Fitness</Text>
-                    <Text style={[styles.scoreDescription, { color: theme.colors.placeholder }]}>Calories burned</Text>
                   </View>
                   <View style={styles.scoreItem}>
                     <ScoreRing score={score.eco_score} color={theme.colors.success} />
                     <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Eco Impact</Text>
-                    <Text style={[styles.scoreDescription, { color: theme.colors.placeholder }]}>Carbon saved</Text>
                   </View>
                   <View style={styles.scoreItem}>
                     <ScoreRing score={score.combined_score} color={theme.colors.accent} size={100} strokeWidth={10} />
                     <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Overall</Text>
-                    <Text style={[styles.scoreDescription, { color: theme.colors.placeholder }]}>Combined score</Text>
                   </View>
                 </View>
               </LinearGradient>
@@ -377,10 +326,7 @@ export default function HomeScreen() {
         {/* Today's Metrics */}
         {summary && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Metrics</Text>
-              <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>Your daily health & eco stats</Text>
-            </View>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Metrics</Text>
             <View style={styles.metricsGrid}>
               <MetricCard
                 title="Calories Consumed"
@@ -445,10 +391,7 @@ export default function HomeScreen() {
         {/* Activity Summary */}
         {summary && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Activity Summary</Text>
-              <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>Your progress today</Text>
-            </View>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Activity Summary</Text>
             <View style={[styles.activityCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <LinearGradient
                 colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
@@ -457,12 +400,6 @@ export default function HomeScreen() {
                 <View style={styles.activityHeader}>
                   <Calendar size={20} color={theme.colors.accent} />
                   <Text style={[styles.activityTitle, { color: theme.colors.text }]}>Today's Progress</Text>
-                  <View style={styles.activityDate}>
-                    <Clock size={14} color={theme.colors.placeholder} />
-                    <Text style={[styles.activityDateText, { color: theme.colors.placeholder }]}>
-                      {new Date().toLocaleDateString()}
-                    </Text>
-                  </View>
                 </View>
                 <View style={styles.activityStats}>
                   <View style={styles.activityStat}>
@@ -471,9 +408,6 @@ export default function HomeScreen() {
                     </View>
                     <Text style={[styles.activityStatValue, { color: theme.colors.text }]}>{summary.mealsCount}</Text>
                     <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary }]}>Meals Logged</Text>
-                    <Text style={[styles.activityStatDetail, { color: theme.colors.placeholder }]}>
-                      {summary.totalCalories.toFixed(0)} kcal total
-                    </Text>
                   </View>
                   <View style={styles.activityStat}>
                     <View style={[styles.activityStatIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
@@ -481,9 +415,6 @@ export default function HomeScreen() {
                     </View>
                     <Text style={[styles.activityStatValue, { color: theme.colors.text }]}>{summary.workoutsCount}</Text>
                     <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary }]}>Workouts Done</Text>
-                    <Text style={[styles.activityStatDetail, { color: theme.colors.placeholder }]}>
-                      {summary.caloriesBurned} kcal burned
-                    </Text>
                   </View>
                   <View style={styles.activityStat}>
                     <View style={[styles.activityStatIcon, { backgroundColor: `${summary.netCalories > 0 ? theme.colors.error : theme.colors.success}20` }]}>
@@ -493,49 +424,12 @@ export default function HomeScreen() {
                       {summary.netCalories > 0 ? '+' : ''}{summary.netCalories.toFixed(0)}
                     </Text>
                     <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary }]}>Net Calories</Text>
-                    <Text style={[styles.activityStatDetail, { color: theme.colors.placeholder }]}>
-                      {summary.netCalories > 0 ? 'Calorie surplus' : 'Calorie deficit'}
-                    </Text>
                   </View>
                 </View>
               </LinearGradient>
             </View>
           </View>
         )}
-
-        {/* Daily Insights */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Daily Insights</Text>
-            <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>Personalized tips for you</Text>
-          </View>
-          <View style={styles.insightsGrid}>
-            <InsightCard
-              title="Hydration Reminder"
-              description="Don't forget to drink water throughout the day for optimal performance!"
-              icon={Droplet}
-              color={theme.colors.info}
-            />
-            <InsightCard
-              title="Eco Tip"
-              description="Try plant-based meals to reduce your carbon footprint by up to 50%!"
-              icon={Leaf}
-              color={theme.colors.success}
-            />
-            <InsightCard
-              title="Fitness Goal"
-              description="You're 200 calories away from your daily burn target. Keep it up!"
-              icon={Target}
-              color={theme.colors.warning}
-            />
-            <InsightCard
-              title="Streak Bonus"
-              description="Log one more meal to maintain your 7-day tracking streak!"
-              icon={Star}
-              color={theme.colors.accent}
-            />
-          </View>
-        </View>
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
@@ -609,22 +503,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#D1FAE5',
     lineHeight: 22,
-    marginBottom: 8,
-  },
-  motivationalContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  motivationalText: {
-    fontSize: 12,
-    color: '#FEF3C7',
-    fontWeight: '500',
   },
   refreshButton: {
     padding: 12,
@@ -636,49 +514,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginTop: 8,
-    position: 'relative',
   },
   heroImage: {
     width: '100%',
     height: '100%',
     opacity: 0.8,
   },
-  heroOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    padding: 12,
-  },
-  heroStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  heroStat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  heroStatText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
   section: {
     padding: 20,
-  },
-  sectionHeader: {
-    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 22,
     fontWeight: '700',
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    fontWeight: '500',
+    marginBottom: 16,
   },
   quickActionsGrid: {
     flexDirection: 'row',
@@ -746,7 +594,7 @@ const styles = StyleSheet.create({
   },
   scoreItem: {
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
   scoreText: {
     fontSize: 18,
@@ -755,10 +603,6 @@ const styles = StyleSheet.create({
   scoreLabel: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  scoreDescription: {
-    fontSize: 10,
-    textAlign: 'center',
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -841,16 +685,6 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 18,
     fontWeight: '700',
-    flex: 1,
-  },
-  activityDate: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  activityDateText: {
-    fontSize: 12,
-    fontWeight: '500',
   },
   activityStats: {
     flexDirection: 'row',
@@ -859,7 +693,6 @@ const styles = StyleSheet.create({
   activityStat: {
     alignItems: 'center',
     gap: 8,
-    flex: 1,
   },
   activityStatIcon: {
     width: 32,
@@ -876,52 +709,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     textAlign: 'center',
-  },
-  activityStatDetail: {
-    fontSize: 10,
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  insightsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  insightCard: {
-    flex: 1,
-    minWidth: (width - 64) / 2,
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  insightGradient: {
-    padding: 16,
-    alignItems: 'center',
-    minHeight: 120,
-  },
-  insightIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  insightTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  insightDescription: {
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 16,
   },
   bottomSpacing: {
     height: 32,
