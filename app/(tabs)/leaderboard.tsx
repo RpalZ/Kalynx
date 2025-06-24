@@ -305,7 +305,7 @@ export default function LeaderboardScreen() {
           {/* Hero Image */}
           <View style={styles.heroImageContainer}>
             <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1552617/pexels-photo-1552617.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+              source={{ uri: 'https://images.pexels.com/photos/3760067/pexels-photo-3760067.jpeg?auto=compress&cs=tinysrgb&w=800' }}
               style={styles.heroImage}
             />
             <View style={styles.heroOverlay} />
