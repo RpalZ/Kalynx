@@ -17,9 +17,6 @@ import { Plus, Search, Utensils, Flame, Activity, Leaf, Droplet, X, ChefHat, Clo
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useResponsive } from '@/hooks/useResponsive';
-import { ResponsiveContainer } from '@/components/ResponsiveContainer';
-import { ResponsiveGrid } from '@/components/ResponsiveGrid';
 
 const { width } = Dimensions.get('window');
 
@@ -41,7 +38,6 @@ interface DetailedIngredient {
 
 export default function MealsScreen() {
   const { theme, isDark } = useTheme();
-  const { isDesktop, isTablet, getSpacing } = useResponsive();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -197,27 +193,20 @@ export default function MealsScreen() {
   );
 
   const MealCard = ({ meal }: { meal: Meal }) => (
-    <View style={[
-      styles.mealCard, 
-      { 
-        backgroundColor: theme.colors.card, 
-        borderColor: theme.colors.border,
-        minHeight: isDesktop ? 180 : 160,
-      }
-    ]}>
+    <View style={[styles.mealCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
       <LinearGradient
         colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
         style={styles.mealCardGradient}
       >
         <View style={styles.mealHeader}>
           <View style={[styles.mealIcon, { backgroundColor: `${theme.colors.success}20` }]}>
-            <Utensils size={isDesktop ? 24 : 20} color={theme.colors.success} />
+            <Utensils size={20} color={theme.colors.success} />
           </View>
           <View style={styles.mealInfo}>
-            <Text style={[styles.mealName, { color: theme.colors.text, fontSize: isDesktop ? 20 : 18 }]}>{meal.name}</Text>
+            <Text style={[styles.mealName, { color: theme.colors.text }]}>{meal.name}</Text>
             <View style={styles.mealTime}>
-              <Clock size={isDesktop ? 14 : 12} color={theme.colors.placeholder} />
-              <Text style={[styles.mealTimeText, { color: theme.colors.placeholder, fontSize: isDesktop ? 14 : 12 }]}>
+              <Clock size={12} color={theme.colors.placeholder} />
+              <Text style={[styles.mealTimeText, { color: theme.colors.placeholder }]}>
                 {new Date(meal.created_at).toLocaleTimeString([], { 
                   hour: '2-digit', 
                   minute: '2-digit' 
@@ -231,29 +220,29 @@ export default function MealsScreen() {
           <View style={styles.statRow}>
             <View style={styles.statItem}>
               <View style={[styles.statIcon, { backgroundColor: `${theme.colors.error}20` }]}>
-                <Flame size={isDesktop ? 16 : 14} color={theme.colors.error} />
+                <Flame size={14} color={theme.colors.error} />
               </View>
-              <Text style={[styles.statText, { color: theme.colors.textSecondary, fontSize: isDesktop ? 15 : 14 }]}>{Math.round(meal.calories)} kcal</Text>
+              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{Math.round(meal.calories)} kcal</Text>
             </View>
             <View style={styles.statItem}>
               <View style={[styles.statIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
-                <Activity size={isDesktop ? 16 : 14} color={theme.colors.secondary} />
+                <Activity size={14} color={theme.colors.secondary} />
               </View>
-              <Text style={[styles.statText, { color: theme.colors.textSecondary, fontSize: isDesktop ? 15 : 14 }]}>{meal.protein.toFixed(1)}g protein</Text>
+              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.protein.toFixed(1)}g protein</Text>
             </View>
           </View>
           <View style={styles.statRow}>
             <View style={styles.statItem}>
               <View style={[styles.statIcon, { backgroundColor: `${theme.colors.success}20` }]}>
-                <Leaf size={isDesktop ? 16 : 14} color={theme.colors.success} />
+                <Leaf size={14} color={theme.colors.success} />
               </View>
-              <Text style={[styles.statText, { color: theme.colors.textSecondary, fontSize: isDesktop ? 15 : 14 }]}>{meal.carbon_impact.toFixed(2)} kg CO₂</Text>
+              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.carbon_impact.toFixed(2)} kg CO₂</Text>
             </View>
             <View style={styles.statItem}>
               <View style={[styles.statIcon, { backgroundColor: `${theme.colors.info}20` }]}>
-                <Droplet size={isDesktop ? 16 : 14} color={theme.colors.info} />
+                <Droplet size={14} color={theme.colors.info} />
               </View>
-              <Text style={[styles.statText, { color: theme.colors.textSecondary, fontSize: isDesktop ? 15 : 14 }]}>{meal.water_impact.toFixed(1)}L water</Text>
+              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.water_impact.toFixed(1)}L water</Text>
             </View>
           </View>
         </View>
@@ -264,14 +253,12 @@ export default function MealsScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <ResponsiveContainer>
-          <View style={styles.loadingContainer}>
-            <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
-              <ChefHat size={48} color={theme.colors.success} />
-              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your meals...</Text>
-            </View>
+        <View style={styles.loadingContainer}>
+          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
+            <ChefHat size={48} color={theme.colors.success} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your meals...</Text>
           </View>
-        </ResponsiveContainer>
+        </View>
       </SafeAreaView>
     );
   }
@@ -281,219 +268,177 @@ export default function MealsScreen() {
       {/* Header */}
       <LinearGradient
         colors={[theme.colors.gradient.success[0], theme.colors.gradient.success[1]]}
-        style={[styles.header, { paddingBottom: isDesktop ? 48 : 32 }]}
+        style={styles.header}
       >
-        <ResponsiveContainer>
-          <View style={styles.headerContent}>
-            <View style={styles.headerLeft}>
-              <Text style={[styles.headerTitle, { fontSize: isDesktop ? 36 : 28 }]}>Today's Meals</Text>
-              <Text style={[styles.headerSubtitle, { fontSize: isDesktop ? 18 : 16 }]}>Track your nutrition and environmental impact</Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.addButton, { width: isDesktop ? 56 : 48, height: isDesktop ? 56 : 48 }]}
-              onPress={() => setShowAddForm(!showAddForm)}
-            >
-              <Plus size={isDesktop ? 28 : 24} color="#FFFFFF" />
-            </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>Today's Meals</Text>
+            <Text style={styles.headerSubtitle}>Track your nutrition and environmental impact</Text>
           </View>
-          
-          {/* Hero Image */}
-          <View style={[styles.heroImageContainer, { height: isDesktop ? 140 : 100 }]}>
-            <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-              style={styles.heroImage}
-            />
-          </View>
-        </ResponsiveContainer>
-      </LinearGradient>
-
-      <ResponsiveContainer>
-        {/* Add Form */}
-        {showAddForm && (
-          <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
-            <LinearGradient
-              colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
-              style={[styles.addFormGradient, { padding: getSpacing(20, 24, 32) }]}
-            >
-              <View style={styles.formHeader}>
-                <Sparkles size={isDesktop ? 24 : 20} color={theme.colors.accent} />
-                <Text style={[styles.formTitle, { color: theme.colors.text, fontSize: isDesktop ? 22 : 18 }]}>Add New Meal</Text>
-              </View>
-              
-              <TextInput
-                style={[styles.input, { 
-                  borderColor: theme.colors.border, 
-                  color: theme.colors.text, 
-                  backgroundColor: theme.colors.surface,
-                  fontSize: isDesktop ? 18 : 16,
-                  padding: isDesktop ? 20 : 16,
-                }]}
-                placeholder="Enter meal name (e.g., Grilled Chicken Salad)"
-                placeholderTextColor={theme.colors.placeholder}
-                value={newMealName}
-                onChangeText={setNewMealName}
-              />
-              
-              <View style={styles.ingredientsSection}>
-                <Text style={[styles.sectionTitle, { color: theme.colors.text, fontSize: isDesktop ? 18 : 16 }]}>Add Ingredients (Optional)</Text>
-                <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary, fontSize: isDesktop ? 16 : 14 }]}>
-                  Add each ingredient with its amount and unit for better accuracy
-                </Text>
-
-                <View style={[styles.ingredientInputContainer, { gap: isDesktop ? 16 : 8 }]}>
-                  <View style={[styles.ingredientInputRow, { gap: isDesktop ? 12 : 8 }]}>
-                    <TextInput
-                      style={[styles.input, styles.ingredientInput, { 
-                        borderColor: theme.colors.border, 
-                        color: theme.colors.text, 
-                        backgroundColor: theme.colors.surface,
-                        fontSize: isDesktop ? 16 : 14,
-                        padding: isDesktop ? 16 : 12,
-                      }]}
-                      placeholder="Ingredient"
-                      placeholderTextColor={theme.colors.placeholder}
-                      value={currentIngredient}
-                      onChangeText={setCurrentIngredient}
-                    />
-                    <TextInput
-                      style={[styles.input, styles.amountInput, { 
-                        borderColor: theme.colors.border, 
-                        color: theme.colors.text, 
-                        backgroundColor: theme.colors.surface,
-                        fontSize: isDesktop ? 16 : 14,
-                        padding: isDesktop ? 16 : 12,
-                      }]}
-                      placeholder="Amount"
-                      placeholderTextColor={theme.colors.placeholder}
-                      value={currentAmount}
-                      onChangeText={setCurrentAmount}
-                      keyboardType="numeric"
-                    />
-                    <TextInput
-                      style={[styles.input, styles.unitInput, { 
-                        borderColor: theme.colors.border, 
-                        color: theme.colors.text, 
-                        backgroundColor: theme.colors.surface,
-                        fontSize: isDesktop ? 16 : 14,
-                        padding: isDesktop ? 16 : 12,
-                      }]}
-                      placeholder="Unit"
-                      placeholderTextColor={theme.colors.placeholder}
-                      value={currentUnit}
-                      onChangeText={setCurrentUnit}
-                    />
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.addIngredientButton, { 
-                      backgroundColor: theme.colors.success,
-                      width: isDesktop ? 56 : 48,
-                      height: isDesktop ? 56 : 48,
-                    }]}
-                    onPress={handleAddIngredient}
-                  >
-                    <Plus size={isDesktop ? 24 : 20} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-
-                {detailedIngredients.length > 0 && (
-                  <View style={styles.ingredientsList}>
-                    <Text style={[styles.ingredientsListTitle, { color: theme.colors.text, fontSize: isDesktop ? 16 : 14 }]}>
-                      Added Ingredients ({detailedIngredients.length})
-                    </Text>
-                    {detailedIngredients.map((ing, index) => (
-                      <View key={index} style={[styles.ingredientItem, { backgroundColor: theme.colors.surface }]}>
-                        <Text style={[styles.ingredientText, { color: theme.colors.text, fontSize: isDesktop ? 16 : 14 }]}>
-                          {ing.ingredient} ({ing.amount}{ing.unit})
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => handleRemoveIngredient(index)}
-                          style={styles.removeIngredientButton}
-                        >
-                          <X size={isDesktop ? 20 : 16} color={theme.colors.error} />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-
-              <View style={[styles.formButtons, { gap: isDesktop ? 16 : 12 }]}>
-                <TouchableOpacity
-                  style={[styles.cancelButton, { borderColor: theme.colors.border, padding: isDesktop ? 20 : 16 }]}
-                  onPress={() => {
-                    setShowAddForm(false);
-                    setNewMealName('');
-                    setDetailedIngredients([]);
-                  }}
-                >
-                  <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary, fontSize: isDesktop ? 18 : 16 }]}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.submitButton, { backgroundColor: theme.colors.success, padding: isDesktop ? 20 : 16 }]}
-                  onPress={handleAddMeal}
-                  disabled={isSubmitting}
-                >
-                  <Text style={[styles.submitButtonText, { fontSize: isDesktop ? 18 : 16 }]}>
-                    {isSubmitting ? 'Adding...' : 'Add Meal'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </LinearGradient>
-          </View>
-        )}
-
-        {/* Search */}
-        <View style={[styles.searchContainer, { 
-          backgroundColor: theme.colors.card, 
-          borderColor: theme.colors.border,
-          margin: getSpacing(20, 24, 32),
-          padding: isDesktop ? 20 : 16,
-        }]}>
-          <View style={[styles.searchIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
-            <Search size={isDesktop ? 24 : 20} color={theme.colors.secondary} />
-          </View>
-          <TextInput
-            style={[styles.searchInput, { color: theme.colors.text, fontSize: isDesktop ? 18 : 16 }]}
-            placeholder="Search meals..."
-            placeholderTextColor={theme.colors.placeholder}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowAddForm(!showAddForm)}
+          >
+            <Plus size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Hero Image */}
+        <View style={styles.heroImageContainer}>
+          <Image 
+            source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+            style={styles.heroImage}
           />
         </View>
+      </LinearGradient>
 
-        {/* Meals List */}
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {filteredMeals.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={[styles.emptyIcon, { backgroundColor: `${theme.colors.success}20` }]}>
-                <Utensils size={isDesktop ? 64 : 48} color={theme.colors.success} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: theme.colors.text, fontSize: isDesktop ? 28 : 20 }]}>No meals logged yet</Text>
-              <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary, fontSize: isDesktop ? 18 : 16 }]}>
-                {searchQuery ? 'No meals match your search' : 'Start tracking your meals to see your nutrition and environmental impact'}
+      {/* Add Form */}
+      {showAddForm && (
+        <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+          <LinearGradient
+            colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+            style={styles.addFormGradient}
+          >
+            <View style={styles.formHeader}>
+              <Sparkles size={20} color={theme.colors.accent} />
+              <Text style={[styles.formTitle, { color: theme.colors.text }]}>Add New Meal</Text>
+            </View>
+            
+            <TextInput
+              style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+              placeholder="Enter meal name (e.g., Grilled Chicken Salad)"
+              placeholderTextColor={theme.colors.placeholder}
+              value={newMealName}
+              onChangeText={setNewMealName}
+            />
+            
+            <View style={styles.ingredientsSection}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add Ingredients (Optional)</Text>
+              <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
+                Add each ingredient with its amount and unit for better accuracy
               </Text>
+
+              <View style={styles.ingredientInputContainer}>
+                <View style={styles.ingredientInputRow}>
+                  <TextInput
+                    style={[styles.input, styles.ingredientInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                    placeholder="Ingredient"
+                    placeholderTextColor={theme.colors.placeholder}
+                    value={currentIngredient}
+                    onChangeText={setCurrentIngredient}
+                  />
+                  <TextInput
+                    style={[styles.input, styles.amountInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                    placeholder="Amount"
+                    placeholderTextColor={theme.colors.placeholder}
+                    value={currentAmount}
+                    onChangeText={setCurrentAmount}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={[styles.input, styles.unitInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                    placeholder="Unit"
+                    placeholderTextColor={theme.colors.placeholder}
+                    value={currentUnit}
+                    onChangeText={setCurrentUnit}
+                  />
+                </View>
+                <TouchableOpacity
+                  style={[styles.addIngredientButton, { backgroundColor: theme.colors.success }]}
+                  onPress={handleAddIngredient}
+                >
+                  <Plus size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+
+              {detailedIngredients.length > 0 && (
+                <View style={styles.ingredientsList}>
+                  <Text style={[styles.ingredientsListTitle, { color: theme.colors.text }]}>
+                    Added Ingredients ({detailedIngredients.length})
+                  </Text>
+                  {detailedIngredients.map((ing, index) => (
+                    <View key={index} style={[styles.ingredientItem, { backgroundColor: theme.colors.surface }]}>
+                      <Text style={[styles.ingredientText, { color: theme.colors.text }]}>
+                        {ing.ingredient} ({ing.amount}{ing.unit})
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => handleRemoveIngredient(index)}
+                        style={styles.removeIngredientButton}
+                      >
+                        <X size={16} color={theme.colors.error} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
-          ) : (
-            <View style={[styles.mealsContainer, { padding: getSpacing(20, 24, 32) }]}>
-              <ResponsiveGrid
-                columns={{ mobile: 1, tablet: 2, desktop: 2, largeDesktop: 3 }}
-                gap={getSpacing(16, 20, 24)}
+
+            <View style={styles.formButtons}>
+              <TouchableOpacity
+                style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+                onPress={() => {
+                  setShowAddForm(false);
+                  setNewMealName('');
+                  setDetailedIngredients([]);
+                }}
               >
-                {filteredMeals.map((meal) => (
-                  <MealCard key={meal.id} meal={meal} />
-                ))}
-              </ResponsiveGrid>
+                <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.submitButton, { backgroundColor: theme.colors.success }]}
+                onPress={handleAddMeal}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.submitButtonText}>
+                  {isSubmitting ? 'Adding...' : 'Add Meal'}
+                </Text>
+              </TouchableOpacity>
             </View>
-          )}
-          <View style={[styles.bottomSpacing, { height: getSpacing(32, 40, 48) }]} />
-        </ScrollView>
-      </ResponsiveContainer>
+          </LinearGradient>
+        </View>
+      )}
+
+      {/* Search */}
+      <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View style={[styles.searchIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+          <Search size={20} color={theme.colors.secondary} />
+        </View>
+        <TextInput
+          style={[styles.searchInput, { color: theme.colors.text }]}
+          placeholder="Search meals..."
+          placeholderTextColor={theme.colors.placeholder}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
+      {/* Meals List */}
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {filteredMeals.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={[styles.emptyIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+              <Utensils size={48} color={theme.colors.success} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No meals logged yet</Text>
+            <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
+              {searchQuery ? 'No meals match your search' : 'Start tracking your meals to see your nutrition and environmental impact'}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.mealsContainer}>
+            {filteredMeals.map((meal) => (
+              <MealCard key={meal.id} meal={meal} />
+            ))}
+          </View>
+        )}
+        <View style={styles.bottomSpacing} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -524,8 +469,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   header: {
-    paddingHorizontal: 0,
+    paddingHorizontal: 24,
     paddingTop: 20,
+    paddingBottom: 32,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
   },
@@ -539,20 +485,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
+    fontSize: 28,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   headerSubtitle: {
+    fontSize: 16,
     color: '#D1FAE5',
   },
   addButton: {
+    width: 48,
+    height: 48,
     borderRadius: 24,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   heroImageContainer: {
+    height: 100,
     borderRadius: 16,
     overflow: 'hidden',
     opacity: 0.8,
@@ -566,6 +517,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   addFormGradient: {
+    padding: 20,
   },
   formHeader: {
     flexDirection: 'row',
@@ -574,31 +526,38 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   formTitle: {
+    fontSize: 18,
     fontWeight: '700',
   },
   input: {
     borderWidth: 1,
     borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
     fontWeight: '500',
   },
   ingredientsSection: {
     marginTop: 20,
   },
   sectionTitle: {
+    fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
   },
   sectionSubtitle: {
+    fontSize: 14,
     marginBottom: 16,
   },
   ingredientInputContainer: {
     flexDirection: 'row',
+    gap: 8,
     alignItems: 'flex-start',
     marginBottom: 16,
   },
   ingredientInputRow: {
     flex: 1,
     flexDirection: 'row',
+    gap: 8,
   },
   ingredientInput: {
     flex: 2,
@@ -610,6 +569,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   addIngredientButton: {
+    width: 48,
+    height: 48,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -618,6 +579,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   ingredientsListTitle: {
+    fontSize: 14,
     fontWeight: '700',
     marginBottom: 8,
   },
@@ -629,6 +591,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   ingredientText: {
+    fontSize: 14,
     fontWeight: '500',
   },
   removeIngredientButton: {
@@ -636,29 +599,37 @@ const styles = StyleSheet.create({
   },
   formButtons: {
     flexDirection: 'row',
+    gap: 12,
     marginTop: 24,
   },
   cancelButton: {
     flex: 1,
+    padding: 16,
     borderWidth: 1,
     borderRadius: 12,
     alignItems: 'center',
   },
   cancelButtonText: {
+    fontSize: 16,
     fontWeight: '600',
   },
   submitButton: {
     flex: 1,
+    padding: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   submitButtonText: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    margin: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: 16,
     borderWidth: 1,
   },
@@ -672,12 +643,15 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    fontSize: 16,
     fontWeight: '500',
   },
   scrollView: {
     flex: 1,
   },
   mealsContainer: {
+    padding: 20,
+    gap: 16,
   },
   mealCard: {
     borderRadius: 16,
@@ -691,7 +665,6 @@ const styles = StyleSheet.create({
   },
   mealCardGradient: {
     padding: 20,
-    flex: 1,
   },
   mealHeader: {
     flexDirection: 'row',
@@ -710,6 +683,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mealName: {
+    fontSize: 18,
     fontWeight: '700',
     marginBottom: 4,
   },
@@ -719,6 +693,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   mealTimeText: {
+    fontSize: 12,
     fontWeight: '500',
   },
   mealStats: {
@@ -742,6 +717,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statText: {
+    fontSize: 14,
     fontWeight: '600',
     flex: 1,
   },
@@ -759,13 +735,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
+    fontSize: 20,
     fontWeight: '700',
     marginBottom: 8,
   },
   emptySubtitle: {
+    fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
   },
   bottomSpacing: {
+    height: 32,
   },
 });

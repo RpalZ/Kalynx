@@ -18,9 +18,6 @@ import { Plus, Camera, TrendingUp, Leaf, Flame, Target, RefreshCw, Utensils, Dum
 import { router, Link, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useResponsive } from '@/hooks/useResponsive';
-import { ResponsiveContainer } from '@/components/ResponsiveContainer';
-import { ResponsiveGrid } from '@/components/ResponsiveGrid';
 
 const { width } = Dimensions.get('window');
 
@@ -42,9 +39,19 @@ interface DailyScore {
   combined_score: number;
 }
 
+const CARD_SIZE_WEB = 220;
+const CARD_SIZE_MOBILE = Math.min(width * 0.44, 180);
+
+const GAP = 16;
+const CARDS_PER_ROW = 2;
+const MAX_CARD_SIZE = 162;
+const windowWidth = Dimensions.get('window').width;
+const gridPadding = 40; // section padding left+right
+const baseCardSize = (windowWidth - gridPadding - GAP * (CARDS_PER_ROW - 1)) / CARDS_PER_ROW;
+const cardSize = Math.min(baseCardSize * 0.9, MAX_CARD_SIZE);
+
 export default function HomeScreen() {
   const { theme, isDark } = useTheme();
-  const { isDesktop, isTablet, getColumns, getSpacing } = useResponsive();
   const [summary, setSummary] = useState<DailySummary | null>(null);
   const [score, setScore] = useState<DailyScore | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -166,28 +173,21 @@ export default function HomeScreen() {
             borderRightColor: 'transparent',
             transform: [{ rotate: `${(score / 100) * 360}deg` }],
           }} />
-          <Text style={[styles.scoreText, { color: theme.colors.text, fontSize: isDesktop ? 20 : 16 }]}>{score}</Text>
+          <Text style={[styles.scoreText, { color: theme.colors.text }]}>{score}</Text>
         </View>
       </View>
     );
   };
 
   const MetricCard = ({ title, value, unit, icon: Icon, color, trend, bgGradient }: any) => (
-    <View style={[
-      styles.metricCard, 
-      { 
-        backgroundColor: theme.colors.card, 
-        borderColor: theme.colors.border,
-        minHeight: isDesktop ? 140 : 120,
-      }
-    ]}>
+    <View style={[styles.metricCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
       <LinearGradient
         colors={bgGradient || [theme.colors.surface, theme.colors.surface]}
         style={styles.metricGradient}
       >
         <View style={styles.metricHeader}>
           <View style={[styles.metricIconContainer, { backgroundColor: `${color}20` }]}>
-            <Icon size={isDesktop ? 24 : 20} color={color} />
+            <Icon size={20} color={color} />
           </View>
           {trend && (
             <View style={[styles.trendContainer, { backgroundColor: trend > 0 ? '#10B98120' : '#EF444420' }]}>
@@ -198,32 +198,23 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
-        <Text style={[styles.metricValue, { color, fontSize: isDesktop ? 28 : 24 }]}>{value}</Text>
-        <Text style={[styles.metricTitle, { color: theme.colors.textSecondary, fontSize: isDesktop ? 16 : 14 }]}>{title}</Text>
-        <Text style={[styles.metricUnit, { color: theme.colors.placeholder, fontSize: isDesktop ? 14 : 12 }]}>{unit}</Text>
+        <Text style={[styles.metricValue, { color }]}>{value}</Text>
+        <Text style={[styles.metricTitle, { color: theme.colors.textSecondary }]}>{title}</Text>
+        <Text style={[styles.metricUnit, { color: theme.colors.placeholder }]}>{unit}</Text>
       </LinearGradient>
     </View>
   );
 
-  const QuickActionCard = ({ title, subtitle, icon: Icon, color, gradient, onPress }: any) => (
-    <TouchableOpacity 
-      style={[
-        styles.quickActionCard, 
-        { 
-          height: isDesktop ? 160 : isTablet ? 140 : 120,
-          minWidth: isDesktop ? 200 : isTablet ? 180 : 160,
-        }
-      ]} 
-      onPress={onPress}
-    >
+  const QuickActionCard = ({ title, subtitle, icon: Icon, color, gradient, onPress, cardSize }: any) => (
+    <TouchableOpacity style={[styles.quickActionCard, { width: cardSize, height: cardSize }]} onPress={onPress}>
       <LinearGradient colors={gradient} style={styles.quickActionGradient}>
         <View style={styles.quickActionContent}>
           <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-            <Icon size={isDesktop ? 32 : 24} color="#FFFFFF" />
+            <Icon size={24} color="#FFFFFF" />
           </View>
           <View style={styles.quickActionText}>
-            <Text style={[styles.quickActionTitle, { fontSize: isDesktop ? 20 : 18 }]}>{title}</Text>
-            <Text style={[styles.quickActionSubtitle, { fontSize: isDesktop ? 15 : 13 }]}>{subtitle}</Text>
+            <Text style={styles.quickActionTitle}>{title}</Text>
+            <Text style={styles.quickActionSubtitle}>{subtitle}</Text>
           </View>
         </View>
       </LinearGradient>
@@ -233,14 +224,12 @@ export default function HomeScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <ResponsiveContainer>
-          <View style={styles.loadingContainer}>
-            <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
-              <View style={[styles.loadingSpinner, { borderColor: theme.colors.border, borderTopColor: theme.colors.primary }]} />
-              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your dashboard...</Text>
-            </View>
+        <View style={styles.loadingContainer}>
+          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
+            <View style={[styles.loadingSpinner, { borderColor: theme.colors.border, borderTopColor: theme.colors.primary }]} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your dashboard...</Text>
           </View>
-        </ResponsiveContainer>
+        </View>
       </SafeAreaView>
     );
   }
@@ -257,228 +246,209 @@ export default function HomeScreen() {
         {/* Header */}
         <LinearGradient
           colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
-          style={[styles.header, { paddingBottom: isDesktop ? 48 : 32 }]}
+          style={styles.header}
         >
-          <ResponsiveContainer>
-            <View style={styles.headerContent}>
-              <View style={styles.headerLeft}>
-                <Text style={[styles.greeting, { fontSize: isDesktop ? 18 : 16 }]}>{getGreeting()},</Text>
-                <Text style={[styles.userName, { fontSize: isDesktop ? 36 : 28 }]}>{user?.user_metadata?.name || 'there'}!</Text>
-                <Text style={[styles.subtitle, { fontSize: isDesktop ? 18 : 16 }]}>Ready to make a positive impact today?</Text>
-              </View>
-              <TouchableOpacity 
-                style={[styles.refreshButton, { width: isDesktop ? 56 : 48, height: isDesktop ? 56 : 48 }]}
-                onPress={onRefresh}
-                disabled={refreshing}
-              >
-                <RefreshCw size={isDesktop ? 28 : 24} color="#FFFFFF" />
-              </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.greeting}>{getGreeting()},</Text>
+              <Text style={styles.userName}>{user?.user_metadata?.name || 'there'}!</Text>
+              <Text style={styles.subtitle}>Ready to make a positive impact today?</Text>
             </View>
-            
-            {/* Hero Image */}
-            <View style={[styles.heroImageContainer, { height: isDesktop ? 160 : 120 }]}>
-              <Image 
-                source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-                style={styles.heroImage}
-              />
-            </View>
-          </ResponsiveContainer>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={onRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Hero Image */}
+          <View style={styles.heroImageContainer}>
+            <Image 
+              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+              style={styles.heroImage}
+            />
+          </View>
         </LinearGradient>
 
-        <ResponsiveContainer>
-          {/* Quick Actions */}
-          <View style={[styles.section, { paddingVertical: getSpacing(20, 24, 32) }]}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text, fontSize: isDesktop ? 26 : 22 }]}>Quick Actions</Text>
-            <ResponsiveGrid
-              columns={{ mobile: 2, tablet: 2, desktop: 4, largeDesktop: 4 }}
-              gap={getSpacing(16, 20, 24)}
-            >
-              <QuickActionCard
-                title="Log Meal"
-                subtitle="Track nutrition & impact"
-                icon={Utensils}
-                gradient={['#10B981', '#059669']}
-                onPress={() => router.push('/meals')}
-              />
-              <QuickActionCard
-                title="Log Workout"
-                subtitle="Record your activity"
-                icon={Dumbbell}
-                gradient={['#3B82F6', '#2563EB']}
-                onPress={() => router.push('/workouts')}
-              />
-              <QuickActionCard
-                title="Scan Fridge"
-                subtitle="AI recipe suggestions"
-                icon={Camera}
-                gradient={['#8B5CF6', '#7C3AED']}
-                onPress={() => router.push('/(tabs)/camera' as any)}
-              />
-              <QuickActionCard
-                title="View Progress"
-                subtitle="See your achievements"
-                icon={Award}
-                gradient={['#F59E0B', '#D97706']}
-                onPress={() => router.push('/(tabs)/leaderboard')}
-              />
-            </ResponsiveGrid>
+        {/* Quick Actions */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Actions</Text>
+          <View style={styles.quickActionsGrid}>
+            <QuickActionCard
+              title="Log Meal"
+              subtitle="Track nutrition & impact"
+              icon={Utensils}
+              gradient={['#10B981', '#059669']}
+              onPress={() => router.push('/meals')}
+              cardSize={cardSize}
+            />
+            <QuickActionCard
+              title="Log Workout"
+              subtitle="Record your activity"
+              icon={Dumbbell}
+              gradient={['#3B82F6', '#2563EB']}
+              onPress={() => router.push('/workouts')}
+              cardSize={cardSize}
+            />
+            <QuickActionCard
+              title="Scan Fridge"
+              subtitle="AI recipe suggestions"
+              icon={Camera}
+              gradient={['#8B5CF6', '#7C3AED']}
+              onPress={() => router.push('/(tabs)/camera' as any)}
+              cardSize={cardSize}
+            />
+            <QuickActionCard
+              title="View Progress"
+              subtitle="See your achievements"
+              icon={Award}
+              gradient={['#F59E0B', '#D97706']}
+              onPress={() => router.push('/(tabs)/leaderboard')}
+              cardSize={cardSize}
+            />
           </View>
+        </View>
 
-          {/* Performance Scores */}
-          {score && (
-            <View style={[styles.section, { paddingVertical: getSpacing(20, 24, 32) }]}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text, fontSize: isDesktop ? 26 : 22 }]}>Today's Performance</Text>
-              <View style={[styles.scoresCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                <LinearGradient
-                  colors={isDark ? ['#1E293B', '#334155'] : ['#F8FAFC', '#F1F5F9']}
-                  style={[styles.scoresGradient, { padding: getSpacing(24, 28, 32) }]}
-                >
-                  <View style={[
-                    styles.scoresContainer,
-                    isDesktop && { justifyContent: 'space-around', maxWidth: 600, alignSelf: 'center' }
-                  ]}>
-                    <View style={styles.scoreItem}>
-                      <ScoreRing score={score.fitness_score} color={theme.colors.secondary} size={isDesktop ? 100 : 80} />
-                      <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary, fontSize: isDesktop ? 16 : 14 }]}>Fitness</Text>
-                    </View>
-                    <View style={styles.scoreItem}>
-                      <ScoreRing score={score.eco_score} color={theme.colors.success} size={isDesktop ? 100 : 80} />
-                      <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary, fontSize: isDesktop ? 16 : 14 }]}>Eco Impact</Text>
-                    </View>
-                    <View style={styles.scoreItem}>
-                      <ScoreRing score={score.combined_score} color={theme.colors.accent} size={isDesktop ? 120 : 100} strokeWidth={isDesktop ? 12 : 10} />
-                      <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary, fontSize: isDesktop ? 16 : 14 }]}>Overall</Text>
-                    </View>
-                  </View>
-                </LinearGradient>
-              </View>
-            </View>
-          )}
-
-          {/* Today's Metrics */}
-          {summary && (
-            <View style={[styles.section, { paddingVertical: getSpacing(20, 24, 32) }]}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text, fontSize: isDesktop ? 26 : 22 }]}>Today's Metrics</Text>
-              <ResponsiveGrid
-                columns={{ mobile: 2, tablet: 3, desktop: 3, largeDesktop: 6 }}
-                gap={getSpacing(12, 16, 20)}
+        {/* Performance Scores */}
+        {score && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Performance</Text>
+            <View style={[styles.scoresCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <LinearGradient
+                colors={isDark ? ['#1E293B', '#334155'] : ['#F8FAFC', '#F1F5F9']}
+                style={styles.scoresGradient}
               >
-                <MetricCard
-                  title="Calories Consumed"
-                  value={summary.totalCalories.toFixed(0)}
-                  unit="kcal"
-                  icon={Flame}
-                  color={theme.colors.error}
-                  trend={5}
-                  bgGradient={isDark ? ['#FEF2F2', '#FEE2E2'] : ['#FEF2F2', '#FECACA']}
-                />
-                <MetricCard
-                  title="Protein Intake"
-                  value={Math.round(summary.totalProtein)}
-                  unit="grams"
-                  icon={TrendingUp}
-                  color={theme.colors.secondary}
-                  trend={-2}
-                  bgGradient={isDark ? ['#EBF5FF', '#DBEAFE'] : ['#EBF5FF', '#BFDBFE']}
-                />
-                <MetricCard
-                  title="CO₂ Impact"
-                  value={summary.totalCO2e.toFixed(1)}
-                  unit="kg saved"
-                  icon={Leaf}
-                  color={theme.colors.success}
-                  trend={12}
-                  bgGradient={isDark ? ['#F0FDF4', '#DCFCE7'] : ['#F0FDF4', '#BBF7D0']}
-                />
-                <MetricCard
-                  title="Water Impact"
-                  value={summary.totalWater.toFixed(0)}
-                  unit="liters"
-                  icon={Droplet}
-                  color={theme.colors.info}
-                  trend={8}
-                  bgGradient={isDark ? ['#EFF6FF', '#DBEAFE'] : ['#EFF6FF', '#BFDBFE']}
-                />
-                <MetricCard
-                  title="Calories Burned"
-                  value={summary.caloriesBurned}
-                  unit="kcal"
-                  icon={Zap}
-                  color={theme.colors.warning}
-                  trend={15}
-                  bgGradient={isDark ? ['#FFFBEB', '#FEF3C7'] : ['#FFFBEB', '#FDE68A']}
-                />
-                <MetricCard
-                  title="Net Balance"
-                  value={Math.abs(summary.netCalories).toFixed(0)}
-                  unit={summary.netCalories > 0 ? 'surplus' : 'deficit'}
-                  icon={Target}
-                  color={summary.netCalories > 0 ? theme.colors.error : theme.colors.success}
-                  bgGradient={summary.netCalories > 0 ? 
-                    (isDark ? ['#FEF2F2', '#FEE2E2'] : ['#FEF2F2', '#FECACA']) :
-                    (isDark ? ['#F0FDF4', '#DCFCE7'] : ['#F0FDF4', '#BBF7D0'])
-                  }
-                />
-              </ResponsiveGrid>
+                <View style={styles.scoresContainer}>
+                  <View style={styles.scoreItem}>
+                    <ScoreRing score={score.fitness_score} color={theme.colors.secondary} />
+                    <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Fitness</Text>
+                  </View>
+                  <View style={styles.scoreItem}>
+                    <ScoreRing score={score.eco_score} color={theme.colors.success} />
+                    <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Eco Impact</Text>
+                  </View>
+                  <View style={styles.scoreItem}>
+                    <ScoreRing score={score.combined_score} color={theme.colors.accent} size={100} strokeWidth={10} />
+                    <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Overall</Text>
+                  </View>
+                </View>
+              </LinearGradient>
             </View>
-          )}
+          </View>
+        )}
 
-          {/* Activity Summary */}
-          {summary && (
-            <View style={[styles.section, { paddingVertical: getSpacing(20, 24, 32) }]}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text, fontSize: isDesktop ? 26 : 22 }]}>Activity Summary</Text>
-              <View style={[styles.activityCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                <LinearGradient
-                  colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
-                  style={[styles.activityGradient, { padding: getSpacing(24, 28, 32) }]}
-                >
-                  <View style={styles.activityHeader}>
-                    <Calendar size={isDesktop ? 24 : 20} color={theme.colors.accent} />
-                    <Text style={[styles.activityTitle, { color: theme.colors.text, fontSize: isDesktop ? 22 : 18 }]}>Today's Progress</Text>
-                  </View>
-                  <View style={[
-                    styles.activityStats,
-                    isDesktop && { justifyContent: 'space-around', maxWidth: 600, alignSelf: 'center' }
-                  ]}>
-                    <View style={styles.activityStat}>
-                      <View style={[styles.activityStatIcon, { backgroundColor: `${theme.colors.success}20`, width: isDesktop ? 40 : 32, height: isDesktop ? 40 : 32 }]}>
-                        <Utensils size={isDesktop ? 20 : 16} color={theme.colors.success} />
-                      </View>
-                      <Text style={[styles.activityStatValue, { color: theme.colors.text, fontSize: isDesktop ? 24 : 20 }]}>{summary.mealsCount}</Text>
-                      <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary, fontSize: isDesktop ? 14 : 12 }]}>Meals Logged</Text>
-                    </View>
-                    <View style={styles.activityStat}>
-                      <View style={[styles.activityStatIcon, { backgroundColor: `${theme.colors.secondary}20`, width: isDesktop ? 40 : 32, height: isDesktop ? 40 : 32 }]}>
-                        <Dumbbell size={isDesktop ? 20 : 16} color={theme.colors.secondary} />
-                      </View>
-                      <Text style={[styles.activityStatValue, { color: theme.colors.text, fontSize: isDesktop ? 24 : 20 }]}>{summary.workoutsCount}</Text>
-                      <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary, fontSize: isDesktop ? 14 : 12 }]}>Workouts Done</Text>
-                    </View>
-                    <View style={styles.activityStat}>
-                      <View style={[styles.activityStatIcon, { 
-                        backgroundColor: `${summary.netCalories > 0 ? theme.colors.error : theme.colors.success}20`,
-                        width: isDesktop ? 40 : 32, 
-                        height: isDesktop ? 40 : 32 
-                      }]}>
-                        <Target size={isDesktop ? 20 : 16} color={summary.netCalories > 0 ? theme.colors.error : theme.colors.success} />
-                      </View>
-                      <Text style={[styles.activityStatValue, { 
-                        color: summary.netCalories > 0 ? theme.colors.error : theme.colors.success,
-                        fontSize: isDesktop ? 24 : 20 
-                      }]}>
-                        {summary.netCalories > 0 ? '+' : ''}{summary.netCalories.toFixed(0)}
-                      </Text>
-                      <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary, fontSize: isDesktop ? 14 : 12 }]}>Net Calories</Text>
-                    </View>
-                  </View>
-                </LinearGradient>
-              </View>
+        {/* Today's Metrics */}
+        {summary && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Metrics</Text>
+            <View style={styles.metricsGrid}>
+              <MetricCard
+                title="Calories Consumed"
+                value={summary.totalCalories.toFixed(0)}
+                unit="kcal"
+                icon={Flame}
+                color={theme.colors.error}
+                trend={5}
+                bgGradient={isDark ? ['#FEF2F2', '#FEE2E2'] : ['#FEF2F2', '#FECACA']}
+              />
+              <MetricCard
+                title="Protein Intake"
+                value={Math.round(summary.totalProtein)}
+                unit="grams"
+                icon={TrendingUp}
+                color={theme.colors.secondary}
+                trend={-2}
+                bgGradient={isDark ? ['#EBF5FF', '#DBEAFE'] : ['#EBF5FF', '#BFDBFE']}
+              />
+              <MetricCard
+                title="CO₂ Impact"
+                value={summary.totalCO2e.toFixed(1)}
+                unit="kg saved"
+                icon={Leaf}
+                color={theme.colors.success}
+                trend={12}
+                bgGradient={isDark ? ['#F0FDF4', '#DCFCE7'] : ['#F0FDF4', '#BBF7D0']}
+              />
+              <MetricCard
+                title="Water Impact"
+                value={summary.totalWater.toFixed(0)}
+                unit="liters"
+                icon={Droplet}
+                color={theme.colors.info}
+                trend={8}
+                bgGradient={isDark ? ['#EFF6FF', '#DBEAFE'] : ['#EFF6FF', '#BFDBFE']}
+              />
+              <MetricCard
+                title="Calories Burned"
+                value={summary.caloriesBurned}
+                unit="kcal"
+                icon={Zap}
+                color={theme.colors.warning}
+                trend={15}
+                bgGradient={isDark ? ['#FFFBEB', '#FEF3C7'] : ['#FFFBEB', '#FDE68A']}
+              />
+              <MetricCard
+                title="Net Balance"
+                value={Math.abs(summary.netCalories).toFixed(0)}
+                unit={summary.netCalories > 0 ? 'surplus' : 'deficit'}
+                icon={Target}
+                color={summary.netCalories > 0 ? theme.colors.error : theme.colors.success}
+                bgGradient={summary.netCalories > 0 ? 
+                  (isDark ? ['#FEF2F2', '#FEE2E2'] : ['#FEF2F2', '#FECACA']) :
+                  (isDark ? ['#F0FDF4', '#DCFCE7'] : ['#F0FDF4', '#BBF7D0'])
+                }
+              />
             </View>
-          )}
-        </ResponsiveContainer>
+          </View>
+        )}
+
+        {/* Activity Summary */}
+        {summary && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Activity Summary</Text>
+            <View style={[styles.activityCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <LinearGradient
+                colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+                style={styles.activityGradient}
+              >
+                <View style={styles.activityHeader}>
+                  <Calendar size={20} color={theme.colors.accent} />
+                  <Text style={[styles.activityTitle, { color: theme.colors.text }]}>Today's Progress</Text>
+                </View>
+                <View style={styles.activityStats}>
+                  <View style={styles.activityStat}>
+                    <View style={[styles.activityStatIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+                      <Utensils size={16} color={theme.colors.success} />
+                    </View>
+                    <Text style={[styles.activityStatValue, { color: theme.colors.text }]}>{summary.mealsCount}</Text>
+                    <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary }]}>Meals Logged</Text>
+                  </View>
+                  <View style={styles.activityStat}>
+                    <View style={[styles.activityStatIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+                      <Dumbbell size={16} color={theme.colors.secondary} />
+                    </View>
+                    <Text style={[styles.activityStatValue, { color: theme.colors.text }]}>{summary.workoutsCount}</Text>
+                    <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary }]}>Workouts Done</Text>
+                  </View>
+                  <View style={styles.activityStat}>
+                    <View style={[styles.activityStatIcon, { backgroundColor: `${summary.netCalories > 0 ? theme.colors.error : theme.colors.success}20` }]}>
+                      <Target size={16} color={summary.netCalories > 0 ? theme.colors.error : theme.colors.success} />
+                    </View>
+                    <Text style={[styles.activityStatValue, { color: summary.netCalories > 0 ? theme.colors.error : theme.colors.success }]}>
+                      {summary.netCalories > 0 ? '+' : ''}{summary.netCalories.toFixed(0)}
+                    </Text>
+                    <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary }]}>Net Calories</Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </View>
+          </View>
+        )}
 
         {/* Bottom Spacing */}
-        <View style={[styles.bottomSpacing, { height: getSpacing(32, 40, 48) }]} />
+        <View style={styles.bottomSpacing} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -519,8 +489,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   header: {
-    paddingHorizontal: 0,
+    paddingHorizontal: 24,
     paddingTop: 20,
+    paddingBottom: 32,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
   },
@@ -534,25 +505,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greeting: {
+    fontSize: 16,
     color: '#E9D5FF',
     fontWeight: '500',
   },
   userName: {
+    fontSize: 28,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   subtitle: {
+    fontSize: 16,
     color: '#D1FAE5',
     lineHeight: 22,
   },
   refreshButton: {
+    padding: 12,
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   heroImageContainer: {
+    height: 120,
     borderRadius: 16,
     overflow: 'hidden',
     marginTop: 8,
@@ -563,16 +537,28 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   section: {
-    paddingHorizontal: 0,
+    padding: 20,
   },
   sectionTitle: {
+    fontSize: 22,
     fontWeight: '700',
     marginBottom: 16,
   },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    maxWidth: 464,
+    alignSelf: 'center',
+    width: '100%',
+  },
   quickActionCard: {
-    aspectRatio: 1.2,
+    aspectRatio: 1,
     borderRadius: 24,
     overflow: 'hidden',
+    marginBottom: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -609,12 +595,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   quickActionTitle: {
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 2,
     textAlign: 'center',
   },
   quickActionSubtitle: {
+    fontSize: 13,
     color: 'rgba(255,255,255,0.9)',
     lineHeight: 18,
     textAlign: 'center',
@@ -630,6 +618,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   scoresGradient: {
+    padding: 24,
   },
   scoresContainer: {
     flexDirection: 'row',
@@ -641,13 +630,21 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   scoreText: {
+    fontSize: 18,
     fontWeight: '700',
   },
   scoreLabel: {
+    fontSize: 14,
     fontWeight: '600',
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
   },
   metricCard: {
     flex: 1,
+    minWidth: (width - 64) / 2,
     borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
@@ -659,7 +656,6 @@ const styles = StyleSheet.create({
   },
   metricGradient: {
     padding: 16,
-    flex: 1,
   },
   metricHeader: {
     flexDirection: 'row',
@@ -687,14 +683,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   metricValue: {
+    fontSize: 24,
     fontWeight: '700',
     marginBottom: 4,
   },
   metricTitle: {
+    fontSize: 14,
     fontWeight: '600',
     marginBottom: 2,
   },
   metricUnit: {
+    fontSize: 12,
     fontWeight: '500',
   },
   activityCard: {
@@ -708,6 +707,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   activityGradient: {
+    padding: 24,
   },
   activityHeader: {
     flexDirection: 'row',
@@ -716,6 +716,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   activityTitle: {
+    fontSize: 18,
     fontWeight: '700',
   },
   activityStats: {
@@ -727,17 +728,22 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   activityStatIcon: {
+    width: 32,
+    height: 32,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   activityStatValue: {
+    fontSize: 20,
     fontWeight: '700',
   },
   activityStatLabel: {
+    fontSize: 12,
     fontWeight: '500',
     textAlign: 'center',
   },
   bottomSpacing: {
+    height: 32,
   },
 });
