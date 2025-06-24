@@ -17,6 +17,7 @@ import { Send, Bot, User, Sparkles, TrendingUp, Trophy, Camera, Leaf, Droplet, T
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+import Markdown from 'react-native-markdown-display';
 
 interface Message {
   id: string;
@@ -264,9 +265,15 @@ export default function KaliAIScreen() {
   };
 
   const handleSystemAction = (action: string) => {
-    if (action.startsWith('/(tabs)/')) {
+    // Normalize navigation actions to the correct tab route
+    const tabRoutes = ['/leaderboard', '/meals', '/workouts', '/camera'];
+    let route = action;
+    if (tabRoutes.includes(action)) {
+      route = '/(tabs)' + action;
+    }
+    if (route.startsWith('/(tabs)/')) {
       // Navigate to the specified route
-      router.push(action as any);
+      router.push(route as any);
     } else {
       // Handle component actions
       switch (action) {
@@ -377,17 +384,21 @@ export default function KaliAIScreen() {
           {message.role === 'assistant' ? 'KaliAI' : 'You'}
         </Text>
       </View>
-      <Text style={[
-        styles.messageText,
-        { color: message.role === 'user' ? '#FFFFFF' : theme.colors.text }
-      ]}>
-        {message.content}
-      </Text>
+      {message.role === 'assistant' ? (
+        <Markdown style={{ body: { ...styles.messageText, color: theme.colors.text } }}>
+          {message.content}
+        </Markdown>
+      ) : (
+        <Text style={[
+          styles.messageText,
+          { color: '#FFFFFF' }
+        ]}>
+          {message.content}
+        </Text>
+      )}
       {message.systemActions && (
         <View style={styles.systemActions}>
-          <Text style={[styles.systemActionsTitle, { color: theme.colors.textSecondary }]}>
-            Available Actions:
-          </Text>
+          <Text style={[styles.systemActionsTitle, { color: theme.colors.textSecondary }]}>Available Actions:</Text>
           {message.systemActions.map((action, index) => (
             <TouchableOpacity
               key={index}
@@ -402,9 +413,7 @@ export default function KaliAIScreen() {
                   </Text>
                 </View>
                 {action.description && (
-                  <Text style={[styles.systemActionDescription, { color: theme.colors.textSecondary }]}>
-                    {action.description}
-                  </Text>
+                  <Text style={[styles.systemActionDescription, { color: theme.colors.textSecondary }]}> {action.description} </Text>
                 )}
               </View>
             </TouchableOpacity>
