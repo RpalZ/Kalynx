@@ -13,23 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  Send, 
-  Bot, 
-  User, 
-  Sparkles, 
-  TrendingUp, 
-  Trophy, 
-  Camera,
-  Leaf,
-  Droplet,
-  Target,
-  Zap,
-  ExternalLink,
-  BarChart3,
-  Utensils,
-  Dumbbell
-} from 'lucide-react-native';
+import { Send, Bot, User, Sparkles, TrendingUp, Trophy, Camera, Leaf, Droplet, Target, Zap, ExternalLink, ChartBar as BarChart3, Utensils, Dumbbell } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
