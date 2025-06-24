@@ -1,90 +1,120 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  RefreshControl,
-  Alert,
+  TextInput,
   TouchableOpacity,
+  Alert,
   Modal,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
+  Send, 
+  Bot, 
+  User, 
+  Sparkles, 
   Leaf, 
   Droplet, 
-  TreePine, 
-  Recycle, 
-  Award,
-  Trophy,
   Target,
   TrendingUp,
+  Trophy,
+  Utensils,
+  Dumbbell,
   Calendar,
-  Zap,
-  Gift
+  X,
+  ChevronRight,
+  Zap
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 
-interface EcoStats {
+interface Message {
+  id: string;
+  type: 'user' | 'bot';
+  content: string;
+  timestamp: Date;
+  component?: React.ReactNode;
+  actions?: MessageAction[];
+}
+
+interface MessageAction {
+  id: string;
+  label: string;
+  type: 'navigate' | 'modal' | 'action';
+  target?: string;
+  data?: any;
+}
+
+interface UserStats {
+  totalMeals: number;
+  totalWorkouts: number;
   totalCO2e: number;
   totalWater: number;
-  mealsCount: number;
-  avgCO2PerMeal: number;
-  avgWaterPerMeal: number;
-  totalCarbonSaved: number;
-  totalWaterSaved: number;
+  avgEcoScore: number;
+  currentStreak: number;
 }
 
-interface EcoMilestone {
-  id: string;
-  name: string;
-  description: string;
-  target: number;
-  current: number;
-  type: 'carbon_saved' | 'water_saved' | 'meals_logged' | 'streak_days';
-  reward: string;
-  completed: boolean;
-  icon: string;
+interface QuickStatsProps {
+  stats: UserStats;
 }
 
-interface EcoChallenge {
-  id: string;
-  title: string;
-  description: string;
-  target: number;
-  current: number;
-  endDate: string;
-  reward: string;
-  type: 'weekly' | 'monthly';
-}
-
-export default function EcoScreen() {
+const QuickStatsCard: React.FC<QuickStatsProps> = ({ stats }) => {
   const { theme } = useTheme();
-  const [ecoStats, setEcoStats] = useState<EcoStats | null>(null);
-  const [weeklyStats, setWeeklyStats] = useState<EcoStats | null>(null);
-  const [milestones, setMilestones] = useState<EcoMilestone[]>([]);
-  const [challenges, setChallenges] = useState<EcoChallenge[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [showRewardModal, setShowRewardModal] = useState(false);
-  const [selectedReward, setSelectedReward] = useState<EcoMilestone | null>(null);
+  
+  return (
+    <View style={[styles.statsCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+      <Text style={[styles.statsTitle, { color: theme.colors.text }]}>Your Weekly Impact</Text>
+      <View style={styles.statsGrid}>
+        <View style={styles.statItem}>
+          <Leaf size={16} color={theme.colors.success} />
+          <Text style={[styles.statValue, { color: theme.colors.text }]}>{stats.totalCO2e.toFixed(1)}kg</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>CO₂</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Droplet size={16} color={theme.colors.info} />
+          <Text style={[styles.statValue, { color: theme.colors.text }]}>{stats.totalWater.toFixed(0)}L</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Water</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Utensils size={16} color={theme.colors.warning} />
+          <Text style={[styles.statValue, { color: theme.colors.text }]}>{stats.totalMeals}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Meals</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Dumbbell size={16} color={theme.colors.secondary} />
+          <Text style={[styles.statValue, { color: theme.colors.text }]}>{stats.totalWorkouts}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Workouts</Text>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+export default function KaliAIScreen() {
+  const { theme } = useTheme();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [showQuickActions, setShowQuickActions] = useState(true);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [conversationContext, setConversationContext] = useState<string[]>([]);
 
   useEffect(() => {
     checkAuth();
+    initializeChat();
   }, []);
-
-  useEffect(() => {
-    if (ecoStats) {
-      updateMilestones();
-    }
-  }, [ecoStats]);
 
   useFocusEffect(
     React.useCallback(() => {
-      checkAuth(); // Re-run auth check and data fetch on focus
+      fetchUserStats();
     }, [])
   );
 
@@ -94,348 +124,322 @@ export default function EcoScreen() {
       router.replace('/auth');
       return;
     }
-    fetchEcoData();
-    fetchMilestones();
-    fetchChallenges();
+    fetchUserStats();
   };
 
-  const fetchEcoData = async () => {
+  const fetchUserStats = async () => {
     try {
       const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        router.replace('/auth');
-        return;
-      }
+      if (!session.session) return;
 
-      // Fetch today's data
-      const today = new Date().toISOString().split('T')[0];
-      const todayResponse = await fetch(
-        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-daily-summary?date=${today}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      // Get last 7 days of data
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAgoStr = weekAgo.toISOString().split('T')[0];
 
-      if (todayResponse.ok) {
-        const todayData = await todayResponse.json();
-        setEcoStats({
-          totalCO2e: todayData.totalCO2e,
-          totalWater: todayData.totalWater,
-          mealsCount: todayData.mealsCount,
-          avgCO2PerMeal: todayData.mealsCount > 0 ? todayData.totalCO2e / todayData.mealsCount : 0,
-          avgWaterPerMeal: todayData.mealsCount > 0 ? todayData.totalWater / todayData.mealsCount : 0,
-          totalCarbonSaved: todayData.totalCarbonSaved,
-          totalWaterSaved: todayData.totalWaterSaved,
-        });
-      }
+      const [mealsResponse, workoutsResponse, scoresResponse] = await Promise.all([
+        supabase.from('meals').select('*').eq('user_id', session.session.user.id).gte('created_at', weekAgoStr),
+        supabase.from('workouts').select('*').eq('user_id', session.session.user.id).gte('created_at', weekAgoStr),
+        supabase.from('daily_scores').select('*').eq('user_id', session.session.user.id).gte('date', weekAgoStr)
+      ]);
 
-      // Fetch weekly data
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - 7);
-      const weekStartStr = weekStart.toISOString().split('T')[0];
+      const meals = mealsResponse.data || [];
+      const workouts = workoutsResponse.data || [];
+      const scores = scoresResponse.data || [];
 
-      const { data: weeklyMeals, error } = await supabase
-        .from('meals')
-        .select('carbon_impact, water_impact')
-        .gte('created_at', `${weekStartStr}T00:00:00`)
-        .lt('created_at', `${today}T23:59:59`);
+      const stats: UserStats = {
+        totalMeals: meals.length,
+        totalWorkouts: workouts.length,
+        totalCO2e: meals.reduce((sum, meal) => sum + (meal.carbon_impact || 0), 0),
+        totalWater: meals.reduce((sum, meal) => sum + (meal.water_impact || 0), 0),
+        avgEcoScore: scores.length ? scores.reduce((sum, score) => sum + (score.eco_score || 0), 0) / scores.length : 0,
+        currentStreak: 7, // Mock streak data
+      };
 
-      if (!error && weeklyMeals) {
-        const weeklyTotalCO2 = weeklyMeals.reduce((sum, meal) => sum + (meal.carbon_impact || 0), 0);
-        const weeklyTotalWater = weeklyMeals.reduce((sum, meal) => sum + (meal.water_impact || 0), 0);
-        
-        setWeeklyStats({
-          totalCO2e: weeklyTotalCO2,
-          totalWater: weeklyTotalWater,
-          mealsCount: weeklyMeals.length,
-          avgCO2PerMeal: weeklyMeals.length > 0 ? weeklyTotalCO2 / weeklyMeals.length : 0,
-          avgWaterPerMeal: weeklyMeals.length > 0 ? weeklyTotalWater / weeklyMeals.length : 0,
-          totalCarbonSaved: weeklyTotalCO2,
-          totalWaterSaved: weeklyTotalWater,
-        });
-      }
-
+      setUserStats(stats);
     } catch (error) {
-      console.error('Error fetching eco data:', error);
-      Alert.alert('Error', 'Failed to load environmental data');
-    } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      console.error('Error fetching user stats:', error);
     }
   };
 
-  const updateMilestones = () => {
-    const updatedMilestones: EcoMilestone[] = [
-      {
-        id: '1',
-        name: 'Carbon Saver',
-        description: 'Save 10kg of CO₂ through sustainable meal choices',
-        target: 10,
-        current: ecoStats?.totalCarbonSaved || 0,
-        type: 'carbon_saved',
-        reward: 'Eco Warrior Badge NFT',
-        completed: (ecoStats?.totalCarbonSaved || 0) >= 10,
-        icon: 'leaf',
-      },
-      {
-        id: '2',
-        name: 'Water Guardian',
-        description: 'Save 100L of water through efficient meal planning',
-        target: 100,
-        current: ecoStats?.totalWaterSaved || 0,
-        type: 'water_saved',
-        reward: 'Water Protector Badge NFT',
-        completed: (ecoStats?.totalWaterSaved || 0) >= 100,
-        icon: 'droplet',
-      },
-      {
-        id: '3',
-        name: 'Meal Tracker',
-        description: 'Log 50 sustainable meals',
-        target: 50,
-        current: ecoStats?.mealsCount || 0,
-        type: 'meals_logged',
-        reward: 'Nutrition Expert Badge NFT',
-        completed: (ecoStats?.mealsCount || 0) >= 50,
-        icon: 'target',
-      },
-    ];
-
-    setMilestones(updatedMilestones);
+  const initializeChat = () => {
+    const welcomeMessage: Message = {
+      id: '1',
+      type: 'bot',
+      content: "Hi there! I'm KaliAI, your personal sustainability and fitness assistant. I'm here to help you make eco-friendly choices and reach your health goals. How can I assist you today?",
+      timestamp: new Date(),
+      actions: [
+        { id: 'tips', label: 'Get Daily Tips', type: 'action', data: 'daily_tips' },
+        { id: 'stats', label: 'Show My Stats', type: 'action', data: 'show_stats' },
+        { id: 'challenges', label: 'View Challenges', type: 'navigate', target: '/leaderboard' },
+      ]
+    };
+    setMessages([welcomeMessage]);
   };
 
-  const fetchMilestones = () => {
-    updateMilestones();
-  };
-
-  const fetchChallenges = async () => {
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) {
-        router.replace('/auth');
-        return;
-      }
-      const userId = session.session.user.id;
-
-      const today = new Date();
-
-      // Calculate Plant-Based Week progress
-      const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1))); // Monday
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      
-      const { data: weeklyMeals, error: weeklyMealsError } = await supabase
-        .from('meals')
-        .select('name')
-        .eq('user_id', userId)
-        .gte('created_at', startOfWeek.toISOString())
-        .lt('created_at', endOfWeek.toISOString());
-      
-      let plantBasedMealsCount = 0;
-      if (!weeklyMealsError && weeklyMeals) {
-        const plantBasedKeywords = ['plant-based', 'vegan', 'vegetarian', 'tofu', 'lentil', 'bean', 'chickpea', 'vegetable'];
-        plantBasedMealsCount = weeklyMeals.filter(meal => 
-          plantBasedKeywords.some(keyword => meal.name.toLowerCase().includes(keyword))
-        ).length;
-      }
-
-      // Calculate Low Carbon Month progress
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      
-      const { data: dailyScores, error: dailyScoresError } = await supabase
-        .from('daily_scores')
-        .select('date, eco_score')
-        .eq('user_id', userId)
-        .gte('date', startOfMonth.toISOString().split('T')[0])
-        .lt('date', endOfMonth.toISOString().split('T')[0]);
-
-      let lowCarbonDaysCount = 0;
-      if (!dailyScoresError && dailyScores) {
-        // Count unique days where eco_score is greater than 50 (equivalent to totalCO2e < 2kg)
-        const uniqueLowCarbonDays = new Set<string>();
-        dailyScores.forEach(score => {
-          if ((score.eco_score || 0) > 50) {
-            uniqueLowCarbonDays.add(score.date);
-          }
-        });
-        lowCarbonDaysCount = uniqueLowCarbonDays.size;
-      }
-
-      const updatedChallenges: EcoChallenge[] = [
-        {
-          id: '1',
-          title: 'Plant-Based Week',
-          description: 'Log 5 plant-based meals this week',
-          target: 5,
-          current: plantBasedMealsCount,
-          endDate: new Date(today.getFullYear(), today.getMonth(), today.getDate() + (7 - today.getDay())).toISOString().split('T')[0],
-          reward: '50 Eco Points',
-          type: 'weekly',
-        },
-        {
-          id: '2',
-          title: 'Low Carbon Month',
-          description: 'Keep daily CO₂ under 2kg for 20 days this month',
-          target: 20,
-          current: lowCarbonDaysCount,
-          endDate: endOfMonth.toISOString().split('T')[0],
-          reward: 'Carbon Neutral Champion NFT',
-          type: 'monthly',
-        },
-      ];
-
-      setChallenges(updatedChallenges);
-
-    } catch (error) {
-      console.error('Error fetching challenges:', error);
-      Alert.alert('Error', 'Failed to load challenges');
-    }
-  };
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchEcoData();
-    fetchMilestones();
-    fetchChallenges();
-  };
-
-  const claimReward = async (milestone: EcoMilestone) => {
-    setSelectedReward(milestone);
-    setShowRewardModal(true);
+  const generateAIResponse = async (userMessage: string, context: string[]): Promise<string> => {
+    const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY');
     
-    // In production, mint NFT or award points here
+    if (!DEEPSEEK_API_KEY) {
+      return "I'm having trouble connecting to my knowledge base right now. Please try again later!";
+    }
+
     try {
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        router.replace('/auth');
-        return;
+      const systemPrompt = `You are KaliAI, a friendly and knowledgeable AI assistant for Kalyx, a sustainable health and fitness app. 
+
+Your personality:
+- Supportive and encouraging
+- Knowledgeable about sustainability, eco-friendly habits, and fitness
+- Conversational and friendly, not robotic
+- Proactive in offering tips and suggestions
+
+User context:
+${userStats ? `
+- Total meals logged this week: ${userStats.totalMeals}
+- Total workouts this week: ${userStats.totalWorkouts}
+- Carbon footprint this week: ${userStats.totalCO2e.toFixed(1)}kg CO₂
+- Water usage this week: ${userStats.totalWater.toFixed(0)}L
+- Average eco score: ${userStats.avgEcoScore.toFixed(0)}
+- Current streak: ${userStats.currentStreak} days
+` : 'User stats not available'}
+
+Recent conversation context: ${context.join(' ')}
+
+Guidelines:
+- Keep responses conversational and under 150 words
+- Offer specific, actionable advice
+- Reference user's data when relevant
+- Suggest system commands when appropriate using this format: [SYSTEM:command_name]
+- Available system commands: show_stats, navigate_meals, navigate_workouts, navigate_leaderboard, navigate_camera, daily_tips
+
+Respond to the user's message naturally and helpfully.`;
+
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage }
+          ],
+          temperature: 0.7,
+          max_tokens: 200
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('AI service unavailable');
       }
 
-      // Mock NFT minting - replace with actual blockchain integration
-      console.log(`Minting NFT for milestone: ${milestone.name}`);
-      
-      Alert.alert(
-        'Reward Claimed!',
-        `Congratulations! You've earned: ${milestone.reward}`,
-        [{ text: 'Awesome!', onPress: () => setShowRewardModal(false) }]
-      );
+      const data = await response.json();
+      return data.choices[0].message.content;
     } catch (error) {
-      console.error('Error claiming reward:', error);
-      Alert.alert('Error', 'Failed to claim reward');
+      console.error('Error generating AI response:', error);
+      return "I'm having trouble processing that right now. Could you try rephrasing your question?";
     }
   };
 
-  const EcoCard = ({ title, value, unit, icon: Icon, color, bgColor, subtitle }: any) => (
-    <View style={[styles.ecoCard, { backgroundColor: bgColor || theme.colors.card, borderColor: theme.colors.border }]}>
-      <View style={styles.cardHeader}>
-        <Icon size={24} color={color} />
-        <Text style={[styles.cardTitle, { color: theme.colors.textSecondary }]}>{title}</Text>
+  const processSystemCommands = (content: string): { content: string; actions: MessageAction[]; component?: React.ReactNode } => {
+    const actions: MessageAction[] = [];
+    let component: React.ReactNode = null;
+    let processedContent = content;
+
+    // Extract system commands
+    const systemCommandRegex = /\[SYSTEM:(\w+)\]/g;
+    const commands = [...content.matchAll(systemCommandRegex)];
+
+    commands.forEach(([fullMatch, command]) => {
+      processedContent = processedContent.replace(fullMatch, '');
+      
+      switch (command) {
+        case 'show_stats':
+          if (userStats) {
+            component = <QuickStatsCard stats={userStats} />;
+          }
+          break;
+        case 'navigate_meals':
+          actions.push({ id: 'meals', label: 'Log Meals', type: 'navigate', target: '/(tabs)/meals' });
+          break;
+        case 'navigate_workouts':
+          actions.push({ id: 'workouts', label: 'Log Workouts', type: 'navigate', target: '/(tabs)/workouts' });
+          break;
+        case 'navigate_leaderboard':
+          actions.push({ id: 'leaderboard', label: 'View Leaderboard', type: 'navigate', target: '/(tabs)/leaderboard' });
+          break;
+        case 'navigate_camera':
+          actions.push({ id: 'camera', label: 'Scan Fridge', type: 'navigate', target: '/(tabs)/camera' });
+          break;
+        case 'daily_tips':
+          actions.push({ id: 'tips', label: 'More Tips', type: 'action', data: 'daily_tips' });
+          break;
+      }
+    });
+
+    return { content: processedContent.trim(), actions, component };
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputText.trim()) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: inputText.trim(),
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputText('');
+    setIsTyping(true);
+    setShowQuickActions(false);
+
+    // Update conversation context
+    const newContext = [...conversationContext, inputText.trim()].slice(-5); // Keep last 5 messages
+    setConversationContext(newContext);
+
+    try {
+      const aiResponse = await generateAIResponse(inputText.trim(), newContext);
+      const { content, actions, component } = processSystemCommands(aiResponse);
+
+      const botMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content,
+        timestamp: new Date(),
+        actions: actions.length > 0 ? actions : undefined,
+        component,
+      };
+
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: "I'm having trouble right now. Please try again in a moment!",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleQuickAction = async (actionData: string) => {
+    if (actionData === 'daily_tips') {
+      const tips = [
+        "💡 Try replacing one meat meal with a plant-based option today to reduce your carbon footprint by up to 2kg CO₂!",
+        "🚰 Use a reusable water bottle instead of single-use plastic to save approximately 167 plastic bottles per year.",
+        "🚶‍♀️ Walk or bike for short trips under 2 miles - it's great exercise and eliminates car emissions!",
+        "🥗 Plan your meals for the week to reduce food waste by up to 40% and save money.",
+        "💪 Try a 10-minute bodyweight workout - no equipment needed and it burns calories efficiently!"
+      ];
+      
+      const randomTip = tips[Math.floor(Math.random() * tips.length)];
+      
+      const tipMessage: Message = {
+        id: Date.now().toString(),
+        type: 'bot',
+        content: `Here's a sustainable tip for you:\n\n${randomTip}`,
+        timestamp: new Date(),
+        actions: [
+          { id: 'more_tips', label: 'Another Tip', type: 'action', data: 'daily_tips' },
+          { id: 'log_meal', label: 'Log a Meal', type: 'navigate', target: '/(tabs)/meals' },
+        ]
+      };
+      
+      setMessages(prev => [...prev, tipMessage]);
+    } else if (actionData === 'show_stats' && userStats) {
+      const statsMessage: Message = {
+        id: Date.now().toString(),
+        type: 'bot',
+        content: "Here's your weekly sustainability and fitness summary:",
+        timestamp: new Date(),
+        component: <QuickStatsCard stats={userStats} />,
+        actions: [
+          { id: 'improve', label: 'How to Improve', type: 'action', data: 'improvement_tips' },
+          { id: 'leaderboard', label: 'Compare with Others', type: 'navigate', target: '/(tabs)/leaderboard' },
+        ]
+      };
+      
+      setMessages(prev => [...prev, statsMessage]);
+    }
+    
+    setShowQuickActions(false);
+  };
+
+  const handleActionPress = (action: MessageAction) => {
+    if (action.type === 'navigate' && action.target) {
+      router.push(action.target as any);
+    } else if (action.type === 'action' && action.data) {
+      handleQuickAction(action.data);
+    }
+  };
+
+  const MessageBubble = ({ message }: { message: Message }) => {
+    const isUser = message.type === 'user';
+    
+    return (
+      <View style={[styles.messageContainer, isUser ? styles.userMessageContainer : styles.botMessageContainer]}>
+        <View style={styles.messageHeader}>
+          <View style={[styles.avatar, { backgroundColor: isUser ? theme.colors.secondary : theme.colors.success }]}>
+            {isUser ? <User size={16} color="#FFFFFF" /> : <Bot size={16} color="#FFFFFF" />}
+          </View>
+          <Text style={[styles.messageSender, { color: theme.colors.textSecondary }]}>
+            {isUser ? 'You' : 'KaliAI'}
+          </Text>
+          <Text style={[styles.messageTime, { color: theme.colors.placeholder }]}>
+            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
+        
+        <View style={[
+          styles.messageBubble,
+          { backgroundColor: isUser ? theme.colors.secondary : theme.colors.card },
+          { borderColor: theme.colors.border }
+        ]}>
+          <Text style={[styles.messageText, { color: isUser ? '#FFFFFF' : theme.colors.text }]}>
+            {message.content}
+          </Text>
+        </View>
+
+        {message.component && (
+          <View style={styles.componentContainer}>
+            {message.component}
+          </View>
+        )}
+
+        {message.actions && message.actions.length > 0 && (
+          <View style={styles.actionsContainer}>
+            {message.actions.map((action) => (
+              <TouchableOpacity
+                key={action.id}
+                style={[styles.actionButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                onPress={() => handleActionPress(action)}
+              >
+                <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>{action.label}</Text>
+                <ChevronRight size={14} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
-      <Text style={[styles.cardValue, { color }]}>{value}</Text>
-      <Text style={[styles.cardUnit, { color: theme.colors.placeholder }]}>{unit}</Text>
-      {subtitle && <Text style={[styles.cardSubtitle, { color: theme.colors.textSecondary }]}>{subtitle}</Text>}
-    </View>
+    );
+  };
+
+  const QuickActionButton = ({ icon: Icon, label, onPress, color }: any) => (
+    <TouchableOpacity
+      style={[styles.quickActionButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+      onPress={onPress}
+    >
+      <Icon size={20} color={color} />
+      <Text style={[styles.quickActionText, { color: theme.colors.text }]}>{label}</Text>
+    </TouchableOpacity>
   );
-
-  const MilestoneCard = ({ milestone }: { milestone: EcoMilestone }) => {
-    const progress = (milestone.current / milestone.target) * 100;
-    const isCompleted = progress >= 100;
-
-    return (
-      <View style={[styles.milestoneCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }, isCompleted && styles.completedMilestone]}>
-        <View style={styles.milestoneHeader}>
-          <View style={[styles.milestoneIcon, { backgroundColor: theme.colors.surface }]}>
-            {milestone.icon === 'leaf' && <Leaf size={20} color={theme.colors.success} />}
-            {milestone.icon === 'droplet' && <Droplet size={20} color={theme.colors.info} />}
-            {milestone.icon === 'target' && <Target size={20} color={theme.colors.warning} />}
-          </View>
-          <View style={styles.milestoneInfo}>
-            <Text style={[styles.milestoneName, { color: theme.colors.text }]}>{milestone.name}</Text>
-            <Text style={[styles.milestoneDescription, { color: theme.colors.textSecondary }]}>{milestone.description}</Text>
-          </View>
-          {isCompleted && (
-            <TouchableOpacity
-              style={[styles.claimButton, { backgroundColor: theme.colors.success }]}
-              onPress={() => claimReward(milestone)}
-            >
-              <Gift size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
-        </View>
-        
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: theme.colors.border }]}>
-            <View 
-              style={[
-                styles.progressFill, 
-                { width: `${Math.min(100, progress)}%`, backgroundColor: theme.colors.success }
-              ]} 
-            />
-          </View>
-          <Text style={[styles.progressText, { color: theme.colors.textSecondary }]}>
-            {milestone.current}/{milestone.target}
-          </Text>
-        </View>
-        
-        <Text style={[styles.rewardText, { color: theme.colors.warning }]}>Reward: {milestone.reward}</Text>
-      </View>
-    );
-  };
-
-  const ChallengeCard = ({ challenge }: { challenge: EcoChallenge }) => {
-    const progress = (challenge.current / challenge.target) * 100;
-    const daysLeft = Math.ceil((new Date(challenge.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-
-    return (
-      <View style={[styles.challengeCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <View style={styles.challengeHeader}>
-          <View style={[styles.challengeIcon, { backgroundColor: theme.colors.surface }]}>
-            <Zap size={20} color={theme.colors.accent} />
-          </View>
-          <View style={styles.challengeInfo}>
-            <Text style={[styles.challengeTitle, { color: theme.colors.text }]}>{challenge.title}</Text>
-            <Text style={[styles.challengeDescription, { color: theme.colors.textSecondary }]}>{challenge.description}</Text>
-          </View>
-          <View style={styles.challengeTime}>
-            <Calendar size={16} color={theme.colors.textSecondary} />
-            <Text style={[styles.timeLeft, { color: theme.colors.textSecondary }]}>{daysLeft}d left</Text>
-          </View>
-        </View>
-        
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { backgroundColor: theme.colors.border }]}>
-            <View 
-              style={[
-                styles.challengeProgressFill, 
-                { width: `${Math.min(100, progress)}%`, backgroundColor: theme.colors.accent }
-              ]} 
-            />
-          </View>
-          <Text style={[styles.progressText, { color: theme.colors.textSecondary }]}>
-            {challenge.current}/{challenge.target}
-          </Text>
-        </View>
-        
-        <Text style={[styles.rewardText, { color: theme.colors.warning }]}>Reward: {challenge.reward}</Text>
-      </View>
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading environmental data...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -443,150 +447,110 @@ export default function EcoScreen() {
         colors={[theme.colors.gradient.success[0], theme.colors.gradient.success[1]]}
         style={styles.header}
       >
-        <Text style={styles.headerTitle}>Environmental Impact</Text>
-        <Text style={styles.headerSubtitle}>Track your sustainable choices and earn rewards</Text>
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <View style={[styles.kaliAvatar, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+              <Sparkles size={24} color="#FFFFFF" />
+            </View>
+            <View>
+              <Text style={styles.headerTitle}>KaliAI</Text>
+              <Text style={styles.headerSubtitle}>Your Sustainability Assistant</Text>
+            </View>
+          </View>
+          <View style={[styles.statusIndicator, { backgroundColor: '#4ADE80' }]}>
+            <Text style={styles.statusText}>Online</Text>
+          </View>
+        </View>
       </LinearGradient>
 
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+      <KeyboardAvoidingView 
+        style={styles.chatContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {/* Today's Impact */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Impact</Text>
-          <View style={styles.cardsGrid}>
-            <EcoCard
-              title="Carbon Footprint"
-              value={ecoStats?.totalCO2e.toFixed(2) || '0.00'}
-              unit="kg CO₂e"
-              icon={Leaf}
-              color={theme.colors.success}
-              bgColor={theme.colors.surface}
-              subtitle={`${ecoStats?.mealsCount || 0} meals logged`}
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+        >
+          {messages.map((message) => (
+            <MessageBubble key={message.id} message={message} />
+          ))}
+          
+          {isTyping && (
+            <View style={[styles.messageContainer, styles.botMessageContainer]}>
+              <View style={styles.messageHeader}>
+                <View style={[styles.avatar, { backgroundColor: theme.colors.success }]}>
+                  <Bot size={16} color="#FFFFFF" />
+                </View>
+                <Text style={[styles.messageSender, { color: theme.colors.textSecondary }]}>KaliAI</Text>
+              </View>
+              <View style={[styles.messageBubble, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <View style={styles.typingIndicator}>
+                  <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+                  <Text style={[styles.typingText, { color: theme.colors.textSecondary }]}>Thinking...</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+
+        {showQuickActions && (
+          <View style={styles.quickActionsContainer}>
+            <Text style={[styles.quickActionsTitle, { color: theme.colors.text }]}>Quick Actions</Text>
+            <View style={styles.quickActionsGrid}>
+              <QuickActionButton
+                icon={Target}
+                label="Daily Tips"
+                color={theme.colors.warning}
+                onPress={() => handleQuickAction('daily_tips')}
+              />
+              <QuickActionButton
+                icon={TrendingUp}
+                label="My Stats"
+                color={theme.colors.info}
+                onPress={() => handleQuickAction('show_stats')}
+              />
+              <QuickActionButton
+                icon={Trophy}
+                label="Leaderboard"
+                color={theme.colors.accent}
+                onPress={() => router.push('/(tabs)/leaderboard')}
+              />
+              <QuickActionButton
+                icon={Zap}
+                label="Scan Fridge"
+                color={theme.colors.secondary}
+                onPress={() => router.push('/(tabs)/camera')}
+              />
+            </View>
+          </View>
+        )}
+
+        <View style={[styles.inputContainer, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
+          <View style={[styles.inputWrapper, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            <TextInput
+              style={[styles.textInput, { color: theme.colors.text }]}
+              placeholder="Ask KaliAI anything about sustainability or fitness..."
+              placeholderTextColor={theme.colors.placeholder}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={500}
+              onSubmitEditing={handleSendMessage}
+              blurOnSubmit={false}
             />
-            <EcoCard
-              title="Water Usage"
-              value={ecoStats?.totalWater.toFixed(1) || '0.0'}
-              unit="liters"
-              icon={Droplet}
-              color={theme.colors.info}
-              bgColor={theme.colors.surface}
-              subtitle={`Avg ${ecoStats?.avgWaterPerMeal.toFixed(1) || '0.0'}L per meal`}
-            />
-          </View>
-        </View>
-
-        {/* Eco Milestones */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Eco Milestones</Text>
-          <View style={styles.milestonesContainer}>
-            {milestones.map((milestone) => (
-              <MilestoneCard key={milestone.id} milestone={milestone} />
-            ))}
-          </View>
-        </View>
-
-        {/* Active Challenges */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Active Challenges</Text>
-          <View style={styles.challengesContainer}>
-            {challenges.map((challenge) => (
-              <ChallengeCard key={challenge.id} challenge={challenge} />
-            ))}
-          </View>
-        </View>
-
-        {/* Environmental Tips */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Sustainability Tips</Text>
-          <View style={styles.tipsContainer}>
-            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <TreePine size={20} color={theme.colors.success} />
-              <View style={styles.tipContent}>
-                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Choose Plant-Based</Text>
-                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
-                  Plant-based meals typically have 50% lower carbon footprint than meat-based meals
-                </Text>
-              </View>
-            </View>
-            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <Recycle size={20} color={theme.colors.success} />
-              <View style={styles.tipContent}>
-                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Reduce Food Waste</Text>
-                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
-                  Plan your meals and use leftovers to minimize environmental impact
-                </Text>
-              </View>
-            </View>
-            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <Droplet size={20} color={theme.colors.info} />
-              <View style={styles.tipContent}>
-                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Choose Local & Seasonal</Text>
-                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
-                  Local and seasonal foods require less water and transportation
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Impact Equivalents */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>What Your Impact Means</Text>
-          <View style={styles.equivalentsContainer}>
-            <View style={[styles.equivalentCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <Text style={[styles.equivalentValue, { color: theme.colors.success }]}>
-                {((ecoStats?.totalCO2e || 0) * 365).toFixed(0)}
-              </Text>
-              <Text style={[styles.equivalentLabel, { color: theme.colors.text }]}>kg CO₂e per year</Text>
-              <Text style={[styles.equivalentSubtext, { color: theme.colors.textSecondary }]}>at current daily rate</Text>
-            </View>
-            <View style={[styles.equivalentCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <Text style={[styles.equivalentValue, { color: theme.colors.success }]}>
-                {Math.round((ecoStats?.totalCO2e || 0) / 0.4)}
-              </Text>
-              <Text style={[styles.equivalentLabel, { color: theme.colors.text }]}>km driven</Text>
-              <Text style={[styles.equivalentSubtext, { color: theme.colors.textSecondary }]}>car equivalent</Text>
-            </View>
-            <View style={[styles.equivalentCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <Text style={[styles.equivalentValue, { color: theme.colors.success }]}>
-                {Math.round((ecoStats?.totalWater || 0) / 8)}
-              </Text>
-              <Text style={[styles.equivalentLabel, { color: theme.colors.text }]}>showers</Text>
-              <Text style={[styles.equivalentSubtext, { color: theme.colors.textSecondary }]}>water equivalent</Text>
-            </View>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Reward Modal */}
-      <Modal
-        visible={showRewardModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowRewardModal(false)}
-      >
-        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
-            <Trophy size={48} color={theme.colors.warning} />
-            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Congratulations!</Text>
-            <Text style={[styles.modalText, { color: theme.colors.textSecondary }]}>
-              You've completed the "{selectedReward?.name}" milestone!
-            </Text>
-            <Text style={[styles.modalReward, { color: theme.colors.warning }]}>
-              Reward: {selectedReward?.reward}
-            </Text>
             <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: theme.colors.success }]}
-              onPress={() => setShowRewardModal(false)}
+              style={[styles.sendButton, { backgroundColor: inputText.trim() ? theme.colors.success : theme.colors.disabled }]}
+              onPress={handleSendMessage}
+              disabled={!inputText.trim() || isTyping}
             >
-              <Text style={styles.modalButtonText}>Awesome!</Text>
+              <Send size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -595,270 +559,203 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  loadingText: {
-    fontSize: 16,
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  header: {
-    padding: 24,
-    paddingBottom: 32,
+  kaliAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#D1FAE5',
   },
-  scrollView: {
+  statusIndicator: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  chatContainer: {
     flex: 1,
   },
-  section: {
-    padding: 16,
+  messagesContainer: {
+    flex: 1,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+  messagesContent: {
+    padding: 16,
+    paddingBottom: 8,
+  },
+  messageContainer: {
     marginBottom: 16,
   },
-  cardsGrid: {
-    flexDirection: 'row',
-    gap: 12,
+  userMessageContainer: {
+    alignItems: 'flex-end',
   },
-  ecoCard: {
-    flex: 1,
-    padding: 16,
+  botMessageContainer: {
+    alignItems: 'flex-start',
+  },
+  messageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  avatar: {
+    width: 24,
+    height: 24,
     borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  messageSender: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  messageTime: {
+    fontSize: 11,
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    padding: 12,
+    borderRadius: 16,
     borderWidth: 1,
   },
-  cardHeader: {
+  messageText: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  componentContainer: {
+    marginTop: 8,
+    maxWidth: '90%',
+  },
+  actionsContainer: {
+    marginTop: 8,
+    gap: 6,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    maxWidth: 200,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  typingIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  typingText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  quickActionsContainer: {
+    padding: 16,
+    paddingBottom: 8,
+  },
+  quickActionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
     marginBottom: 12,
   },
-  cardTitle: {
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quickActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+    minWidth: '45%',
+  },
+  quickActionText: {
     fontSize: 14,
     fontWeight: '500',
   },
-  cardValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 2,
+  inputContainer: {
+    borderTopWidth: 1,
+    padding: 16,
   },
-  cardUnit: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  cardSubtitle: {
-    fontSize: 11,
-  },
-  milestonesContainer: {
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    borderWidth: 1,
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     gap: 12,
   },
-  milestoneCard: {
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    maxHeight: 100,
+    minHeight: 20,
+  },
+  sendButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statsCard: {
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
+    marginVertical: 4,
   },
-  completedMilestone: {
-    borderColor: '#16A34A',
-    backgroundColor: '#F0FDF4',
-  },
-  milestoneHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  milestoneIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  milestoneInfo: {
-    flex: 1,
-  },
-  milestoneName: {
+  statsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 4,
-  },
-  milestoneDescription: {
-    fontSize: 14,
-  },
-  claimButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  progressBar: {
-    flex: 1,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  challengeProgressFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  rewardText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  challengesContainer: {
-    gap: 12,
-  },
-  challengeCard: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  challengeHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     marginBottom: 12,
   },
-  challengeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  challengeInfo: {
-    flex: 1,
-  },
-  challengeTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  challengeDescription: {
-    fontSize: 14,
-  },
-  challengeTime: {
+  statsGrid: {
     flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
     alignItems: 'center',
     gap: 4,
   },
-  timeLeft: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  tipsContainer: {
-    gap: 12,
-  },
-  tipCard: {
-    flexDirection: 'row',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 12,
-  },
-  tipContent: {
-    flex: 1,
-  },
-  tipTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  tipText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  equivalentsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'space-around',
-  },
-  equivalentCard: {
-    flex: 1,
-    minWidth: 120,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  equivalentValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  equivalentLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
-    flexWrap: 'wrap',
-  },
-  equivalentSubtext: {
-    fontSize: 11,
-    textAlign: 'center',
-    flexWrap: 'wrap',
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    padding: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    margin: 20,
-    maxWidth: 300,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  modalText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  modalReward: {
+  statValue: {
     fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 24,
+    fontWeight: '700',
   },
-  modalButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+  statLabel: {
+    fontSize: 12,
   },
 });
