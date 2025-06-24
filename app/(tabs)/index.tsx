@@ -10,6 +10,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,6 +38,17 @@ interface DailyScore {
   eco_score: number;
   combined_score: number;
 }
+
+const CARD_SIZE_WEB = 220;
+const CARD_SIZE_MOBILE = Math.min(width * 0.44, 180);
+
+const GAP = 16;
+const CARDS_PER_ROW = 2;
+const MAX_CARD_SIZE = 162;
+const windowWidth = Dimensions.get('window').width;
+const gridPadding = 40; // section padding left+right
+const baseCardSize = (windowWidth - gridPadding - GAP * (CARDS_PER_ROW - 1)) / CARDS_PER_ROW;
+const cardSize = Math.min(baseCardSize * 0.9, MAX_CARD_SIZE);
 
 export default function HomeScreen() {
   const { theme, isDark } = useTheme();
@@ -193,8 +205,8 @@ export default function HomeScreen() {
     </View>
   );
 
-  const QuickActionCard = ({ title, subtitle, icon: Icon, color, gradient, onPress }: any) => (
-    <TouchableOpacity style={styles.quickActionCard} onPress={onPress}>
+  const QuickActionCard = ({ title, subtitle, icon: Icon, color, gradient, onPress, cardSize }: any) => (
+    <TouchableOpacity style={[styles.quickActionCard, { width: cardSize, height: cardSize }]} onPress={onPress}>
       <LinearGradient colors={gradient} style={styles.quickActionGradient}>
         <View style={styles.quickActionContent}>
           <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
@@ -270,6 +282,7 @@ export default function HomeScreen() {
               icon={Utensils}
               gradient={['#10B981', '#059669']}
               onPress={() => router.push('/meals')}
+              cardSize={cardSize}
             />
             <QuickActionCard
               title="Log Workout"
@@ -277,6 +290,7 @@ export default function HomeScreen() {
               icon={Dumbbell}
               gradient={['#3B82F6', '#2563EB']}
               onPress={() => router.push('/workouts')}
+              cardSize={cardSize}
             />
             <QuickActionCard
               title="Scan Fridge"
@@ -284,6 +298,7 @@ export default function HomeScreen() {
               icon={Camera}
               gradient={['#8B5CF6', '#7C3AED']}
               onPress={() => router.push('/(tabs)/camera' as any)}
+              cardSize={cardSize}
             />
             <QuickActionCard
               title="View Progress"
@@ -291,6 +306,7 @@ export default function HomeScreen() {
               icon={Award}
               gradient={['#F59E0B', '#D97706']}
               onPress={() => router.push('/(tabs)/leaderboard')}
+              cardSize={cardSize}
             />
           </View>
         </View>
@@ -531,26 +547,40 @@ const styles = StyleSheet.create({
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    maxWidth: 464,
+    alignSelf: 'center',
+    width: '100%',
   },
   quickActionCard: {
-    flex: 1,
-    minWidth: (width - 64) / 2,
-    borderRadius: 16,
+    aspectRatio: 1,
+    borderRadius: 24,
     overflow: 'hidden',
+    marginBottom: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   quickActionGradient: {
-    padding: 20,
-    minHeight: 100,
+    flex: 1,
+    padding: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    height: '100%',
   },
   quickActionContent: {
-    flexDirection: 'row',
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
+    height: '100%',
     gap: 12,
   },
   quickActionIcon: {
@@ -559,20 +589,23 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 8,
   },
   quickActionText: {
-    flex: 1,
+    alignItems: 'center',
   },
   quickActionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 2,
+    textAlign: 'center',
   },
   quickActionSubtitle: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
-    lineHeight: 16,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    lineHeight: 18,
+    textAlign: 'center',
   },
   scoresCard: {
     borderRadius: 20,

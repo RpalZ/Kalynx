@@ -26,6 +26,7 @@ export interface Theme {
       success: string[];
       warning: string[];
       error: string[];
+      accent: string[];
     };
   };
   spacing: {
@@ -74,6 +75,7 @@ const lightTheme: Theme = {
       success: ['#16A34A', '#22C55E'],
       warning: ['#F59E0B', '#F97316'],
       error: ['#EF4444', '#F87171'],
+      accent: ['#7C3AED', '#A855F7'],
     },
   },
   spacing: {
@@ -140,6 +142,7 @@ const darkTheme: Theme = {
       success: ['#22C55E', '#16A34A'],
       warning: ['#F59E0B', '#F97316'],
       error: ['#EF4444', '#F87171'],
+      accent: ['#A855F7', '#7C3AED'],
     },
   },
   spacing: {

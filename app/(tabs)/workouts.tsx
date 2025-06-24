@@ -8,12 +8,17 @@ import {
   TextInput,
   Alert,
   RefreshControl,
+  Dimensions,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Search, Dumbbell, Clock, Flame, Timer } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Plus, Search, Dumbbell, Clock, Flame, Timer, Zap, Target, TrendingUp } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+
+const { width } = Dimensions.get('window');
 
 interface Workout {
   id: string;
@@ -24,12 +29,20 @@ interface Workout {
 }
 
 const WORKOUT_TYPES = [
-  'Running', 'Walking', 'Cycling', 'Swimming', 'Weights', 
-  'Yoga', 'Hiking', 'Basketball', 'Tennis', 'Dancing'
+  { name: 'Running', icon: '🏃‍♂️', color: '#EF4444' },
+  { name: 'Walking', icon: '🚶‍♂️', color: '#10B981' },
+  { name: 'Cycling', icon: '🚴‍♂️', color: '#3B82F6' },
+  { name: 'Swimming', icon: '🏊‍♂️', color: '#06B6D4' },
+  { name: 'Weights', icon: '🏋️‍♂️', color: '#8B5CF6' },
+  { name: 'Yoga', icon: '🧘‍♀️', color: '#F59E0B' },
+  { name: 'Hiking', icon: '🥾', color: '#059669' },
+  { name: 'Basketball', icon: '🏀', color: '#DC2626' },
+  { name: 'Tennis', icon: '🎾', color: '#7C3AED' },
+  { name: 'Dancing', icon: '💃', color: '#EC4899' },
 ];
 
 export default function WorkoutsScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,7 +58,7 @@ export default function WorkoutsScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      checkAuth(); // Re-run auth check and data fetch on focus
+      checkAuth();
     }, [])
   );
 
@@ -148,36 +161,90 @@ export default function WorkoutsScreen() {
     workout.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const WorkoutCard = ({ workout }: { workout: Workout }) => (
-    <View style={[styles.workoutCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-      <View style={styles.workoutHeader}>
-        <Dumbbell size={20} color={theme.colors.secondary} />
-        <Text style={[styles.workoutType, { color: theme.colors.text }]}>{workout.type}</Text>
+  const getWorkoutTypeInfo = (type: string) => {
+    return WORKOUT_TYPES.find(w => w.name.toLowerCase() === type.toLowerCase()) || 
+           { name: type, icon: '💪', color: theme.colors.secondary };
+  };
+
+  const WorkoutCard = ({ workout }: { workout: Workout }) => {
+    const workoutInfo = getWorkoutTypeInfo(workout.type);
+    
+    return (
+      <View style={[styles.workoutCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <LinearGradient
+          colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+          style={styles.workoutCardGradient}
+        >
+          <View style={styles.workoutHeader}>
+            <View style={[styles.workoutIcon, { backgroundColor: `${workoutInfo.color}20` }]}>
+              <Text style={styles.workoutEmoji}>{workoutInfo.icon}</Text>
+            </View>
+            <View style={styles.workoutInfo}>
+              <Text style={[styles.workoutType, { color: theme.colors.text }]}>{workout.type}</Text>
+              <View style={styles.workoutTime}>
+                <Clock size={12} color={theme.colors.placeholder} />
+                <Text style={[styles.workoutTimeText, { color: theme.colors.placeholder }]}>
+                  {new Date(workout.created_at).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </Text>
+              </View>
+            </View>
+          </View>
+          
+          <View style={styles.workoutStats}>
+            <View style={styles.statItem}>
+              <View style={[styles.statIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+                <Timer size={14} color={theme.colors.secondary} />
+              </View>
+              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{workout.duration} min</Text>
+            </View>
+            <View style={styles.statItem}>
+              <View style={[styles.statIcon, { backgroundColor: `${theme.colors.error}20` }]}>
+                <Flame size={14} color={theme.colors.error} />
+              </View>
+              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{Math.round(workout.calories_burned)} kcal</Text>
+            </View>
+          </View>
+        </LinearGradient>
       </View>
-      <View style={styles.workoutStats}>
-        <View style={styles.statItem}>
-          <Clock size={16} color={theme.colors.textSecondary} />
-          <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{workout.duration} min</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Flame size={16} color={theme.colors.error} />
-          <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{Math.round(workout.calories_burned)} kcal</Text>
-        </View>
-      </View>
-      <Text style={[styles.workoutTime, { color: theme.colors.placeholder }]}>
-        {new Date(workout.created_at).toLocaleTimeString([], { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        })}
+    );
+  };
+
+  const WorkoutTypeButton = ({ workout }: { workout: typeof WORKOUT_TYPES[0] }) => (
+    <TouchableOpacity
+      style={[
+        styles.workoutTypeButton,
+        { 
+          borderColor: theme.colors.border,
+          backgroundColor: selectedWorkoutType === workout.name ? `${workout.color}20` : theme.colors.surface
+        },
+        selectedWorkoutType === workout.name && { borderColor: workout.color, borderWidth: 2 }
+      ]}
+      onPress={() => setSelectedWorkoutType(workout.name)}
+    >
+      <Text style={styles.workoutTypeEmoji}>{workout.icon}</Text>
+      <Text style={[
+        styles.workoutTypeButtonText,
+        { 
+          color: selectedWorkoutType === workout.name ? workout.color : theme.colors.textSecondary,
+          fontWeight: selectedWorkoutType === workout.name ? '700' : '500'
+        }
+      ]}>
+        {workout.name}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading workouts...</Text>
+          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
+            <Dumbbell size={48} color={theme.colors.secondary} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your workouts...</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -185,77 +252,92 @@ export default function WorkoutsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Today's Workouts</Text>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: theme.colors.secondary }]}
-          onPress={() => setShowAddForm(!showAddForm)}
-        >
-          <Plus size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      {/* Header */}
+      <LinearGradient
+        colors={[theme.colors.gradient.secondary[0], theme.colors.gradient.secondary[1]]}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>Today's Workouts</Text>
+            <Text style={styles.headerSubtitle}>Track your fitness activities and progress</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowAddForm(!showAddForm)}
+          >
+            <Plus size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Hero Image */}
+        <View style={styles.heroImageContainer}>
+          <Image 
+            source={{ uri: 'https://images.pexels.com/photos/416778/pexels-photo-416778.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+            style={styles.heroImage}
+          />
+        </View>
+      </LinearGradient>
 
+      {/* Add Form */}
       {showAddForm && (
         <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
-          <Text style={[styles.formLabel, { color: theme.colors.text }]}>Workout Type</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.workoutTypes}>
-            {WORKOUT_TYPES.map((type) => (
+          <LinearGradient
+            colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+            style={styles.addFormGradient}
+          >
+            <View style={styles.formHeader}>
+              <Zap size={20} color={theme.colors.secondary} />
+              <Text style={[styles.formTitle, { color: theme.colors.text }]}>Log New Workout</Text>
+            </View>
+            
+            <Text style={[styles.formLabel, { color: theme.colors.text }]}>Workout Type</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.workoutTypes}>
+              {WORKOUT_TYPES.map((workout) => (
+                <WorkoutTypeButton key={workout.name} workout={workout} />
+              ))}
+            </ScrollView>
+            
+            <Text style={[styles.formLabel, { color: theme.colors.text }]}>Duration (minutes)</Text>
+            <TextInput
+              style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+              placeholder="Enter duration in minutes"
+              placeholderTextColor={theme.colors.placeholder}
+              value={duration}
+              onChangeText={setDuration}
+              keyboardType="numeric"
+            />
+            
+            <View style={styles.formButtons}>
               <TouchableOpacity
-                key={type}
-                style={[
-                  styles.workoutTypeButton,
-                  { borderColor: theme.colors.border },
-                  selectedWorkoutType === type && { backgroundColor: theme.colors.secondary, borderColor: theme.colors.secondary }
-                ]}
-                onPress={() => setSelectedWorkoutType(type)}
+                style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+                onPress={() => {
+                  setShowAddForm(false);
+                  setSelectedWorkoutType('');
+                  setDuration('');
+                }}
               >
-                <Text style={[
-                  styles.workoutTypeButtonText,
-                  { color: theme.colors.textSecondary },
-                  selectedWorkoutType === type && styles.workoutTypeButtonTextActive
-                ]}>
-                  {type}
+                <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.submitButton, { backgroundColor: theme.colors.secondary }]}
+                onPress={handleAddWorkout}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.submitButtonText}>
+                  {isSubmitting ? 'Adding...' : 'Add Workout'}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-          
-          <Text style={[styles.formLabel, { color: theme.colors.text }]}>Duration (minutes)</Text>
-          <TextInput
-            style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text }]}
-            placeholder="Enter duration in minutes"
-            placeholderTextColor={theme.colors.placeholder}
-            value={duration}
-            onChangeText={setDuration}
-            keyboardType="numeric"
-          />
-          
-          <View style={styles.formButtons}>
-            <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: theme.colors.border }]}
-              onPress={() => {
-                setShowAddForm(false);
-                setSelectedWorkoutType('');
-                setDuration('');
-              }}
-            >
-              <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.submitButton, { backgroundColor: theme.colors.secondary }]}
-              onPress={handleAddWorkout}
-              disabled={isSubmitting}
-            >
-              <Text style={styles.submitButtonText}>
-                {isSubmitting ? 'Adding...' : 'Add Workout'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          </LinearGradient>
         </View>
       )}
 
+      {/* Search */}
       <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <Search size={20} color={theme.colors.textSecondary} />
+        <View style={[styles.searchIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+          <Search size={20} color={theme.colors.secondary} />
+        </View>
         <TextInput
           style={[styles.searchInput, { color: theme.colors.text }]}
           placeholder="Search workouts..."
@@ -265,15 +347,19 @@ export default function WorkoutsScreen() {
         />
       </View>
 
+      {/* Workouts List */}
       <ScrollView
         style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {filteredWorkouts.length === 0 ? (
           <View style={styles.emptyState}>
-            <Dumbbell size={48} color={theme.colors.disabled} />
+            <View style={[styles.emptyIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+              <Dumbbell size={48} color={theme.colors.secondary} />
+            </View>
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No workouts logged yet</Text>
             <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
               {searchQuery ? 'No workouts match your search' : 'Start tracking your workouts to see your fitness progress'}
@@ -286,6 +372,7 @@ export default function WorkoutsScreen() {
             ))}
           </View>
         )}
+        <View style={styles.bottomSpacing} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -299,76 +386,128 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 32,
+  },
+  loadingCard: {
+    padding: 32,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
   loadingText: {
     fontSize: 16,
+    marginTop: 16,
+    fontWeight: '500',
   },
   header: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 32,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  headerLeft: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#DBEAFE',
   },
   addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  heroImageContainer: {
+    height: 100,
+    borderRadius: 16,
+    overflow: 'hidden',
+    opacity: 0.8,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
   addForm: {
-    padding: 16,
     borderBottomWidth: 1,
+    overflow: 'hidden',
+  },
+  addFormGradient: {
+    padding: 20,
+  },
+  formHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  formTitle: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   formLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
+    fontWeight: '700',
+    marginBottom: 12,
+    marginTop: 16,
   },
   workoutTypes: {
     marginBottom: 16,
   },
   workoutTypeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderRadius: 20,
-    marginRight: 8,
-    minWidth: 100,
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: 16,
+    marginRight: 12,
+    minWidth: 80,
+    gap: 8,
   },
-  workoutTypeButtonActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
+  workoutTypeEmoji: {
+    fontSize: 24,
   },
   workoutTypeButtonText: {
-    fontSize: 14,
-  },
-  workoutTypeButtonTextActive: {
-    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
+    fontWeight: '500',
     marginBottom: 16,
   },
   formButtons: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 8,
   },
   cancelButton: {
     flex: 1,
-    padding: 12,
+    padding: 16,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
   },
   cancelButtonText: {
@@ -377,8 +516,8 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
   submitButtonText: {
@@ -389,72 +528,123 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    margin: 16,
+    margin: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
+  },
+  searchIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 12,
     fontSize: 16,
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
   },
   workoutsContainer: {
-    padding: 16,
-    gap: 12,
+    padding: 20,
+    gap: 16,
   },
   workoutCard: {
-    padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  workoutCardGradient: {
+    padding: 20,
   },
   workoutHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  workoutIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  workoutEmoji: {
+    fontSize: 20,
+  },
+  workoutInfo: {
+    flex: 1,
   },
   workoutType: {
     fontSize: 18,
-    fontWeight: '600',
-    flex: 1,
+    fontWeight: '700',
+    marginBottom: 4,
   },
-  workoutStats: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 8,
-  },
-  statItem: {
+  workoutTime: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
+  workoutTimeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  workoutStats: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  statItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   statText: {
     fontSize: 14,
-  },
-  workoutTime: {
-    fontSize: 12,
-    textAlign: 'right',
+    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 48,
   },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
+    fontWeight: '700',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  bottomSpacing: {
+    height: 32,
   },
 });

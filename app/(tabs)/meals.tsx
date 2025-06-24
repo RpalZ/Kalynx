@@ -8,12 +8,17 @@ import {
   TextInput,
   Alert,
   RefreshControl,
+  Dimensions,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, Search, Utensils, Flame, Activity, Leaf, Droplet, X } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Plus, Search, Utensils, Flame, Activity, Leaf, Droplet, X, ChefHat, Clock, Sparkles } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+
+const { width } = Dimensions.get('window');
 
 interface Meal {
   id: string;
@@ -32,7 +37,7 @@ interface DetailedIngredient {
 }
 
 export default function MealsScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -189,34 +194,59 @@ export default function MealsScreen() {
 
   const MealCard = ({ meal }: { meal: Meal }) => (
     <View style={[styles.mealCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-      <View style={styles.mealHeader}>
-        <Utensils size={20} color={theme.colors.success} />
-        <Text style={[styles.mealName, { color: theme.colors.text }]}>{meal.name}</Text>
-      </View>
-      <View style={styles.mealStats}>
-        <View style={styles.statItem}>
-          <Flame size={16} color={theme.colors.error} />
-          <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{Math.round(meal.calories)} kcal</Text>
+      <LinearGradient
+        colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+        style={styles.mealCardGradient}
+      >
+        <View style={styles.mealHeader}>
+          <View style={[styles.mealIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+            <Utensils size={20} color={theme.colors.success} />
+          </View>
+          <View style={styles.mealInfo}>
+            <Text style={[styles.mealName, { color: theme.colors.text }]}>{meal.name}</Text>
+            <View style={styles.mealTime}>
+              <Clock size={12} color={theme.colors.placeholder} />
+              <Text style={[styles.mealTimeText, { color: theme.colors.placeholder }]}>
+                {new Date(meal.created_at).toLocaleTimeString([], { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
+              </Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.statItem}>
-          <Activity size={16} color={theme.colors.secondary} />
-          <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.protein.toFixed(1)}g protein</Text>
+        
+        <View style={styles.mealStats}>
+          <View style={styles.statRow}>
+            <View style={styles.statItem}>
+              <View style={[styles.statIcon, { backgroundColor: `${theme.colors.error}20` }]}>
+                <Flame size={14} color={theme.colors.error} />
+              </View>
+              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{Math.round(meal.calories)} kcal</Text>
+            </View>
+            <View style={styles.statItem}>
+              <View style={[styles.statIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+                <Activity size={14} color={theme.colors.secondary} />
+              </View>
+              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.protein.toFixed(1)}g protein</Text>
+            </View>
+          </View>
+          <View style={styles.statRow}>
+            <View style={styles.statItem}>
+              <View style={[styles.statIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+                <Leaf size={14} color={theme.colors.success} />
+              </View>
+              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.carbon_impact.toFixed(2)} kg CO₂</Text>
+            </View>
+            <View style={styles.statItem}>
+              <View style={[styles.statIcon, { backgroundColor: `${theme.colors.info}20` }]}>
+                <Droplet size={14} color={theme.colors.info} />
+              </View>
+              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.water_impact.toFixed(1)}L water</Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.statItem}>
-          <Leaf size={16} color={theme.colors.success} />
-          <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.carbon_impact.toFixed(2)} kg CO₂</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Droplet size={16} color={theme.colors.info} />
-          <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.water_impact.toFixed(1)}L water</Text>
-        </View>
-      </View>
-      <Text style={[styles.mealTime, { color: theme.colors.placeholder }]}>
-        {new Date(meal.created_at).toLocaleTimeString([], { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        })}
-      </Text>
+      </LinearGradient>
     </View>
   );
 
@@ -224,7 +254,10 @@ export default function MealsScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading meals...</Text>
+          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
+            <ChefHat size={48} color={theme.colors.success} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your meals...</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -232,127 +265,144 @@ export default function MealsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.header, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Today's Meals</Text>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: theme.colors.success }]}
-          onPress={() => setShowAddForm(!showAddForm)}
-        >
-          <Plus size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      {/* Header */}
+      <LinearGradient
+        colors={[theme.colors.gradient.success[0], theme.colors.gradient.success[1]]}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>Today's Meals</Text>
+            <Text style={styles.headerSubtitle}>Track your nutrition and environmental impact</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowAddForm(!showAddForm)}
+          >
+            <Plus size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Hero Image */}
+        <View style={styles.heroImageContainer}>
+          <Image 
+            source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+            style={styles.heroImage}
+          />
+        </View>
+      </LinearGradient>
 
+      {/* Add Form */}
       {showAddForm && (
         <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
-          <TextInput
-            style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text }]}
-            placeholder="Enter meal name"
-            placeholderTextColor={theme.colors.placeholder}
-            value={newMealName}
-            onChangeText={setNewMealName}
-          />
-          
-          <View style={styles.ingredientsSection}>
-            <View style={styles.sectionHeader}>
+          <LinearGradient
+            colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+            style={styles.addFormGradient}
+          >
+            <View style={styles.formHeader}>
+              <Sparkles size={20} color={theme.colors.accent} />
+              <Text style={[styles.formTitle, { color: theme.colors.text }]}>Add New Meal</Text>
+            </View>
+            
+            <TextInput
+              style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+              placeholder="Enter meal name (e.g., Grilled Chicken Salad)"
+              placeholderTextColor={theme.colors.placeholder}
+              value={newMealName}
+              onChangeText={setNewMealName}
+            />
+            
+            <View style={styles.ingredientsSection}>
               <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add Ingredients (Optional)</Text>
               <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
-                Add each ingredient with its amount and unit
+                Add each ingredient with its amount and unit for better accuracy
               </Text>
+
+              <View style={styles.ingredientInputContainer}>
+                <View style={styles.ingredientInputRow}>
+                  <TextInput
+                    style={[styles.input, styles.ingredientInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                    placeholder="Ingredient"
+                    placeholderTextColor={theme.colors.placeholder}
+                    value={currentIngredient}
+                    onChangeText={setCurrentIngredient}
+                  />
+                  <TextInput
+                    style={[styles.input, styles.amountInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                    placeholder="Amount"
+                    placeholderTextColor={theme.colors.placeholder}
+                    value={currentAmount}
+                    onChangeText={setCurrentAmount}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={[styles.input, styles.unitInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                    placeholder="Unit"
+                    placeholderTextColor={theme.colors.placeholder}
+                    value={currentUnit}
+                    onChangeText={setCurrentUnit}
+                  />
+                </View>
+                <TouchableOpacity
+                  style={[styles.addIngredientButton, { backgroundColor: theme.colors.success }]}
+                  onPress={handleAddIngredient}
+                >
+                  <Plus size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+
+              {detailedIngredients.length > 0 && (
+                <View style={styles.ingredientsList}>
+                  <Text style={[styles.ingredientsListTitle, { color: theme.colors.text }]}>
+                    Added Ingredients ({detailedIngredients.length})
+                  </Text>
+                  {detailedIngredients.map((ing, index) => (
+                    <View key={index} style={[styles.ingredientItem, { backgroundColor: theme.colors.surface }]}>
+                      <Text style={[styles.ingredientText, { color: theme.colors.text }]}>
+                        {ing.ingredient} ({ing.amount}{ing.unit})
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => handleRemoveIngredient(index)}
+                        style={styles.removeIngredientButton}
+                      >
+                        <X size={16} color={theme.colors.error} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
 
-            <View style={styles.ingredientInputContainer}>
-              <View style={styles.ingredientInputRow}>
-                <TextInput
-                  style={[styles.input, styles.ingredientInput, { borderColor: theme.colors.border, color: theme.colors.text }]}
-                  placeholder="Ingredient (e.g., chicken)"
-                  placeholderTextColor={theme.colors.placeholder}
-                  value={currentIngredient}
-                  onChangeText={setCurrentIngredient}
-                  onSubmitEditing={() => {
-                    if (currentIngredient.trim()) {
-                      setCurrentAmount('');
-                      setCurrentUnit('g');
-                    }
-                  }}
-                />
-                <TextInput
-                  style={[styles.input, styles.amountInput, { borderColor: theme.colors.border, color: theme.colors.text }]}
-                  placeholder="Amount"
-                  placeholderTextColor={theme.colors.placeholder}
-                  value={currentAmount}
-                  onChangeText={setCurrentAmount}
-                  keyboardType="numeric"
-                  onSubmitEditing={() => {
-                    if (currentAmount.trim()) {
-                      setCurrentUnit('g');
-                    }
-                  }}
-                />
-                <TextInput
-                  style={[styles.input, styles.unitInput, { borderColor: theme.colors.border, color: theme.colors.text }]}
-                  placeholder="Unit (g/ml)"
-                  placeholderTextColor={theme.colors.placeholder}
-                  value={currentUnit}
-                  onChangeText={setCurrentUnit}
-                  onSubmitEditing={handleAddIngredient}
-                />
-              </View>
+            <View style={styles.formButtons}>
               <TouchableOpacity
-                style={[styles.addIngredientButton, { backgroundColor: theme.colors.success }]}
-                onPress={handleAddIngredient}
+                style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+                onPress={() => {
+                  setShowAddForm(false);
+                  setNewMealName('');
+                  setDetailedIngredients([]);
+                }}
               >
-                <Plus size={20} color="#FFFFFF" />
+                <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.submitButton, { backgroundColor: theme.colors.success }]}
+                onPress={handleAddMeal}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.submitButtonText}>
+                  {isSubmitting ? 'Adding...' : 'Add Meal'}
+                </Text>
               </TouchableOpacity>
             </View>
-
-            {detailedIngredients.length > 0 && (
-              <View style={styles.ingredientsList}>
-                <Text style={[styles.ingredientsListTitle, { color: theme.colors.text }]}>
-                  Added Ingredients ({detailedIngredients.length})
-                </Text>
-                {detailedIngredients.map((ing, index) => (
-                  <View key={index} style={[styles.ingredientItem, { backgroundColor: theme.colors.surface }]}>
-                    <Text style={[styles.ingredientText, { color: theme.colors.text }]}>
-                      {ing.ingredient} ({ing.amount}{ing.unit})
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => handleRemoveIngredient(index)}
-                      style={styles.removeIngredientButton}
-                    >
-                      <X size={16} color={theme.colors.error} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-
-          <View style={styles.formButtons}>
-            <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: theme.colors.border }]}
-              onPress={() => {
-                setShowAddForm(false);
-                setNewMealName('');
-                setDetailedIngredients([]);
-              }}
-            >
-              <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.submitButton, { backgroundColor: theme.colors.success }]}
-              onPress={handleAddMeal}
-              disabled={isSubmitting}
-            >
-              <Text style={styles.submitButtonText}>
-                {isSubmitting ? 'Adding...' : 'Add Meal'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          </LinearGradient>
         </View>
       )}
 
+      {/* Search */}
       <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <Search size={20} color={theme.colors.textSecondary} />
+        <View style={[styles.searchIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+          <Search size={20} color={theme.colors.secondary} />
+        </View>
         <TextInput
           style={[styles.searchInput, { color: theme.colors.text }]}
           placeholder="Search meals..."
@@ -362,15 +412,19 @@ export default function MealsScreen() {
         />
       </View>
 
+      {/* Meals List */}
       <ScrollView
         style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {filteredMeals.length === 0 ? (
           <View style={styles.emptyState}>
-            <Utensils size={48} color={theme.colors.disabled} />
+            <View style={[styles.emptyIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+              <Utensils size={48} color={theme.colors.success} />
+            </View>
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No meals logged yet</Text>
             <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
               {searchQuery ? 'No meals match your search' : 'Start tracking your meals to see your nutrition and environmental impact'}
@@ -383,6 +437,7 @@ export default function MealsScreen() {
             ))}
           </View>
         )}
+        <View style={styles.bottomSpacing} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -396,50 +451,162 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 32,
+  },
+  loadingCard: {
+    padding: 32,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
   loadingText: {
     fontSize: 16,
+    marginTop: 16,
+    fontWeight: '500',
   },
   header: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 32,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  headerLeft: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#D1FAE5',
   },
   addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  heroImageContainer: {
+    height: 100,
+    borderRadius: 16,
+    overflow: 'hidden',
+    opacity: 0.8,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
   addForm: {
-    padding: 16,
     borderBottomWidth: 1,
+    overflow: 'hidden',
+  },
+  addFormGradient: {
+    padding: 20,
+  },
+  formHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  formTitle: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
-    minHeight: 60,
-    textAlignVertical: 'top',
+    fontWeight: '500',
+  },
+  ingredientsSection: {
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  ingredientInputContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  ingredientInputRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  ingredientInput: {
+    flex: 2,
+  },
+  amountInput: {
+    flex: 1,
+  },
+  unitInput: {
+    flex: 1,
+  },
+  addIngredientButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ingredientsList: {
+    gap: 8,
+  },
+  ingredientsListTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  ingredientItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
+  },
+  ingredientText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  removeIngredientButton: {
+    padding: 4,
   },
   formButtons: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 12,
+    marginTop: 24,
   },
   cancelButton: {
     flex: 1,
-    padding: 12,
+    padding: 16,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
   },
   cancelButtonText: {
@@ -448,8 +615,8 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
   submitButtonText: {
@@ -460,70 +627,116 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    margin: 16,
+    margin: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
+  },
+  searchIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 12,
     fontSize: 16,
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
   },
   mealsContainer: {
-    padding: 16,
-    gap: 12,
+    padding: 20,
+    gap: 16,
   },
   mealCard: {
-    padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  mealCardGradient: {
+    padding: 20,
   },
   mealHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  mealIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  mealInfo: {
+    flex: 1,
   },
   mealName: {
     fontSize: 18,
-    fontWeight: '600',
-    flex: 1,
+    fontWeight: '700',
+    marginBottom: 4,
   },
-  mealStats: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 8,
-  },
-  statItem: {
+  mealTime: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  mealTimeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  mealStats: {
+    gap: 12,
+  },
+  statRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  statItem: {
     flex: 1,
-    minWidth: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statText: {
     fontSize: 14,
-    flexWrap: 'wrap',
-  },
-  mealTime: {
-    fontSize: 12,
-    textAlign: 'right',
+    fontWeight: '600',
+    flex: 1,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 48,
   },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
+    fontWeight: '700',
     marginBottom: 8,
   },
   emptySubtitle: {
@@ -531,70 +744,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  ingredientsSection: {
-    marginTop: 16,
-  },
-  sectionHeader: {
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-  ingredientInputContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'flex-start',
-  },
-  ingredientInputRow: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  ingredientInput: {
-    flex: 2,
-    minWidth: 100,
-  },
-  amountInput: {
-    flex: 1,
-    minWidth: 60,
-  },
-  unitInput: {
-    flex: 1,
-    minWidth: 60,
-  },
-  addIngredientButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 1,
-  },
-  ingredientsList: {
-    marginTop: 12,
-    gap: 8,
-  },
-  ingredientsListTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  ingredientItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 8,
-    borderRadius: 6,
-  },
-  ingredientText: {
-    fontSize: 14,
-  },
-  removeIngredientButton: {
-    padding: 4,
+  bottomSpacing: {
+    height: 32,
   },
 });

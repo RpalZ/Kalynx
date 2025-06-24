@@ -10,6 +10,8 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Dimensions,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +20,8 @@ import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import Markdown from 'react-native-markdown-display';
+
+const { width } = Dimensions.get('window');
 
 interface Message {
   id: string;
@@ -41,7 +45,7 @@ interface UserStats {
 }
 
 export default function KaliAIScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -60,7 +64,6 @@ export default function KaliAIScreen() {
   );
 
   useEffect(() => {
-    // Initial greeting when component mounts
     if (messages.length === 0) {
       const welcomeMessage: Message = {
         id: Date.now().toString(),
@@ -140,7 +143,6 @@ export default function KaliAIScreen() {
         return;
       }
 
-      // Prepare conversation context (last 5 messages for context)
       const context = messages.slice(-5).map(msg => ({
         role: msg.role === 'user' ? 'user' : 'assistant',
         content: msg.content
@@ -159,8 +161,6 @@ export default function KaliAIScreen() {
       }
 
       const aiResponse = data.response;
-      
-      // Process system commands and extract action buttons
       const { cleanResponse, systemActions } = processSystemCommands(aiResponse);
       
       const assistantMessage: Message = {
@@ -201,7 +201,6 @@ export default function KaliAIScreen() {
       const command = match[1];
       cleanResponse = cleanResponse.replace(match[0], '');
       
-      // Convert system commands to action buttons
       if (command.startsWith('navigate:')) {
         const route = command.replace('navigate:', '');
         let label = '';
@@ -261,7 +260,6 @@ export default function KaliAIScreen() {
       }
     }
 
-    // Ensure cleanResponse is never empty or just whitespace/dots
     const finalResponse = cleanResponse.trim();
     return { 
       cleanResponse: finalResponse || "I'm here to help! What would you like to know?", 
@@ -270,17 +268,14 @@ export default function KaliAIScreen() {
   };
 
   const handleSystemAction = (action: string) => {
-    // Normalize navigation actions to the correct tab route
     const tabRoutes = ['/leaderboard', '/meals', '/workouts', '/camera'];
     let route = action;
     if (tabRoutes.includes(action)) {
       route = '/(tabs)' + action;
     }
     if (route.startsWith('/(tabs)/')) {
-      // Navigate to the specified route
       router.push(route as any);
     } else {
-      // Handle component actions
       switch (action) {
         case 'stats':
           if (userStats) {
@@ -374,70 +369,72 @@ export default function KaliAIScreen() {
     <View style={[
       styles.messageBubble,
       message.role === 'user' ? styles.userBubble : styles.assistantBubble,
-      { backgroundColor: message.role === 'user' ? theme.colors.secondary : theme.colors.card }
     ]}>
-      <View style={styles.messageHeader}>
-        {message.role === 'assistant' ? (
-          <Bot size={16} color={theme.colors.success} />
-        ) : (
-          <User size={16} color="#FFFFFF" />
-        )}
-        <Text style={[
-          styles.messageRole,
-          { color: message.role === 'user' ? '#FFFFFF' : theme.colors.textSecondary }
-        ]}>
-          {message.role === 'assistant' ? 'KaliAI' : 'You'}
-        </Text>
-      </View>
-      {message.role === 'assistant' ? (
-        <Markdown style={{ body: { ...styles.messageText, color: theme.colors.text } }}>
-          {message.content}
-        </Markdown>
+      {message.role === 'user' ? (
+        <LinearGradient
+          colors={[theme.colors.gradient.secondary[0], theme.colors.gradient.secondary[1]]}
+          style={styles.userMessageGradient}
+        >
+          <View style={styles.messageHeader}>
+            <User size={16} color="#FFFFFF" />
+            <Text style={styles.userMessageRole}>You</Text>
+          </View>
+          <Text style={styles.userMessageText}>{message.content}</Text>
+        </LinearGradient>
       ) : (
-        <Text style={[
-          styles.messageText,
-          { color: '#FFFFFF' }
-        ]}>
-          {message.content}
-        </Text>
-      )}
-      {message.systemActions && (
-        <View style={styles.systemActions}>
-          <Text style={[styles.systemActionsTitle, { color: theme.colors.textSecondary }]}>Available Actions:</Text>
-          {message.systemActions.map((action, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[styles.systemActionButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-              onPress={() => handleSystemAction(action.action)}
-            >
-              <View style={styles.systemActionContent}>
-                <View style={styles.systemActionHeader}>
-                  {action.icon && getActionIcon(action.icon)}
-                  <Text style={[styles.systemActionLabel, { color: theme.colors.text }]}>
-                    {action.label}
-                  </Text>
-                </View>
-                {action.description && (
-                  <Text style={[styles.systemActionDescription, { color: theme.colors.textSecondary }]}> {action.description} </Text>
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
+        <View style={[styles.assistantMessageContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+          <View style={styles.messageHeader}>
+            <View style={[styles.botIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+              <Bot size={16} color={theme.colors.success} />
+            </View>
+            <Text style={[styles.assistantMessageRole, { color: theme.colors.textSecondary }]}>KaliAI</Text>
+          </View>
+          <Markdown style={{ body: { ...styles.assistantMessageText, color: theme.colors.text } }}>
+            {message.content}
+          </Markdown>
+          {message.systemActions && (
+            <View style={styles.systemActions}>
+              <Text style={[styles.systemActionsTitle, { color: theme.colors.textSecondary }]}>Quick Actions:</Text>
+              {message.systemActions.map((action, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.systemActionButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                  onPress={() => handleSystemAction(action.action)}
+                >
+                  <View style={styles.systemActionContent}>
+                    <View style={styles.systemActionHeader}>
+                      {action.icon && getActionIcon(action.icon)}
+                      <Text style={[styles.systemActionLabel, { color: theme.colors.text }]}>
+                        {action.label}
+                      </Text>
+                    </View>
+                    {action.description && (
+                      <Text style={[styles.systemActionDescription, { color: theme.colors.textSecondary }]}>{action.description}</Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       )}
     </View>
   );
 
   const TypingIndicator = () => (
-    <View style={[styles.messageBubble, styles.assistantBubble, { backgroundColor: theme.colors.card }]}>
-      <View style={styles.messageHeader}>
-        <Bot size={16} color={theme.colors.success} />
-        <Text style={[styles.messageRole, { color: theme.colors.textSecondary }]}>KaliAI</Text>
-      </View>
-      <View style={styles.typingIndicator}>
-        <View style={[styles.typingDot, { backgroundColor: theme.colors.textSecondary }]} />
-        <View style={[styles.typingDot, { backgroundColor: theme.colors.textSecondary }]} />
-        <View style={[styles.typingDot, { backgroundColor: theme.colors.textSecondary }]} />
+    <View style={[styles.messageBubble, styles.assistantBubble]}>
+      <View style={[styles.assistantMessageContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View style={styles.messageHeader}>
+          <View style={[styles.botIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+            <Bot size={16} color={theme.colors.success} />
+          </View>
+          <Text style={[styles.assistantMessageRole, { color: theme.colors.textSecondary }]}>KaliAI</Text>
+        </View>
+        <View style={styles.typingIndicator}>
+          <View style={[styles.typingDot, { backgroundColor: theme.colors.textSecondary }]} />
+          <View style={[styles.typingDot, { backgroundColor: theme.colors.textSecondary }]} />
+          <View style={[styles.typingDot, { backgroundColor: theme.colors.textSecondary }]} />
+        </View>
       </View>
     </View>
   );
@@ -446,8 +443,10 @@ export default function KaliAIScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.secondary} />
-          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading KaliAI...</Text>
+          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
+            <Sparkles size={48} color={theme.colors.success} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading KaliAI...</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -455,6 +454,7 @@ export default function KaliAIScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* Header */}
       <LinearGradient
         colors={[theme.colors.gradient.success[0], theme.colors.gradient.success[1]]}
         style={styles.header}
@@ -474,8 +474,17 @@ export default function KaliAIScreen() {
             <Text style={styles.statusText}>Online</Text>
           </View>
         </View>
+        
+        {/* Hero Image */}
+        <View style={styles.heroImageContainer}>
+          <Image 
+            source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+            style={styles.heroImage}
+          />
+        </View>
       </LinearGradient>
 
+      {/* Quick Actions */}
       <View style={styles.quickActions}>
         <TouchableOpacity
           style={[styles.quickActionButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
@@ -507,6 +516,7 @@ export default function KaliAIScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Chat Container */}
       <KeyboardAvoidingView 
         style={styles.chatContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -515,6 +525,7 @@ export default function KaliAIScreen() {
           ref={scrollViewRef}
           style={styles.messagesContainer}
           contentContainerStyle={styles.messagesContent}
+          showsVerticalScrollIndicator={false}
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
           {messages.map((message) => (
@@ -523,6 +534,7 @@ export default function KaliAIScreen() {
           {isTyping && <TypingIndicator />}
         </ScrollView>
 
+        {/* Input Container */}
         <View style={[styles.inputContainer, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
           <TextInput
             style={[styles.textInput, { backgroundColor: theme.colors.surface, color: theme.colors.text, borderColor: theme.colors.border }]}
@@ -556,19 +568,35 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 16,
+    padding: 32,
+  },
+  loadingCard: {
+    padding: 32,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
   loadingText: {
     fontSize: 16,
+    marginTop: 16,
+    fontWeight: '500',
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
   },
   headerInfo: {
     flexDirection: 'row',
@@ -608,6 +636,16 @@ const styles = StyleSheet.create({
     color: '#D1FAE5',
     fontWeight: '500',
   },
+  heroImageContainer: {
+    height: 80,
+    borderRadius: 12,
+    overflow: 'hidden',
+    opacity: 0.8,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
   quickActions: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -621,13 +659,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     gap: 4,
   },
   quickActionText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   chatContainer: {
     flex: 1,
@@ -641,28 +679,52 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: '85%',
-    padding: 12,
-    borderRadius: 16,
   },
   userBubble: {
     alignSelf: 'flex-end',
-    borderBottomRightRadius: 4,
   },
   assistantBubble: {
     alignSelf: 'flex-start',
+  },
+  userMessageGradient: {
+    padding: 16,
+    borderRadius: 20,
+    borderBottomRightRadius: 4,
+  },
+  assistantMessageContainer: {
+    padding: 16,
+    borderRadius: 20,
     borderBottomLeftRadius: 4,
+    borderWidth: 1,
   },
   messageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
+    gap: 8,
+    marginBottom: 8,
   },
-  messageRole: {
+  botIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  userMessageRole: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  assistantMessageRole: {
     fontSize: 12,
     fontWeight: '600',
   },
-  messageText: {
+  userMessageText: {
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#FFFFFF',
+  },
+  assistantMessageText: {
     fontSize: 15,
     lineHeight: 20,
   },
@@ -677,7 +739,7 @@ const styles = StyleSheet.create({
   },
   systemActionButton: {
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
   },
   systemActionContent: {
