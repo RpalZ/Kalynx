@@ -570,31 +570,29 @@ export default function CameraScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Header */}
-      <LinearGradient
-        colors={[theme.colors.gradient.accent[0], theme.colors.gradient.accent[1]]}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>AI Recipe Generator</Text>
-            <Text style={styles.headerSubtitle}>Scan your fridge to get sustainable recipe suggestions</Text>
-          </View>
-          <View style={[styles.aiIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-            <Sparkles size={24} color="#FFFFFF" />
-          </View>
-        </View>
-        
-        {/* Hero Image */}
-        <View style={styles.heroImageContainer}>
-          <Image 
-            source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-            style={styles.heroImage}
-          />
-        </View>
-      </LinearGradient>
-
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <LinearGradient
+          colors={[theme.colors.gradient.accent[0], theme.colors.gradient.accent[1]]}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.headerTitle}>AI Recipe Generator</Text>
+              <Text style={styles.headerSubtitle}>Scan your fridge to get sustainable recipe suggestions</Text>
+            </View>
+            <View style={[styles.aiIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}> 
+              <Sparkles size={24} color="#FFFFFF" />
+            </View>
+          </View>
+          {/* Hero Image */}
+          <View style={styles.heroImageContainer}>
+            <Image 
+              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+              style={styles.heroImage}
+            />
+          </View>
+        </LinearGradient>
         {/* Camera/Upload Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Capture Fridge Photo</Text>

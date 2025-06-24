@@ -208,36 +208,6 @@ export default function LeaderboardScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Header */}
-      <LinearGradient
-        colors={[theme.colors.gradient.warning[0], theme.colors.gradient.warning[1]]}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>Leaderboard</Text>
-            <Text style={styles.headerSubtitle}>
-              {leaderboardData ? `Past ${leaderboardData.period.days} days` : 'Community rankings'}
-            </Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.refreshButton}
-            onPress={onRefresh}
-            disabled={refreshing}
-          >
-            <RefreshCw size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-        
-        {/* Hero Image */}
-        <View style={styles.heroImageContainer}>
-          <Image 
-            source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-            style={styles.heroImage}
-          />
-        </View>
-      </LinearGradient>
-
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -245,6 +215,34 @@ export default function LeaderboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        {/* Header */}
+        <LinearGradient
+          colors={[theme.colors.gradient.warning[0], theme.colors.gradient.warning[1]]}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.headerTitle}>Leaderboard</Text>
+              <Text style={styles.headerSubtitle}>
+                {leaderboardData ? `Past ${leaderboardData.period.days} days` : 'Community rankings'}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={onRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          {/* Hero Image */}
+          <View style={styles.heroImageContainer}>
+            <Image 
+              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+              style={styles.heroImage}
+            />
+          </View>
+        </LinearGradient>
         {/* Current User's Rank */}
         {userRank && (
           <View style={styles.section}>
