@@ -24,7 +24,11 @@ import {
   Leaf,
   Droplet,
   Target,
-  Zap
+  Zap,
+  ExternalLink,
+  BarChart3,
+  Utensils,
+  Dumbbell
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
@@ -35,9 +39,11 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  actions?: Array<{
+  systemActions?: Array<{
     label: string;
     action: string;
+    icon?: string;
+    description?: string;
   }>;
 }
 
@@ -76,12 +82,6 @@ export default function KaliAIScreen() {
         role: 'assistant',
         content: "Hi there! I'm KaliAI, your personal sustainability and fitness assistant! 🌱✨\n\nI'm here to help you make eco-friendly choices, track your environmental impact, and support your fitness journey. What would you like to know about today?",
         timestamp: new Date(),
-        actions: [
-          { label: "Daily Tips", action: "tips" },
-          { label: "My Stats", action: "stats" },
-          { label: "Leaderboard", action: "leaderboard" },
-          { label: "Scan Fridge", action: "camera" }
-        ]
       };
       setMessages([welcomeMessage]);
     }
@@ -175,35 +175,16 @@ export default function KaliAIScreen() {
 
       const aiResponse = data.response;
       
-      // Process system commands
-      const { cleanResponse, systemCommands } = processSystemCommands(aiResponse);
+      // Process system commands and extract action buttons
+      const { cleanResponse, systemActions } = processSystemCommands(aiResponse);
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: cleanResponse,
         timestamp: new Date(),
+        systemActions: systemActions.length > 0 ? systemActions : undefined,
       };
-
-      // Execute system commands
-      systemCommands.forEach(command => executeSystemCommand(command));
-
-      // Add action buttons based on response content
-      if (cleanResponse.toLowerCase().includes('stats') || cleanResponse.toLowerCase().includes('progress')) {
-        assistantMessage.actions = [
-          { label: "Show Stats", action: "stats" },
-          { label: "View Leaderboard", action: "leaderboard" }
-        ];
-      } else if (cleanResponse.toLowerCase().includes('meal') || cleanResponse.toLowerCase().includes('food')) {
-        assistantMessage.actions = [
-          { label: "Log Meal", action: "meals" },
-          { label: "Scan Fridge", action: "camera" }
-        ];
-      } else if (cleanResponse.toLowerCase().includes('workout') || cleanResponse.toLowerCase().includes('exercise')) {
-        assistantMessage.actions = [
-          { label: "Log Workout", action: "workouts" }
-        ];
-      }
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
@@ -222,29 +203,129 @@ export default function KaliAIScreen() {
 
   const processSystemCommands = (response: string) => {
     const systemCommandRegex = /\[SYSTEM:([^\]]+)\]/g;
-    const systemCommands: string[] = [];
+    const systemActions: Array<{
+      label: string;
+      action: string;
+      icon?: string;
+      description?: string;
+    }> = [];
     let cleanResponse = response;
 
     let match;
     while ((match = systemCommandRegex.exec(response)) !== null) {
-      systemCommands.push(match[1]);
+      const command = match[1];
       cleanResponse = cleanResponse.replace(match[0], '');
+      
+      // Convert system commands to action buttons
+      if (command.startsWith('navigate:')) {
+        const route = command.replace('navigate:', '');
+        let label = '';
+        let icon = '';
+        let description = '';
+        
+        switch (route) {
+          case '/(tabs)/leaderboard':
+            label = 'View Leaderboard';
+            icon = 'trophy';
+            description = 'See how you rank against other users';
+            break;
+          case '/(tabs)/meals':
+            label = 'Log Meal';
+            icon = 'utensils';
+            description = 'Track your nutrition and environmental impact';
+            break;
+          case '/(tabs)/workouts':
+            label = 'Log Workout';
+            icon = 'dumbbell';
+            description = 'Record your fitness activities';
+            break;
+          case '/(tabs)/camera':
+            label = 'Scan Fridge';
+            icon = 'camera';
+            description = 'Generate recipes from your ingredients';
+            break;
+          default:
+            label = 'Go to ' + route.split('/').pop();
+            icon = 'external-link';
+        }
+        
+        systemActions.push({ label, action: route, icon, description });
+      } else if (command.startsWith('component:')) {
+        const component = command.replace('component:', '');
+        let label = '';
+        let icon = '';
+        let description = '';
+        
+        switch (component) {
+          case 'stats':
+            label = 'Show My Stats';
+            icon = 'bar-chart';
+            description = 'View your weekly progress summary';
+            break;
+          case 'tips':
+            label = 'Get Daily Tips';
+            icon = 'leaf';
+            description = 'Discover new sustainability practices';
+            break;
+          default:
+            label = 'Show ' + component;
+            icon = 'external-link';
+        }
+        
+        systemActions.push({ label, action: component, icon, description });
+      }
     }
 
-    return { cleanResponse: cleanResponse.trim(), systemCommands };
+    return { cleanResponse: cleanResponse.trim(), systemActions };
   };
 
-  const executeSystemCommand = (command: string) => {
-    if (command.startsWith('navigate:')) {
-      const route = command.replace('navigate:', '');
-      router.push(route as any);
-    } else if (command.startsWith('component:')) {
-      const component = command.replace('component:', '');
-      if (component === 'stats') {
-        handleQuickAction('stats');
-      } else if (component === 'tips') {
-        handleQuickAction('tips');
+  const handleSystemAction = (action: string) => {
+    if (action.startsWith('/(tabs)/')) {
+      // Navigate to the specified route
+      router.push(action as any);
+    } else {
+      // Handle component actions
+      switch (action) {
+        case 'stats':
+          if (userStats) {
+            const statsMessage: Message = {
+              id: Date.now().toString(),
+              role: 'assistant',
+              content: `Here's your weekly impact summary:\n\n📊 **Your Stats This Week**\n🍽️ Meals logged: ${userStats.mealsCount}\n🏃‍♀️ Workouts: ${userStats.workoutsCount}\n🔥 Calories burned: ${userStats.caloriesBurned}\n🌍 Carbon footprint: ${userStats.totalCO2e.toFixed(2)} kg CO₂\n💧 Water usage: ${userStats.totalWater.toFixed(1)} liters\n\n${userStats.mealsCount > 5 ? "Great job staying consistent with meal logging! 🎉" : "Try to log more meals to get better insights! 💪"}`,
+              timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, statsMessage]);
+          }
+          break;
+        case 'tips':
+          const tipsMessage: Message = {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: "Here are some daily sustainability tips:\n\n🌱 Choose plant-based meals to reduce your carbon footprint\n💧 Use a reusable water bottle\n🚶‍♀️ Walk or bike for short trips\n♻️ Reduce food waste by meal planning\n🌿 Buy local and seasonal produce\n\nWould you like specific advice based on your current habits?",
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, tipsMessage]);
+          break;
       }
+    }
+  };
+
+  const getActionIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'trophy':
+        return <Trophy size={16} color={theme.colors.warning} />;
+      case 'utensils':
+        return <Utensils size={16} color={theme.colors.success} />;
+      case 'dumbbell':
+        return <Dumbbell size={16} color={theme.colors.secondary} />;
+      case 'camera':
+        return <Camera size={16} color={theme.colors.accent} />;
+      case 'bar-chart':
+        return <BarChart3 size={16} color={theme.colors.info} />;
+      case 'leaf':
+        return <Leaf size={16} color={theme.colors.success} />;
+      default:
+        return <ExternalLink size={16} color={theme.colors.textSecondary} />;
     }
   };
 
@@ -256,9 +337,9 @@ export default function KaliAIScreen() {
           role: 'assistant',
           content: "Here are some daily sustainability tips:\n\n🌱 Choose plant-based meals to reduce your carbon footprint\n💧 Use a reusable water bottle\n🚶‍♀️ Walk or bike for short trips\n♻️ Reduce food waste by meal planning\n🌿 Buy local and seasonal produce",
           timestamp: new Date(),
-          actions: [
-            { label: "Log Meal", action: "meals" },
-            { label: "Scan Fridge", action: "camera" }
+          systemActions: [
+            { label: "Log Meal", action: "/(tabs)/meals", icon: "utensils", description: "Track your nutrition" },
+            { label: "Scan Fridge", action: "/(tabs)/camera", icon: "camera", description: "Generate recipes" }
           ]
         };
         setMessages(prev => [...prev, tipsMessage]);
@@ -270,9 +351,9 @@ export default function KaliAIScreen() {
             role: 'assistant',
             content: `Here's your weekly impact summary:\n\n📊 **Your Stats This Week**\n🍽️ Meals logged: ${userStats.mealsCount}\n🏃‍♀️ Workouts: ${userStats.workoutsCount}\n🔥 Calories burned: ${userStats.caloriesBurned}\n🌍 Carbon footprint: ${userStats.totalCO2e.toFixed(2)} kg CO₂\n💧 Water usage: ${userStats.totalWater.toFixed(1)} liters\n\n${userStats.mealsCount > 5 ? "Great job staying consistent with meal logging! 🎉" : "Try to log more meals to get better insights! 💪"}`,
             timestamp: new Date(),
-            actions: [
-              { label: "View Leaderboard", action: "leaderboard" },
-              { label: "Log Meal", action: "meals" }
+            systemActions: [
+              { label: "View Leaderboard", action: "/(tabs)/leaderboard", icon: "trophy", description: "See your ranking" },
+              { label: "Log Meal", action: "/(tabs)/meals", icon: "utensils", description: "Add a new meal" }
             ]
           };
           setMessages(prev => [...prev, statsMessage]);
@@ -318,17 +399,30 @@ export default function KaliAIScreen() {
       ]}>
         {message.content}
       </Text>
-      {message.actions && (
-        <View style={styles.messageActions}>
-          {message.actions.map((action, index) => (
+      {message.systemActions && (
+        <View style={styles.systemActions}>
+          <Text style={[styles.systemActionsTitle, { color: theme.colors.textSecondary }]}>
+            Available Actions:
+          </Text>
+          {message.systemActions.map((action, index) => (
             <TouchableOpacity
               key={index}
-              style={[styles.actionButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-              onPress={() => handleQuickAction(action.action)}
+              style={[styles.systemActionButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+              onPress={() => handleSystemAction(action.action)}
             >
-              <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
-                {action.label}
-              </Text>
+              <View style={styles.systemActionContent}>
+                <View style={styles.systemActionHeader}>
+                  {action.icon && getActionIcon(action.icon)}
+                  <Text style={[styles.systemActionLabel, { color: theme.colors.text }]}>
+                    {action.label}
+                  </Text>
+                </View>
+                {action.description && (
+                  <Text style={[styles.systemActionDescription, { color: theme.colors.textSecondary }]}>
+                    {action.description}
+                  </Text>
+                )}
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -574,21 +668,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
   },
-  messageActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  systemActions: {
     marginTop: 12,
+    gap: 8,
   },
-  actionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+  systemActionsTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  systemActionButton: {
+    padding: 12,
+    borderRadius: 8,
     borderWidth: 1,
   },
-  actionButtonText: {
+  systemActionContent: {
+    gap: 4,
+  },
+  systemActionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  systemActionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  systemActionDescription: {
     fontSize: 12,
-    fontWeight: '500',
+    lineHeight: 16,
   },
   typingIndicator: {
     flexDirection: 'row',
