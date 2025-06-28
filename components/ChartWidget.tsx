@@ -8,12 +8,14 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { VictoryChart, VictoryLine, VictoryAxis, VictoryTheme, VictoryArea } from 'victory-native';
+import { Svg, Path, Circle, Line, Text as SvgText, G } from 'react-native-svg';
 import { TrendingUp, Calendar, Maximize2, X, ChartBar as BarChart3, Flame, Leaf, Zap } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
+import { useFocusEffect } from 'expo-router';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -40,6 +42,12 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
   useEffect(() => {
     fetchChartData();
   }, [timeframe]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchChartData();
+    }, [])
+  );
 
   const fetchChartData = async () => {
     setIsLoading(true);
@@ -103,44 +111,236 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
     }
   };
 
-  const getChartLines = () => {
-    const lines = [];
+  const formatDate = (dateStr: string, index: number, total: number) => {
+    const date = new Date(dateStr);
     
-    if (selectedMetric === 'all' || selectedMetric === 'calories') {
-      lines.push({
-        data: chartData.map((item, index) => ({ x: index, y: item.calories / 10 })), // Scale down calories
-        color: theme.colors.error,
-        name: 'Calories (÷10)',
-        icon: Flame,
-      });
+    if (timeframe === 'weekly') {
+      return date.toLocaleDateString('en-US', { weekday: 'short' });
+    } else {
+      // For monthly view, show fewer labels to avoid overlap
+      if (total > 15 && index % 3 !== 0) return '';
+      return date.getDate().toString();
     }
-    
-    if (selectedMetric === 'all' || selectedMetric === 'fitness') {
-      lines.push({
-        data: chartData.map((item, index) => ({ x: index, y: item.fitness_score })),
-        color: theme.colors.secondary,
-        name: 'Fitness Score',
-        icon: Zap,
-      });
-    }
-    
-    if (selectedMetric === 'all' || selectedMetric === 'eco') {
-      lines.push({
-        data: chartData.map((item, index) => ({ x: index, y: item.eco_score })),
-        color: theme.colors.success,
-        name: 'Eco Score',
-        icon: Leaf,
-      });
-    }
-
-    return lines;
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return timeframe === 'weekly' 
-      ? date.toLocaleDateString('en-US', { weekday: 'short' })
-      : date.getDate().toString();
+  // Custom SVG Chart Component
+  const CustomChart = ({ width, height, isModal = false }: { width: number; height: number; isModal?: boolean }) => {
+    if (chartData.length === 0) return null;
+
+    const padding = { 
+      left: 60, 
+      top: 30, 
+      right: 30, 
+      bottom: isModal ? 60 : 50 
+    };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+
+    // Get data based on selected metric
+    const getDataSets = () => {
+      const dataSets = [];
+      
+      if (selectedMetric === 'all' || selectedMetric === 'calories') {
+        dataSets.push({
+          data: chartData.map(item => item.calories / 10), // Scale down calories
+          color: theme.colors.error,
+          name: 'Calories (÷10)',
+          icon: Flame,
+        });
+      }
+      
+      if (selectedMetric === 'all' || selectedMetric === 'fitness') {
+        dataSets.push({
+          data: chartData.map(item => item.fitness_score),
+          color: theme.colors.secondary,
+          name: 'Fitness Score',
+          icon: Zap,
+        });
+      }
+      
+      if (selectedMetric === 'all' || selectedMetric === 'eco') {
+        dataSets.push({
+          data: chartData.map(item => item.eco_score),
+          color: theme.colors.success,
+          name: 'Eco Score',
+          icon: Leaf,
+        });
+      }
+
+      return dataSets;
+    };
+
+    const dataSets = getDataSets();
+    const allValues = dataSets.flatMap(set => set.data);
+    
+    // Better axis scaling
+    let maxValue = Math.max(...allValues, 100);
+    let minValue = Math.min(...allValues, 0);
+    
+    // Round to nice numbers
+    maxValue = Math.ceil(maxValue / 10) * 10;
+    minValue = Math.floor(minValue / 10) * 10;
+    
+    // Ensure minimum range
+    if (maxValue - minValue < 20) {
+      maxValue = minValue + 20;
+    }
+
+    // Create path for each data set
+    const createPath = (data: number[]) => {
+      if (data.length === 0) return '';
+      
+      const points = data.map((value, index) => {
+        const x = padding.left + (index / Math.max(data.length - 1, 1)) * chartWidth;
+        const y = padding.top + chartHeight - ((value - minValue) / (maxValue - minValue)) * chartHeight;
+        return { x, y };
+      });
+
+      let path = `M ${points[0].x} ${points[0].y}`;
+      for (let i = 1; i < points.length; i++) {
+        path += ` L ${points[i].x} ${points[i].y}`;
+      }
+      
+      return path;
+    };
+
+    // Grid lines
+    const gridLines = [];
+    const numGridLines = 4;
+    for (let i = 0; i <= numGridLines; i++) {
+      const y = padding.top + (i / numGridLines) * chartHeight;
+      gridLines.push(
+        <Line
+          key={`grid-${i}`}
+          x1={padding.left}
+          y1={y}
+          x2={padding.left + chartWidth}
+          y2={y}
+          stroke={theme.colors.border}
+          strokeWidth={1}
+          opacity={0.3}
+        />
+      );
+    }
+
+    // Y-axis labels with better spacing
+    const yLabels = [];
+    for (let i = 0; i <= numGridLines; i++) {
+      const value = maxValue - (i / numGridLines) * (maxValue - minValue);
+      const y = padding.top + (i / numGridLines) * chartHeight;
+      yLabels.push(
+        <SvgText
+          key={`y-label-${i}`}
+          x={padding.left - 15}
+          y={y + 5}
+          fontSize={11}
+          fill={theme.colors.textSecondary}
+          textAnchor="end"
+          fontWeight="500"
+        >
+          {Math.round(value)}
+        </SvgText>
+      );
+    }
+
+    // X-axis labels with better spacing
+    const xLabels = chartData.map((item, index) => {
+      const label = formatDate(item.date, index, chartData.length);
+      if (!label) return null;
+      
+      const x = padding.left + (index / Math.max(chartData.length - 1, 1)) * chartWidth;
+      return (
+        <SvgText
+          key={`x-label-${index}`}
+          x={x}
+          y={height - 15}
+          fontSize={10}
+          fill={theme.colors.textSecondary}
+          textAnchor="middle"
+          fontWeight="500"
+        >
+          {label}
+        </SvgText>
+      );
+    }).filter(Boolean);
+
+    return (
+      <View style={styles.chartContainer}>
+        <Svg width={width} height={height}>
+          {/* Grid lines */}
+          {gridLines}
+          
+          {/* Y-axis */}
+          <Line
+            x1={padding.left}
+            y1={padding.top}
+            x2={padding.left}
+            y2={padding.top + chartHeight}
+            stroke={theme.colors.border}
+            strokeWidth={2}
+          />
+          
+          {/* X-axis */}
+          <Line
+            x1={padding.left}
+            y1={padding.top + chartHeight}
+            x2={padding.left + chartWidth}
+            y2={padding.top + chartHeight}
+            stroke={theme.colors.border}
+            strokeWidth={2}
+          />
+          
+          {/* Y-axis labels */}
+          {yLabels}
+          
+          {/* X-axis labels */}
+          {xLabels}
+          
+          {/* Data lines */}
+          {dataSets.map((dataSet, index) => (
+            <G key={index}>
+              <Path
+                d={createPath(dataSet.data)}
+                stroke={dataSet.color}
+                strokeWidth={isModal ? 3 : 2.5}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              {/* Data points */}
+              {dataSet.data.map((value, pointIndex) => {
+                const x = padding.left + (pointIndex / Math.max(dataSet.data.length - 1, 1)) * chartWidth;
+                const y = padding.top + chartHeight - ((value - minValue) / (maxValue - minValue)) * chartHeight;
+                return (
+                  <Circle
+                    key={`point-${index}-${pointIndex}`}
+                    cx={x}
+                    cy={y}
+                    r={isModal ? 5 : 4}
+                    fill={dataSet.color}
+                    stroke="#FFFFFF"
+                    strokeWidth={2}
+                  />
+                );
+              })}
+            </G>
+          ))}
+        </Svg>
+
+        {/* Legend */}
+        <View style={styles.legend}>
+          {dataSets.map((dataSet, index) => (
+            <View key={index} style={styles.legendItem}>
+              <View style={[styles.legendColor, { backgroundColor: dataSet.color }]} />
+              <dataSet.icon size={14} color={dataSet.color} />
+              <Text style={[styles.legendText, { color: theme.colors.textSecondary }]}>
+                {dataSet.name}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
   };
 
   const MetricButton = ({ 
@@ -179,8 +379,7 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
 
   const ChartContent = ({ isModal = false }: { isModal?: boolean }) => {
     const chartWidth = isModal ? screenWidth - 40 : screenWidth - 80;
-    const chartHeight = isModal ? 300 : 180;
-    const lines = getChartLines();
+    const chartHeight = isModal ? 350 : 200;
 
     return (
       <View style={[styles.chartContainer, isModal && styles.modalChartContainer]}>
@@ -191,75 +390,14 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
               Loading chart data...
             </Text>
           </View>
+        ) : chartData.length === 0 ? (
+          <View style={[styles.loadingContainer, { height: chartHeight }]}>
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+              No data available
+            </Text>
+          </View>
         ) : (
-          <>
-            <VictoryChart
-              theme={VictoryTheme.material}
-              width={chartWidth}
-              height={chartHeight}
-              padding={{ left: 50, top: 20, right: 50, bottom: 40 }}
-              style={{
-                background: { fill: 'transparent' }
-              }}
-            >
-              <VictoryAxis
-                dependentAxis
-                style={{
-                  axis: { stroke: theme.colors.border },
-                  tickLabels: { 
-                    fill: theme.colors.textSecondary, 
-                    fontSize: 12,
-                    fontFamily: 'System'
-                  },
-                  grid: { stroke: theme.colors.border, strokeOpacity: 0.3 }
-                }}
-              />
-              <VictoryAxis
-                style={{
-                  axis: { stroke: theme.colors.border },
-                  tickLabels: { 
-                    fill: theme.colors.textSecondary, 
-                    fontSize: 12,
-                    fontFamily: 'System'
-                  },
-                  grid: { stroke: theme.colors.border, strokeOpacity: 0.3 }
-                }}
-                tickFormat={(x) => formatDate(chartData[x]?.date || '')}
-              />
-              
-              {lines.map((line, index) => (
-                <VictoryLine
-                  key={index}
-                  data={line.data}
-                  style={{
-                    data: { 
-                      stroke: line.color, 
-                      strokeWidth: 3,
-                      strokeLinecap: 'round',
-                      strokeLinejoin: 'round'
-                    }
-                  }}
-                  animate={{
-                    duration: 1000,
-                    onLoad: { duration: 500 }
-                  }}
-                />
-              ))}
-            </VictoryChart>
-
-            {/* Legend */}
-            <View style={styles.legend}>
-              {lines.map((line, index) => (
-                <View key={index} style={styles.legendItem}>
-                  <View style={[styles.legendColor, { backgroundColor: line.color }]} />
-                  <line.icon size={14} color={line.color} />
-                  <Text style={[styles.legendText, { color: theme.colors.textSecondary }]}>
-                    {line.name}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </>
+          <CustomChart width={chartWidth} height={chartHeight} isModal={isModal} />
         )}
       </View>
     );
@@ -326,12 +464,14 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
           </View>
 
           {/* Metric Filter */}
-          <View style={styles.metricFilter}>
-            <MetricButton metric="all" label="All" icon={TrendingUp} color={theme.colors.primary} />
-            <MetricButton metric="calories" label="Calories" icon={Flame} color={theme.colors.error} />
-            <MetricButton metric="fitness" label="Fitness" icon={Zap} color={theme.colors.secondary} />
-            <MetricButton metric="eco" label="Eco" icon={Leaf} color={theme.colors.success} />
-          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.metricFilter}>
+            <View style={styles.metricFilterContent}>
+              <MetricButton metric="all" label="All" icon={TrendingUp} color={theme.colors.primary} />
+              <MetricButton metric="calories" label="Calories" icon={Flame} color={theme.colors.error} />
+              <MetricButton metric="fitness" label="Fitness" icon={Zap} color={theme.colors.secondary} />
+              <MetricButton metric="eco" label="Eco" icon={Leaf} color={theme.colors.success} />
+            </View>
+          </ScrollView>
 
           {/* Chart */}
           <ChartContent />
@@ -509,9 +649,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   metricFilter: {
+    marginBottom: 16,
+  },
+  metricFilterContent: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 16,
+    paddingHorizontal: 4,
   },
   metricButton: {
     flexDirection: 'row',
@@ -546,7 +689,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 16,
-    marginTop: 12,
+    marginTop: 16,
+    paddingHorizontal: 8,
   },
   legendItem: {
     flexDirection: 'row',
@@ -611,6 +755,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     marginBottom: 20,
+    padding: 16,
   },
   statsSection: {
     marginTop: 20,
