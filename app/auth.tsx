@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -18,8 +17,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Leaf, Mail, Lock, User, Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
-import { Notification } from '../components/Notification';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useCustomAlert } from '@/components/CustomAlert';
+import { useToast } from '@/components/Toast';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,17 +34,14 @@ const scale = (size: number) => {
 
 export default function AuthScreen() {
   const { theme } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
+  const { showToast, ToastComponent } = useToast();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
-
-  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    setNotification({ message, type });
-  };
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -75,45 +72,79 @@ export default function AuthScreen() {
   };
 
   const handleAuth = async () => {
-    setNotification(null);
-
     if (isSignUp) {
       if (!name.trim()) {
-        showNotification('Please enter your name', 'error');
+        showAlert({
+          type: 'warning',
+          title: 'Missing Information',
+          message: 'Please enter your name',
+        });
         return;
       }
       if (!validateName(name)) {
-        showNotification('Name must be at least 2 characters long', 'error');
+        showAlert({
+          type: 'warning',
+          title: 'Invalid Name',
+          message: 'Name must be at least 2 characters long',
+        });
         return;
       }
       if (!email.trim()) {
-        showNotification('Please enter your email', 'error');
+        showAlert({
+          type: 'warning',
+          title: 'Missing Information',
+          message: 'Please enter your email',
+        });
         return;
       }
       if (!validateEmail(email)) {
-        showNotification('Please enter a valid email address', 'error');
+        showAlert({
+          type: 'warning',
+          title: 'Invalid Email',
+          message: 'Please enter a valid email address',
+        });
         return;
       }
       if (!password) {
-        showNotification('Please enter a password', 'error');
+        showAlert({
+          type: 'warning',
+          title: 'Missing Information',
+          message: 'Please enter a password',
+        });
         return;
       }
       const passwordValidation = validatePassword(password);
       if (!passwordValidation.isValid) {
-        showNotification(passwordValidation.message, 'error');
+        showAlert({
+          type: 'warning',
+          title: 'Weak Password',
+          message: passwordValidation.message,
+        });
         return;
       }
     } else {
       if (!email.trim()) {
-        showNotification('Please enter your email', 'error');
+        showAlert({
+          type: 'warning',
+          title: 'Missing Information',
+          message: 'Please enter your email',
+        });
         return;
       }
       if (!validateEmail(email)) {
-        showNotification('Please enter a valid email address', 'error');
+        showAlert({
+          type: 'warning',
+          title: 'Invalid Email',
+          message: 'Please enter a valid email address',
+        });
         return;
       }
       if (!password) {
-        showNotification('Please enter your password', 'error');
+        showAlert({
+          type: 'warning',
+          title: 'Missing Information',
+          message: 'Please enter your password',
+        });
         return;
       }
     }
@@ -143,9 +174,17 @@ export default function AuthScreen() {
             errorMessage = 'Please enter a valid email address.';
           }
           
-          showNotification(errorMessage, 'error');
+          showAlert({
+            type: 'error',
+            title: 'Sign Up Failed',
+            message: errorMessage,
+          });
         } else if (data.user) {
-          showNotification('Your account has been created! Please check your email for verification.', 'success');
+          showToast({
+            type: 'success',
+            message: 'Account created! Please check your email for verification.',
+            duration: 4000,
+          });
           
           const { error: profileError } = await supabase.functions.invoke('create-user-profile', {
             body: { 
@@ -157,7 +196,11 @@ export default function AuthScreen() {
 
           if (profileError) {
             console.error('Error creating user profile:', profileError);
-            showNotification('Your account was created, but there was an error setting up your profile. Please try logging in.', 'error');
+            showAlert({
+              type: 'warning',
+              title: 'Profile Setup Issue',
+              message: 'Your account was created, but there was an error setting up your profile. Please try logging in.',
+            });
           } else {
             router.replace('/(tabs)');
           }
@@ -180,15 +223,26 @@ export default function AuthScreen() {
             errorMessage = 'No account found with this email. Please sign up first.';
           }
           
-          showNotification(errorMessage, 'error');
+          showAlert({
+            type: 'error',
+            title: 'Sign In Failed',
+            message: errorMessage,
+          });
         } else if (data.user) {
-          showNotification(`Welcome back, ${data.user.user_metadata.name || email}!`, 'success');
+          showToast({
+            type: 'success',
+            message: `Welcome back, ${data.user.user_metadata.name || email}!`,
+          });
           router.replace('/(tabs)');
         }
       }
     } catch (error) {
       console.error('Unexpected error during auth:', error);
-      showNotification('An unexpected error occurred. Please try again later.', 'error');
+      showAlert({
+        type: 'error',
+        title: 'Connection Error',
+        message: 'An unexpected error occurred. Please try again later.',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -196,14 +250,6 @@ export default function AuthScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {notification && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification(null)}
-        />
-      )}
-      
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -339,7 +385,6 @@ export default function AuthScreen() {
                   setName('');
                   setEmail('');
                   setPassword('');
-                  setNotification(null);
                 }}
               >
                 <Text style={[styles.switchButtonText, { color: theme.colors.textSecondary }]}>
@@ -374,6 +419,10 @@ export default function AuthScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Alert and Toast Components */}
+      {AlertComponent}
+      {ToastComponent}
     </SafeAreaView>
   );
 }

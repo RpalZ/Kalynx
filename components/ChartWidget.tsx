@@ -1,0 +1,644 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+  Modal,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { VictoryChart, VictoryLine, VictoryAxis, VictoryTheme, VictoryArea } from 'victory-native';
+import { TrendingUp, Calendar, Maximize2, X, ChartBar as BarChart3, Flame, Leaf, Zap } from 'lucide-react-native';
+import { useTheme } from '@/contexts/ThemeContext';
+import { supabase } from '@/lib/supabase';
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+interface ChartData {
+  date: string;
+  calories: number;
+  fitness_score: number;
+  eco_score: number;
+  combined_score: number;
+}
+
+interface ChartWidgetProps {
+  onPress?: () => void;
+}
+
+const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
+  const { theme, isDark } = useTheme();
+  const [timeframe, setTimeframe] = useState<'weekly' | 'monthly'>('weekly');
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState<'all' | 'calories' | 'fitness' | 'eco'>('all');
+
+  useEffect(() => {
+    fetchChartData();
+  }, [timeframe]);
+
+  const fetchChartData = async () => {
+    setIsLoading(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return;
+
+      const endDate = new Date();
+      const startDate = new Date();
+      
+      if (timeframe === 'weekly') {
+        startDate.setDate(endDate.getDate() - 7);
+      } else {
+        startDate.setDate(endDate.getDate() - 30);
+      }
+
+      // Fetch daily scores and meals data
+      const { data: scoresData } = await supabase
+        .from('daily_scores')
+        .select('*')
+        .gte('date', startDate.toISOString().split('T')[0])
+        .lte('date', endDate.toISOString().split('T')[0])
+        .order('date', { ascending: true });
+
+      const { data: mealsData } = await supabase
+        .from('meals')
+        .select('calories, created_at')
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString());
+
+      // Process data for chart
+      const processedData: ChartData[] = [];
+      const daysToShow = timeframe === 'weekly' ? 7 : 30;
+
+      for (let i = 0; i < daysToShow; i++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        const dateStr = currentDate.toISOString().split('T')[0];
+
+        const dayScores = scoresData?.find(score => score.date === dateStr);
+        const dayMeals = mealsData?.filter(meal => 
+          meal.created_at.startsWith(dateStr)
+        ) || [];
+
+        const totalCalories = dayMeals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
+
+        processedData.push({
+          date: dateStr,
+          calories: totalCalories,
+          fitness_score: dayScores?.fitness_score || 0,
+          eco_score: dayScores?.eco_score || 0,
+          combined_score: dayScores?.combined_score || 0,
+        });
+      }
+
+      setChartData(processedData);
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getChartLines = () => {
+    const lines = [];
+    
+    if (selectedMetric === 'all' || selectedMetric === 'calories') {
+      lines.push({
+        data: chartData.map((item, index) => ({ x: index, y: item.calories / 10 })), // Scale down calories
+        color: theme.colors.error,
+        name: 'Calories (÷10)',
+        icon: Flame,
+      });
+    }
+    
+    if (selectedMetric === 'all' || selectedMetric === 'fitness') {
+      lines.push({
+        data: chartData.map((item, index) => ({ x: index, y: item.fitness_score })),
+        color: theme.colors.secondary,
+        name: 'Fitness Score',
+        icon: Zap,
+      });
+    }
+    
+    if (selectedMetric === 'all' || selectedMetric === 'eco') {
+      lines.push({
+        data: chartData.map((item, index) => ({ x: index, y: item.eco_score })),
+        color: theme.colors.success,
+        name: 'Eco Score',
+        icon: Leaf,
+      });
+    }
+
+    return lines;
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return timeframe === 'weekly' 
+      ? date.toLocaleDateString('en-US', { weekday: 'short' })
+      : date.getDate().toString();
+  };
+
+  const MetricButton = ({ 
+    metric, 
+    label, 
+    icon: Icon, 
+    color 
+  }: { 
+    metric: typeof selectedMetric; 
+    label: string; 
+    icon: any; 
+    color: string; 
+  }) => (
+    <TouchableOpacity
+      style={[
+        styles.metricButton,
+        { 
+          backgroundColor: selectedMetric === metric ? `${color}20` : theme.colors.surface,
+          borderColor: selectedMetric === metric ? color : theme.colors.border,
+        }
+      ]}
+      onPress={() => setSelectedMetric(metric)}
+    >
+      <Icon size={16} color={selectedMetric === metric ? color : theme.colors.textSecondary} />
+      <Text style={[
+        styles.metricButtonText,
+        { 
+          color: selectedMetric === metric ? color : theme.colors.textSecondary,
+          fontWeight: selectedMetric === metric ? '700' : '500'
+        }
+      ]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const ChartContent = ({ isModal = false }: { isModal?: boolean }) => {
+    const chartWidth = isModal ? screenWidth - 40 : screenWidth - 80;
+    const chartHeight = isModal ? 300 : 180;
+    const lines = getChartLines();
+
+    return (
+      <View style={[styles.chartContainer, isModal && styles.modalChartContainer]}>
+        {isLoading ? (
+          <View style={[styles.loadingContainer, { height: chartHeight }]}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+              Loading chart data...
+            </Text>
+          </View>
+        ) : (
+          <>
+            <VictoryChart
+              theme={VictoryTheme.material}
+              width={chartWidth}
+              height={chartHeight}
+              padding={{ left: 50, top: 20, right: 50, bottom: 40 }}
+              style={{
+                background: { fill: 'transparent' }
+              }}
+            >
+              <VictoryAxis
+                dependentAxis
+                style={{
+                  axis: { stroke: theme.colors.border },
+                  tickLabels: { 
+                    fill: theme.colors.textSecondary, 
+                    fontSize: 12,
+                    fontFamily: 'System'
+                  },
+                  grid: { stroke: theme.colors.border, strokeOpacity: 0.3 }
+                }}
+              />
+              <VictoryAxis
+                style={{
+                  axis: { stroke: theme.colors.border },
+                  tickLabels: { 
+                    fill: theme.colors.textSecondary, 
+                    fontSize: 12,
+                    fontFamily: 'System'
+                  },
+                  grid: { stroke: theme.colors.border, strokeOpacity: 0.3 }
+                }}
+                tickFormat={(x) => formatDate(chartData[x]?.date || '')}
+              />
+              
+              {lines.map((line, index) => (
+                <VictoryLine
+                  key={index}
+                  data={line.data}
+                  style={{
+                    data: { 
+                      stroke: line.color, 
+                      strokeWidth: 3,
+                      strokeLinecap: 'round',
+                      strokeLinejoin: 'round'
+                    }
+                  }}
+                  animate={{
+                    duration: 1000,
+                    onLoad: { duration: 500 }
+                  }}
+                />
+              ))}
+            </VictoryChart>
+
+            {/* Legend */}
+            <View style={styles.legend}>
+              {lines.map((line, index) => (
+                <View key={index} style={styles.legendItem}>
+                  <View style={[styles.legendColor, { backgroundColor: line.color }]} />
+                  <line.icon size={14} color={line.color} />
+                  <Text style={[styles.legendText, { color: theme.colors.textSecondary }]}>
+                    {line.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <>
+      <View style={[styles.widget, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <LinearGradient
+          colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+          style={styles.widgetGradient}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <View style={[styles.headerIcon, { backgroundColor: `${theme.colors.info}20` }]}>
+                <BarChart3 size={20} color={theme.colors.info} />
+              </View>
+              <View>
+                <Text style={[styles.title, { color: theme.colors.text }]}>Progress Chart</Text>
+                <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+                  {timeframe === 'weekly' ? 'Last 7 days' : 'Last 30 days'}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.expandButton, { backgroundColor: `${theme.colors.accent}20` }]}
+              onPress={() => setShowModal(true)}
+            >
+              <Maximize2 size={16} color={theme.colors.accent} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Timeframe Toggle */}
+          <View style={styles.timeframeToggle}>
+            <TouchableOpacity
+              style={[
+                styles.timeframeButton,
+                timeframe === 'weekly' && [styles.activeTimeframe, { backgroundColor: theme.colors.primary }]
+              ]}
+              onPress={() => setTimeframe('weekly')}
+            >
+              <Text style={[
+                styles.timeframeText,
+                { color: timeframe === 'weekly' ? '#FFFFFF' : theme.colors.textSecondary }
+              ]}>
+                Weekly
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.timeframeButton,
+                timeframe === 'monthly' && [styles.activeTimeframe, { backgroundColor: theme.colors.primary }]
+              ]}
+              onPress={() => setTimeframe('monthly')}
+            >
+              <Text style={[
+                styles.timeframeText,
+                { color: timeframe === 'monthly' ? '#FFFFFF' : theme.colors.textSecondary }
+              ]}>
+                Monthly
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Metric Filter */}
+          <View style={styles.metricFilter}>
+            <MetricButton metric="all" label="All" icon={TrendingUp} color={theme.colors.primary} />
+            <MetricButton metric="calories" label="Calories" icon={Flame} color={theme.colors.error} />
+            <MetricButton metric="fitness" label="Fitness" icon={Zap} color={theme.colors.secondary} />
+            <MetricButton metric="eco" label="Eco" icon={Leaf} color={theme.colors.success} />
+          </View>
+
+          {/* Chart */}
+          <ChartContent />
+        </LinearGradient>
+      </View>
+
+      {/* Modal */}
+      <Modal
+        visible={showModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowModal(false)}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: theme.colors.background }]}>
+          <View style={[styles.modalHeader, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Progress Chart</Text>
+            <TouchableOpacity onPress={() => setShowModal(false)}>
+              <X size={24} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {/* Timeframe Toggle */}
+            <View style={styles.modalTimeframeToggle}>
+              <TouchableOpacity
+                style={[
+                  styles.modalTimeframeButton,
+                  timeframe === 'weekly' && [styles.activeTimeframe, { backgroundColor: theme.colors.primary }]
+                ]}
+                onPress={() => setTimeframe('weekly')}
+              >
+                <Calendar size={16} color={timeframe === 'weekly' ? '#FFFFFF' : theme.colors.textSecondary} />
+                <Text style={[
+                  styles.modalTimeframeText,
+                  { color: timeframe === 'weekly' ? '#FFFFFF' : theme.colors.textSecondary }
+                ]}>
+                  Weekly
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalTimeframeButton,
+                  timeframe === 'monthly' && [styles.activeTimeframe, { backgroundColor: theme.colors.primary }]
+                ]}
+                onPress={() => setTimeframe('monthly')}
+              >
+                <Calendar size={16} color={timeframe === 'monthly' ? '#FFFFFF' : theme.colors.textSecondary} />
+                <Text style={[
+                  styles.modalTimeframeText,
+                  { color: timeframe === 'monthly' ? '#FFFFFF' : theme.colors.textSecondary }
+                ]}>
+                  Monthly
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Metric Filter */}
+            <View style={styles.modalMetricFilter}>
+              <MetricButton metric="all" label="All Metrics" icon={TrendingUp} color={theme.colors.primary} />
+              <MetricButton metric="calories" label="Calories" icon={Flame} color={theme.colors.error} />
+              <MetricButton metric="fitness" label="Fitness Score" icon={Zap} color={theme.colors.secondary} />
+              <MetricButton metric="eco" label="Eco Score" icon={Leaf} color={theme.colors.success} />
+            </View>
+
+            {/* Chart */}
+            <View style={[styles.modalChartWrapper, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <ChartContent isModal={true} />
+            </View>
+
+            {/* Stats Summary */}
+            {!isLoading && chartData.length > 0 && (
+              <View style={styles.statsSection}>
+                <Text style={[styles.statsTitle, { color: theme.colors.text }]}>Summary</Text>
+                <View style={styles.statsGrid}>
+                  <View style={[styles.statCard, { backgroundColor: theme.colors.surface }]}>
+                    <Text style={[styles.statValue, { color: theme.colors.error }]}>
+                      {Math.round(chartData.reduce((sum, item) => sum + item.calories, 0) / chartData.length)}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Avg Calories</Text>
+                  </View>
+                  <View style={[styles.statCard, { backgroundColor: theme.colors.surface }]}>
+                    <Text style={[styles.statValue, { color: theme.colors.secondary }]}>
+                      {Math.round(chartData.reduce((sum, item) => sum + item.fitness_score, 0) / chartData.length)}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Avg Fitness</Text>
+                  </View>
+                  <View style={[styles.statCard, { backgroundColor: theme.colors.surface }]}>
+                    <Text style={[styles.statValue, { color: theme.colors.success }]}>
+                      {Math.round(chartData.reduce((sum, item) => sum + item.eco_score, 0) / chartData.length)}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Avg Eco</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
+    </>
+  );
+};
+
+const styles = StyleSheet.create({
+  widget: {
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    marginVertical: 8,
+  },
+  widgetGradient: {
+    padding: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  expandButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timeframeToggle: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 16,
+  },
+  timeframeButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  activeTimeframe: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  timeframeText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  metricFilter: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  metricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  metricButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  chartContainer: {
+    alignItems: 'center',
+  },
+  modalChartContainer: {
+    marginVertical: 20,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  legend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 12,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendColor: {
+    width: 12,
+    height: 3,
+    borderRadius: 2,
+  },
+  legendText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  modalTimeframeToggle: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  modalTimeframeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  modalTimeframeText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalMetricFilter: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  modalChartWrapper: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  statsSection: {
+    marginTop: 20,
+  },
+  statsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+});
+
+export default ChartWidget;

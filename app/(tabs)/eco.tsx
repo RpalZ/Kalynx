@@ -491,28 +491,28 @@ export default function KaliAIScreen() {
           onPress={() => handleQuickAction('tips')}
         >
           <Leaf size={16} color={theme.colors.success} />
-          <Text style={[styles.quickActionText, { color: theme.colors.text }]}>Daily Tips</Text>
+          <Text style={[styles.quickActionText, { color: theme.colors.text }]} numberOfLines={1} ellipsizeMode="tail">Daily Tips</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.quickActionButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
           onPress={() => handleQuickAction('stats')}
         >
           <TrendingUp size={16} color={theme.colors.secondary} />
-          <Text style={[styles.quickActionText, { color: theme.colors.text }]}>My Stats</Text>
+          <Text style={[styles.quickActionText, { color: theme.colors.text }]} numberOfLines={1} ellipsizeMode="tail">My Stats</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.quickActionButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
           onPress={() => handleQuickAction('leaderboard')}
         >
           <Trophy size={16} color={theme.colors.warning} />
-          <Text style={[styles.quickActionText, { color: theme.colors.text }]}>Leaderboard</Text>
+          <Text style={[styles.quickActionText, { color: theme.colors.text }]} numberOfLines={1} ellipsizeMode="tail">Leaderboard</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.quickActionButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
           onPress={() => handleQuickAction('camera')}
         >
           <Camera size={16} color={theme.colors.accent} />
-          <Text style={[styles.quickActionText, { color: theme.colors.text }]}>Scan Fridge</Text>
+          <Text style={[styles.quickActionText, { color: theme.colors.text }]} numberOfLines={1} ellipsizeMode="tail">Scan Fridge</Text>
         </TouchableOpacity>
       </View>
 
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   quickActionText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   chatContainer: {

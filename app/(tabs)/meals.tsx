@@ -6,17 +6,21 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   RefreshControl,
   Dimensions,
   Image,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, Search, Utensils, Flame, Activity, Leaf, Droplet, X, ChefHat, Clock, Sparkles } from 'lucide-react-native';
+import { Plus, Search, Utensils, Flame, Activity, Leaf, Droplet, X, ChefHat, Clock, Sparkles, CreditCard as Edit3, Trash2, Save, MoveVertical as MoreVertical } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useCustomAlert } from '@/components/CustomAlert';
+import { useToast } from '@/components/Toast';
 
 const { width } = Dimensions.get('window');
 
@@ -28,6 +32,7 @@ interface Meal {
   carbon_impact: number;
   water_impact: number;
   created_at: string;
+  detailed_ingredients?: { ingredient: string; amount: string; unit: string }[];
 }
 
 interface DetailedIngredient {
@@ -36,8 +41,255 @@ interface DetailedIngredient {
   unit: string;
 }
 
+interface EditMealModalProps {
+  isVisible: boolean;
+  meal: Meal | null;
+  onClose: () => void;
+  onSave: (updatedMeal: Meal) => void;
+}
+
+const EditMealModal = ({ isVisible, meal, onClose, onSave }: EditMealModalProps) => {
+  const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
+  const { showToast, ToastComponent } = useToast();
+  const [editedMeal, setEditedMeal] = useState<Meal | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (meal) {
+      setEditedMeal({ ...meal });
+    }
+  }, [meal]);
+
+  const handleSave = async () => {
+    if (!editedMeal) return;
+
+    // Validate inputs
+    if (!editedMeal.name.trim()) {
+      showAlert({
+        type: 'error',
+        title: 'Invalid Input',
+        message: 'Meal name cannot be empty',
+      });
+      return;
+    }
+
+    if (editedMeal.calories < 0 || editedMeal.protein < 0 || editedMeal.carbon_impact < 0 || editedMeal.water_impact < 0) {
+      showAlert({
+        type: 'error',
+        title: 'Invalid Values',
+        message: 'Values cannot be negative',
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        router.replace('/auth');
+        return;
+      }
+
+      console.log('🔄 Updating meal with ID:', editedMeal.id);
+      console.log('📊 Update data:', {
+        name: editedMeal.name.trim(),
+        calories: Number(editedMeal.calories),
+        protein: Number(editedMeal.protein),
+        carbon_impact: Number(editedMeal.carbon_impact),
+        water_impact: Number(editedMeal.water_impact),
+      });
+
+      const token = session.session.access_token;
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/update-meal`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            mealId: editedMeal.id,
+            name: editedMeal.name.trim(),
+            calories: Number(editedMeal.calories),
+            protein: Number(editedMeal.protein),
+            carbon_impact: Number(editedMeal.carbon_impact),
+            water_impact: Number(editedMeal.water_impact),
+          }),
+        }
+      );
+
+      console.log('📡 Update response status:', response.status);
+      console.log('📡 Update response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (response.ok) {
+        const updatedMeal = await response.json();
+        console.log('✅ Meal updated successfully:', updatedMeal);
+        onSave(updatedMeal);
+        onClose();
+        showToast({
+          type: 'success',
+          message: 'Meal updated successfully!',
+        });
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error updating meal:', response.status, errorText);
+        showAlert({
+          type: 'error',
+          title: 'Update Failed',
+          message: errorText || 'Failed to update meal',
+        });
+      }
+    } catch (error) {
+      console.error('💥 Error updating meal:', error);
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to update meal. Please check your connection.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!editedMeal) return null;
+
+  return (
+    <>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isVisible}
+        onRequestClose={onClose}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+            <View style={styles.modalHeader}>
+              <Edit3 size={24} color={theme.colors.secondary} />
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Edit Meal</Text>
+              <TouchableOpacity onPress={onClose}>
+                <X size={24} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Meal Name</Text>
+                <TextInput
+                  style={[styles.modalInput, { 
+                    borderColor: theme.colors.border, 
+                    color: theme.colors.text, 
+                    backgroundColor: theme.colors.surface 
+                  }]}
+                  value={editedMeal.name}
+                  onChangeText={(text) => setEditedMeal({ ...editedMeal, name: text })}
+                  placeholder="Enter meal name"
+                  placeholderTextColor={theme.colors.placeholder}
+                />
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Calories</Text>
+                  <TextInput
+                    style={[styles.modalInput, { 
+                      borderColor: theme.colors.border, 
+                      color: theme.colors.text, 
+                      backgroundColor: theme.colors.surface 
+                    }]}
+                    value={editedMeal.calories.toString()}
+                    onChangeText={(text) => setEditedMeal({ ...editedMeal, calories: Number(text) || 0 })}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.placeholder}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Protein (g)</Text>
+                  <TextInput
+                    style={[styles.modalInput, { 
+                      borderColor: theme.colors.border, 
+                      color: theme.colors.text, 
+                      backgroundColor: theme.colors.surface 
+                    }]}
+                    value={editedMeal.protein.toString()}
+                    onChangeText={(text) => setEditedMeal({ ...editedMeal, protein: Number(text) || 0 })}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.placeholder}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Carbon Impact (kg CO₂)</Text>
+                  <TextInput
+                    style={[styles.modalInput, { 
+                      borderColor: theme.colors.border, 
+                      color: theme.colors.text, 
+                      backgroundColor: theme.colors.surface 
+                    }]}
+                    value={editedMeal.carbon_impact.toString()}
+                    onChangeText={(text) => setEditedMeal({ ...editedMeal, carbon_impact: Number(text) || 0 })}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.placeholder}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Water Impact (L)</Text>
+                  <TextInput
+                    style={[styles.modalInput, { 
+                      borderColor: theme.colors.border, 
+                      color: theme.colors.text, 
+                      backgroundColor: theme.colors.surface 
+                    }]}
+                    value={editedMeal.water_impact.toString()}
+                    onChangeText={(text) => setEditedMeal({ ...editedMeal, water_impact: Number(text) || 0 })}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.placeholder}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.colors.surface }]}
+                onPress={onClose}
+              >
+                <Text style={[styles.modalButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.colors.secondary }]}
+                onPress={handleSave}
+                disabled={isSaving}
+              >
+                <Save size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {AlertComponent}
+      {ToastComponent}
+    </>
+  );
+};
+
 export default function MealsScreen() {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
+  const { showToast, ToastComponent } = useToast();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,6 +301,8 @@ export default function MealsScreen() {
   const [currentIngredient, setCurrentIngredient] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
   const [currentUnit, setCurrentUnit] = useState('g');
+  const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -88,13 +342,21 @@ export default function MealsScreen() {
 
       if (error) {
         console.error('Error fetching meals:', error);
-        Alert.alert('Error', 'Failed to load meals');
+        showAlert({
+          type: 'error',
+          title: 'Loading Error',
+          message: 'Failed to load meals. Please try again.',
+        });
       } else {
         setMeals(mealsData || []);
       }
     } catch (error) {
       console.error('Error:', error);
-      Alert.alert('Error', 'Failed to load meals');
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to load meals. Please check your connection.',
+      });
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -106,19 +368,120 @@ export default function MealsScreen() {
     fetchMeals();
   };
 
+  const handleDeleteMeal = async (mealId: string, mealName: string) => {
+    showAlert({
+      type: 'warning',
+      title: 'Delete Meal',
+      message: `Are you sure you want to delete "${mealName}"?`,
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { data: session } = await supabase.auth.getSession();
+              
+              if (!session.session) {
+                router.replace('/auth');
+                return;
+              }
+
+              console.log('🗑️ Deleting meal with ID:', mealId);
+              console.log('🔑 Using token:', session.session.access_token.substring(0, 20) + '...');
+
+              const token = session.session.access_token;
+              const requestBody = { mealId: mealId };
+              
+              console.log('📦 Request body:', JSON.stringify(requestBody));
+              console.log('🌐 Request URL:', `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-meal`);
+
+              const response = await fetch(
+                `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-meal`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(requestBody),
+                }
+              );
+
+              console.log('📡 Delete response status:', response.status);
+              console.log('📡 Delete response headers:', Object.fromEntries(response.headers.entries()));
+
+              if (response.ok) {
+                const result = await response.json();
+                console.log('✅ Meal deleted successfully:', result);
+                
+                // Update the local state to remove the deleted meal
+                setMeals(prevMeals => prevMeals.filter(meal => meal.id !== mealId));
+                showToast({
+                  type: 'success',
+                  message: 'Meal deleted successfully!',
+                });
+              } else {
+                const errorText = await response.text();
+                console.error('❌ Error deleting meal:', response.status, errorText);
+                showAlert({
+                  type: 'error',
+                  title: 'Delete Failed',
+                  message: errorText || 'Failed to delete meal',
+                });
+              }
+            } catch (error) {
+              console.error('💥 Error deleting meal:', error);
+              showAlert({
+                type: 'error',
+                title: 'Network Error',
+                message: 'Failed to delete meal. Please check your connection and try again.',
+              });
+            }
+          }
+        }
+      ]
+    });
+  };
+
+  const handleEditMeal = (meal: Meal) => {
+    console.log('✏️ Editing meal:', meal);
+    setEditingMeal(meal);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEditedMeal = (updatedMeal: Meal) => {
+    console.log('💾 Saving edited meal:', updatedMeal);
+    setMeals(meals.map(meal => meal.id === updatedMeal.id ? updatedMeal : meal));
+    setShowEditModal(false);
+    setEditingMeal(null);
+  };
+
   const handleAddIngredient = () => {
     if (!currentIngredient.trim()) {
-      Alert.alert('Error', 'Please enter an ingredient name');
+      showAlert({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please enter an ingredient name',
+      });
       return;
     }
     
     if (!currentAmount.trim()) {
-      Alert.alert('Error', 'Please enter an amount');
+      showAlert({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please enter an amount',
+      });
       return;
     }
 
     if (!currentUnit.trim()) {
-      Alert.alert('Error', 'Please enter a unit (g/ml)');
+      showAlert({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please enter a unit (g/ml)',
+      });
       return;
     }
     
@@ -141,7 +504,11 @@ export default function MealsScreen() {
 
   const handleAddMeal = async () => {
     if (!newMealName.trim()) {
-      Alert.alert('Error', 'Please enter a meal name');
+      showAlert({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please enter a meal name',
+      });
       return;
     }
 
@@ -175,14 +542,25 @@ export default function MealsScreen() {
         setDetailedIngredients([]);
         setShowAddForm(false);
         fetchMeals();
-        Alert.alert('Success', 'Meal logged successfully!');
+        showToast({
+          type: 'success',
+          message: 'Meal logged successfully!',
+        });
       } else {
         const errorData = await response.text();
-        Alert.alert('Error', errorData || 'Failed to log meal');
+        showAlert({
+          type: 'error',
+          title: 'Failed to Log Meal',
+          message: errorData || 'Failed to log meal',
+        });
       }
     } catch (error) {
       console.error('Error adding meal:', error);
-      Alert.alert('Error', 'Failed to log meal');
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to log meal. Please check your connection.',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -192,63 +570,100 @@ export default function MealsScreen() {
     meal.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const MealCard = ({ meal }: { meal: Meal }) => (
-    <View style={[styles.mealCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-      <LinearGradient
-        colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
-        style={styles.mealCardGradient}
-      >
-        <View style={styles.mealHeader}>
-          <View style={[styles.mealIcon, { backgroundColor: `${theme.colors.success}20` }]}>
-            <Utensils size={20} color={theme.colors.success} />
-          </View>
-          <View style={styles.mealInfo}>
-            <Text style={[styles.mealName, { color: theme.colors.text }]}>{meal.name}</Text>
-            <View style={styles.mealTime}>
-              <Clock size={12} color={theme.colors.placeholder} />
-              <Text style={[styles.mealTimeText, { color: theme.colors.placeholder }]}>
-                {new Date(meal.created_at).toLocaleTimeString([], { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </Text>
+  const MealCard = ({ meal }: { meal: Meal }) => {
+    const [showActions, setShowActions] = useState(false);
+
+    return (
+      <View style={[styles.mealCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <LinearGradient
+          colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+          style={styles.mealCardGradient}
+        >
+          <View style={styles.mealHeader}>
+            <View style={[styles.mealIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+              <Utensils size={20} color={theme.colors.success} />
             </View>
-          </View>
-        </View>
-        
-        <View style={styles.mealStats}>
-          <View style={styles.statRow}>
-            <View style={styles.statItem}>
-              <View style={[styles.statIcon, { backgroundColor: `${theme.colors.error}20` }]}>
-                <Flame size={14} color={theme.colors.error} />
+            <View style={styles.mealInfo}>
+              <Text style={[styles.mealName, { color: theme.colors.text }]}>{meal.name}</Text>
+              <View style={styles.mealTime}>
+                <Clock size={12} color={theme.colors.placeholder} />
+                <Text style={[styles.mealTimeText, { color: theme.colors.placeholder }]}>
+                  {new Date(meal.created_at).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </Text>
               </View>
-              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{Math.round(meal.calories)} kcal</Text>
             </View>
-            <View style={styles.statItem}>
-              <View style={[styles.statIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
-                <Activity size={14} color={theme.colors.secondary} />
-              </View>
-              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.protein.toFixed(1)}g protein</Text>
+            <View style={styles.mealActions}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: `${theme.colors.textSecondary}10` }]}
+                onPress={() => setShowActions(!showActions)}
+              >
+                <MoreVertical size={16} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.statRow}>
-            <View style={styles.statItem}>
-              <View style={[styles.statIcon, { backgroundColor: `${theme.colors.success}20` }]}>
-                <Leaf size={14} color={theme.colors.success} />
-              </View>
-              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.carbon_impact.toFixed(2)} kg CO₂</Text>
+          
+          {showActions && (
+            <View style={[styles.actionsMenu, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+              <TouchableOpacity
+                style={styles.actionMenuItem}
+                onPress={() => {
+                  setShowActions(false);
+                  handleEditMeal(meal);
+                }}
+              >
+                <Edit3 size={16} color={theme.colors.secondary} />
+                <Text style={[styles.actionMenuText, { color: theme.colors.text }]}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionMenuItem}
+                onPress={() => {
+                  setShowActions(false);
+                  handleDeleteMeal(meal.id, meal.name);
+                }}
+              >
+                <Trash2 size={16} color={theme.colors.error} />
+                <Text style={[styles.actionMenuText, { color: theme.colors.error }]}>Delete</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.statItem}>
-              <View style={[styles.statIcon, { backgroundColor: `${theme.colors.info}20` }]}>
-                <Droplet size={14} color={theme.colors.info} />
+          )}
+          
+          <View style={styles.mealStats}>
+            <View style={styles.statRow}>
+              <View style={styles.statItem}>
+                <View style={[styles.statIcon, { backgroundColor: `${theme.colors.error}20` }]}>
+                  <Flame size={14} color={theme.colors.error} />
+                </View>
+                <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{Math.round(meal.calories)} kcal</Text>
               </View>
-              <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.water_impact.toFixed(1)}L water</Text>
+              <View style={styles.statItem}>
+                <View style={[styles.statIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+                  <Activity size={14} color={theme.colors.secondary} />
+                </View>
+                <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.protein.toFixed(1)}g protein</Text>
+              </View>
+            </View>
+            <View style={styles.statRow}>
+              <View style={styles.statItem}>
+                <View style={[styles.statIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+                  <Leaf size={14} color={theme.colors.success} />
+                </View>
+                <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.carbon_impact.toFixed(2)} kg CO₂</Text>
+              </View>
+              <View style={styles.statItem}>
+                <View style={[styles.statIcon, { backgroundColor: `${theme.colors.info}20` }]}>
+                  <Droplet size={14} color={theme.colors.info} />
+                </View>
+                <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>{meal.water_impact.toFixed(1)}L water</Text>
+              </View>
             </View>
           </View>
-        </View>
-      </LinearGradient>
-    </View>
-  );
+        </LinearGradient>
+      </View>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -264,182 +679,196 @@ export default function MealsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Header */}
-      <LinearGradient
-        colors={[theme.colors.gradient.success[0], theme.colors.gradient.success[1]]}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>Today's Meals</Text>
-            <Text style={styles.headerSubtitle}>Track your nutrition and environmental impact</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowAddForm(!showAddForm)}
-          >
-            <Plus size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-        
-        {/* Hero Image */}
-        <View style={styles.heroImageContainer}>
-          <Image 
-            source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-            style={styles.heroImage}
-          />
-        </View>
-      </LinearGradient>
-
-      {/* Add Form */}
-      {showAddForm && (
-        <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={64}
+    >
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background, flex: 1 }]}> 
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
           <LinearGradient
-            colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
-            style={styles.addFormGradient}
+            colors={[theme.colors.gradient.success[0], theme.colors.gradient.success[1]]}
+            style={styles.header}
           >
-            <View style={styles.formHeader}>
-              <Sparkles size={20} color={theme.colors.accent} />
-              <Text style={[styles.formTitle, { color: theme.colors.text }]}>Add New Meal</Text>
-            </View>
-            
-            <TextInput
-              style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-              placeholder="Enter meal name (e.g., Grilled Chicken Salad)"
-              placeholderTextColor={theme.colors.placeholder}
-              value={newMealName}
-              onChangeText={setNewMealName}
-            />
-            
-            <View style={styles.ingredientsSection}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add Ingredients (Optional)</Text>
-              <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
-                Add each ingredient with its amount and unit for better accuracy
-              </Text>
-
-              <View style={styles.ingredientInputContainer}>
-                <View style={styles.ingredientInputRow}>
-                  <TextInput
-                    style={[styles.input, styles.ingredientInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-                    placeholder="Ingredient"
-                    placeholderTextColor={theme.colors.placeholder}
-                    value={currentIngredient}
-                    onChangeText={setCurrentIngredient}
-                  />
-                  <TextInput
-                    style={[styles.input, styles.amountInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-                    placeholder="Amount"
-                    placeholderTextColor={theme.colors.placeholder}
-                    value={currentAmount}
-                    onChangeText={setCurrentAmount}
-                    keyboardType="numeric"
-                  />
-                  <TextInput
-                    style={[styles.input, styles.unitInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-                    placeholder="Unit"
-                    placeholderTextColor={theme.colors.placeholder}
-                    value={currentUnit}
-                    onChangeText={setCurrentUnit}
-                  />
-                </View>
-                <TouchableOpacity
-                  style={[styles.addIngredientButton, { backgroundColor: theme.colors.success }]}
-                  onPress={handleAddIngredient}
-                >
-                  <Plus size={20} color="#FFFFFF" />
-                </TouchableOpacity>
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeft}>
+                <Text style={styles.headerTitle}>Today's Meals</Text>
+                <Text style={styles.headerSubtitle}>Track your nutrition and environmental impact</Text>
               </View>
-
-              {detailedIngredients.length > 0 && (
-                <View style={styles.ingredientsList}>
-                  <Text style={[styles.ingredientsListTitle, { color: theme.colors.text }]}>
-                    Added Ingredients ({detailedIngredients.length})
-                  </Text>
-                  {detailedIngredients.map((ing, index) => (
-                    <View key={index} style={[styles.ingredientItem, { backgroundColor: theme.colors.surface }]}>
-                      <Text style={[styles.ingredientText, { color: theme.colors.text }]}>
-                        {ing.ingredient} ({ing.amount}{ing.unit})
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => handleRemoveIngredient(index)}
-                        style={styles.removeIngredientButton}
-                      >
-                        <X size={16} color={theme.colors.error} />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => setShowAddForm(!showAddForm)}
+              >
+                <Plus size={24} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.formButtons}>
-              <TouchableOpacity
-                style={[styles.cancelButton, { borderColor: theme.colors.border }]}
-                onPress={() => {
-                  setShowAddForm(false);
-                  setNewMealName('');
-                  setDetailedIngredients([]);
-                }}
-              >
-                <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.submitButton, { backgroundColor: theme.colors.success }]}
-                onPress={handleAddMeal}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.submitButtonText}>
-                  {isSubmitting ? 'Adding...' : 'Add Meal'}
-                </Text>
-              </TouchableOpacity>
+            {/* Hero Image */}
+            <View style={styles.heroImageContainer}>
+              <Image 
+                source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+                style={styles.heroImage}
+              />
             </View>
           </LinearGradient>
-        </View>
-      )}
-
-      {/* Search */}
-      <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <View style={[styles.searchIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
-          <Search size={20} color={theme.colors.secondary} />
-        </View>
-        <TextInput
-          style={[styles.searchInput, { color: theme.colors.text }]}
-          placeholder="Search meals..."
-          placeholderTextColor={theme.colors.placeholder}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      {/* Meals List */}
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {filteredMeals.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={[styles.emptyIcon, { backgroundColor: `${theme.colors.success}20` }]}>
-              <Utensils size={48} color={theme.colors.success} />
+          {/* Add Form */}
+          {showAddForm && (
+            <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}> 
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ flexGrow: 1 }}
+              >
+                <LinearGradient
+                  colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+                  style={styles.addFormGradient}
+                >
+                  <View style={styles.formHeader}>
+                    <Sparkles size={20} color={theme.colors.accent} />
+                    <Text style={[styles.formTitle, { color: theme.colors.text }]}>Add New Meal</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                    placeholder="Enter meal name (e.g., Grilled Chicken Salad)"
+                    placeholderTextColor={theme.colors.placeholder}
+                    value={newMealName}
+                    onChangeText={setNewMealName}
+                  />
+                  <View style={styles.ingredientsSection}>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add Ingredients (Optional)</Text>
+                    <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>Add each ingredient with its amount and unit for better accuracy</Text>
+                    <View style={styles.ingredientInputContainer}>
+                      <View style={styles.ingredientInputRow}>
+                        <TextInput
+                          style={[styles.input, styles.ingredientInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                          placeholder="Ingredient"
+                          placeholderTextColor={theme.colors.placeholder}
+                          value={currentIngredient}
+                          onChangeText={setCurrentIngredient}
+                        />
+                        <TextInput
+                          style={[styles.input, styles.amountInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                          placeholder="Amount"
+                          placeholderTextColor={theme.colors.placeholder}
+                          value={currentAmount}
+                          onChangeText={setCurrentAmount}
+                          keyboardType="numeric"
+                        />
+                        <TextInput
+                          style={[styles.input, styles.unitInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                          placeholder="Unit"
+                          placeholderTextColor={theme.colors.placeholder}
+                          value={currentUnit}
+                          onChangeText={setCurrentUnit}
+                        />
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.addIngredientButton, { backgroundColor: theme.colors.success }]}
+                        onPress={handleAddIngredient}
+                      >
+                        <Plus size={20} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+                    {detailedIngredients.length > 0 && (
+                      <View style={styles.ingredientsList}>
+                        <Text style={[styles.ingredientsListTitle, { color: theme.colors.text }]}>Added Ingredients ({detailedIngredients.length})</Text>
+                        {detailedIngredients.map((ing, index) => (
+                          <View key={index} style={[styles.ingredientItem, { backgroundColor: theme.colors.surface }]}> 
+                            <Text style={[styles.ingredientText, { color: theme.colors.text }]}>{ing.ingredient} ({ing.amount}{ing.unit})</Text>
+                            <TouchableOpacity
+                              onPress={() => handleRemoveIngredient(index)}
+                              style={styles.removeIngredientButton}
+                            >
+                              <X size={16} color={theme.colors.error} />
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.formButtons}>
+                    <TouchableOpacity
+                      style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+                      onPress={() => {
+                        setShowAddForm(false);
+                        setNewMealName('');
+                        setDetailedIngredients([]);
+                      }}
+                    >
+                      <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.submitButton, { backgroundColor: theme.colors.success }]}
+                      onPress={handleAddMeal}
+                      disabled={isSubmitting}
+                    >
+                      <Text style={styles.submitButtonText}>{isSubmitting ? 'Adding...' : 'Add Meal'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              </ScrollView>
             </View>
-            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No meals logged yet</Text>
-            <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
-              {searchQuery ? 'No meals match your search' : 'Start tracking your meals to see your nutrition and environmental impact'}
-            </Text>
+          )}
+          {/* Search */}
+          <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <View style={[styles.searchIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+              <Search size={20} color={theme.colors.secondary} />
+            </View>
+            <TextInput
+              style={[styles.searchInput, { color: theme.colors.text }]}
+              placeholder="Search meals..."
+              placeholderTextColor={theme.colors.placeholder}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           </View>
-        ) : (
-          <View style={styles.mealsContainer}>
-            {filteredMeals.map((meal) => (
-              <MealCard key={meal.id} meal={meal} />
-            ))}
-          </View>
-        )}
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
-    </SafeAreaView>
+          {/* Meals List */}
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            {filteredMeals.length === 0 ? (
+              <View style={styles.emptyState}>
+                <View style={[styles.emptyIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+                  <Utensils size={48} color={theme.colors.success} />
+                </View>
+                <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No meals logged yet</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
+                  {searchQuery ? 'No meals match your search' : 'Start tracking your meals to see your nutrition and environmental impact'}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.mealsContainer}>
+                {filteredMeals.map((meal) => (
+                  <MealCard key={meal.id} meal={meal} />
+                ))}
+              </View>
+            )}
+            <View style={styles.bottomSpacing} />
+          </ScrollView>
+          {/* Edit Modal */}
+          <EditMealModal
+            isVisible={showEditModal}
+            meal={editingMeal}
+            onClose={() => {
+              setShowEditModal(false);
+              setEditingMeal(null);
+            }}
+            onSave={handleSaveEditedMeal}
+          />
+          {/* Global Alert and Toast Components */}
+          {AlertComponent}
+          {ToastComponent}
+        </ScrollView>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -532,7 +961,8 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: 16,
+    paddingHorizontal: 16,
+    height: 48,
     fontSize: 16,
     fontWeight: '500',
   },
@@ -550,30 +980,42 @@ const styles = StyleSheet.create({
   },
   ingredientInputContainer: {
     flexDirection: 'row',
-    gap: 8,
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
     marginBottom: 16,
   },
   ingredientInputRow: {
     flex: 1,
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'stretch',
   },
   ingredientInput: {
     flex: 2,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+    marginRight: -1,
   },
   amountInput: {
     flex: 1,
+    borderRadius: 0,
+    marginRight: -1,
   },
   unitInput: {
     flex: 1,
+    borderRadius: 0,
+    marginRight: -1,
   },
   addIngredientButton: {
     width: 48,
     height: 48,
-    borderRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 0,
   },
   ingredientsList: {
     gap: 8,
@@ -696,6 +1138,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  mealActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionsMenu: {
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  actionMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 12,
+  },
+  actionMenuText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   mealStats: {
     gap: 12,
   },
@@ -746,5 +1215,80 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 32,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    paddingBottom: 0,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    flex: 1,
+    marginLeft: 12,
+  },
+  modalBody: {
+    padding: 20,
+    maxHeight: 400,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    paddingTop: 0,
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+  },
+  saveButton: {
+    // backgroundColor handled by theme
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

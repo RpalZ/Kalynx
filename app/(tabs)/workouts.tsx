@@ -10,6 +10,8 @@ import {
   RefreshControl,
   Dimensions,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -251,130 +253,141 @@ export default function WorkoutsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Header */}
-      <LinearGradient
-        colors={[theme.colors.gradient.secondary[0], theme.colors.gradient.secondary[1]]}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>Today's Workouts</Text>
-            <Text style={styles.headerSubtitle}>Track your fitness activities and progress</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowAddForm(!showAddForm)}
-          >
-            <Plus size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-        
-        {/* Hero Image */}
-        <View style={styles.heroImageContainer}>
-          <Image 
-            source={{ uri: 'https://images.pexels.com/photos/416778/pexels-photo-416778.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-            style={styles.heroImage}
-          />
-        </View>
-      </LinearGradient>
-
-      {/* Add Form */}
-      {showAddForm && (
-        <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={64}
+    >
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background, flex: 1 }]}> 
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
           <LinearGradient
-            colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
-            style={styles.addFormGradient}
+            colors={[theme.colors.gradient.secondary[0], theme.colors.gradient.secondary[1]]}
+            style={styles.header}
           >
-            <View style={styles.formHeader}>
-              <Zap size={20} color={theme.colors.secondary} />
-              <Text style={[styles.formTitle, { color: theme.colors.text }]}>Log New Workout</Text>
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeft}>
+                <Text style={styles.headerTitle}>Today's Workouts</Text>
+                <Text style={styles.headerSubtitle}>Track your fitness activities and progress</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => setShowAddForm(!showAddForm)}
+              >
+                <Plus size={24} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
-            
-            <Text style={[styles.formLabel, { color: theme.colors.text }]}>Workout Type</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.workoutTypes}>
-              {WORKOUT_TYPES.map((workout) => (
-                <WorkoutTypeButton key={workout.name} workout={workout} />
-              ))}
-            </ScrollView>
-            
-            <Text style={[styles.formLabel, { color: theme.colors.text }]}>Duration (minutes)</Text>
-            <TextInput
-              style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-              placeholder="Enter duration in minutes"
-              placeholderTextColor={theme.colors.placeholder}
-              value={duration}
-              onChangeText={setDuration}
-              keyboardType="numeric"
-            />
-            
-            <View style={styles.formButtons}>
-              <TouchableOpacity
-                style={[styles.cancelButton, { borderColor: theme.colors.border }]}
-                onPress={() => {
-                  setShowAddForm(false);
-                  setSelectedWorkoutType('');
-                  setDuration('');
-                }}
-              >
-                <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.submitButton, { backgroundColor: theme.colors.secondary }]}
-                onPress={handleAddWorkout}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.submitButtonText}>
-                  {isSubmitting ? 'Adding...' : 'Add Workout'}
-                </Text>
-              </TouchableOpacity>
+            {/* Hero Image */}
+            <View style={styles.heroImageContainer}>
+              <Image 
+                source={{ uri: 'https://images.pexels.com/photos/416778/pexels-photo-416778.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+                style={styles.heroImage}
+              />
             </View>
           </LinearGradient>
-        </View>
-      )}
-
-      {/* Search */}
-      <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <View style={[styles.searchIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
-          <Search size={20} color={theme.colors.secondary} />
-        </View>
-        <TextInput
-          style={[styles.searchInput, { color: theme.colors.text }]}
-          placeholder="Search workouts..."
-          placeholderTextColor={theme.colors.placeholder}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      {/* Workouts List */}
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {filteredWorkouts.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={[styles.emptyIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
-              <Dumbbell size={48} color={theme.colors.secondary} />
+          {/* Add Form */}
+          {showAddForm && (
+            <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}> 
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ flexGrow: 1 }}
+              >
+                <LinearGradient
+                  colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+                  style={styles.addFormGradient}
+                >
+                  <View style={styles.formHeader}>
+                    <Zap size={20} color={theme.colors.secondary} />
+                    <Text style={[styles.formTitle, { color: theme.colors.text }]}>Log New Workout</Text>
+                  </View>
+                  <Text style={[styles.formLabel, { color: theme.colors.text }]}>Workout Type</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.workoutTypes}>
+                    {WORKOUT_TYPES.map((workout) => (
+                      <WorkoutTypeButton key={workout.name} workout={workout} />
+                    ))}
+                  </ScrollView>
+                  <Text style={[styles.formLabel, { color: theme.colors.text }]}>Duration (minutes)</Text>
+                  <TextInput
+                    style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                    placeholder="Enter duration in minutes"
+                    placeholderTextColor={theme.colors.placeholder}
+                    value={duration}
+                    onChangeText={setDuration}
+                    keyboardType="numeric"
+                  />
+                  <View style={styles.formButtons}>
+                    <TouchableOpacity
+                      style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+                      onPress={() => {
+                        setShowAddForm(false);
+                        setSelectedWorkoutType('');
+                        setDuration('');
+                      }}
+                    >
+                      <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.submitButton, { backgroundColor: theme.colors.secondary }]}
+                      onPress={handleAddWorkout}
+                      disabled={isSubmitting}
+                    >
+                      <Text style={styles.submitButtonText}>
+                        {isSubmitting ? 'Adding...' : 'Add Workout'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              </ScrollView>
             </View>
-            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No workouts logged yet</Text>
-            <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
-              {searchQuery ? 'No workouts match your search' : 'Start tracking your workouts to see your fitness progress'}
-            </Text>
+          )}
+          {/* Search */}
+          <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <View style={[styles.searchIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+              <Search size={20} color={theme.colors.secondary} />
+            </View>
+            <TextInput
+              style={[styles.searchInput, { color: theme.colors.text }]}
+              placeholder="Search workouts..."
+              placeholderTextColor={theme.colors.placeholder}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           </View>
-        ) : (
-          <View style={styles.workoutsContainer}>
-            {filteredWorkouts.map((workout) => (
-              <WorkoutCard key={workout.id} workout={workout} />
-            ))}
-          </View>
-        )}
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
-    </SafeAreaView>
+          {/* Workouts List */}
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            {filteredWorkouts.length === 0 ? (
+              <View style={styles.emptyState}>
+                <View style={[styles.emptyIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+                  <Dumbbell size={48} color={theme.colors.secondary} />
+                </View>
+                <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No workouts logged yet</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
+                  {searchQuery ? 'No workouts match your search' : 'Start tracking your workouts to see your fitness progress'}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.workoutsContainer}>
+                {filteredWorkouts.map((workout) => (
+                  <WorkoutCard key={workout.id} workout={workout} />
+                ))}
+              </View>
+            )}
+            <View style={styles.bottomSpacing} />
+          </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
