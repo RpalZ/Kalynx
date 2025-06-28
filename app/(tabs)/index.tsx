@@ -273,11 +273,6 @@ export default function HomeScreen() {
           </View>
         </LinearGradient>
 
-        {/* Chart Widget */}
-        <View style={styles.section}>
-          <ChartWidget />
-        </View>
-
         {/* Quick Actions */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Actions</Text>
@@ -315,6 +310,11 @@ export default function HomeScreen() {
               cardSize={cardSize}
             />
           </View>
+        </View>
+
+        {/* Chart Widget */}
+        <View style={styles.section}>
+          <ChartWidget />
         </View>
 
         {/* Performance Scores */}
