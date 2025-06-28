@@ -10,6 +10,8 @@ import {
   Dimensions,
   Image,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -677,197 +679,196 @@ export default function MealsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Header */}
-      <LinearGradient
-        colors={[theme.colors.gradient.success[0], theme.colors.gradient.success[1]]}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>Today's Meals</Text>
-            <Text style={styles.headerSubtitle}>Track your nutrition and environmental impact</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowAddForm(!showAddForm)}
-          >
-            <Plus size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-        
-        {/* Hero Image */}
-        <View style={styles.heroImageContainer}>
-          <Image 
-            source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-            style={styles.heroImage}
-          />
-        </View>
-      </LinearGradient>
-
-      {/* Add Form */}
-      {showAddForm && (
-        <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={64}
+    >
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background, flex: 1 }]}> 
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
           <LinearGradient
-            colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
-            style={styles.addFormGradient}
+            colors={[theme.colors.gradient.success[0], theme.colors.gradient.success[1]]}
+            style={styles.header}
           >
-            <View style={styles.formHeader}>
-              <Sparkles size={20} color={theme.colors.accent} />
-              <Text style={[styles.formTitle, { color: theme.colors.text }]}>Add New Meal</Text>
-            </View>
-            
-            <TextInput
-              style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-              placeholder="Enter meal name (e.g., Grilled Chicken Salad)"
-              placeholderTextColor={theme.colors.placeholder}
-              value={newMealName}
-              onChangeText={setNewMealName}
-            />
-            
-            <View style={styles.ingredientsSection}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add Ingredients (Optional)</Text>
-              <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
-                Add each ingredient with its amount and unit for better accuracy
-              </Text>
-
-              <View style={styles.ingredientInputContainer}>
-                <View style={styles.ingredientInputRow}>
-                  <TextInput
-                    style={[styles.input, styles.ingredientInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-                    placeholder="Ingredient"
-                    placeholderTextColor={theme.colors.placeholder}
-                    value={currentIngredient}
-                    onChangeText={setCurrentIngredient}
-                  />
-                  <TextInput
-                    style={[styles.input, styles.amountInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-                    placeholder="Amount"
-                    placeholderTextColor={theme.colors.placeholder}
-                    value={currentAmount}
-                    onChangeText={setCurrentAmount}
-                    keyboardType="numeric"
-                  />
-                  <TextInput
-                    style={[styles.input, styles.unitInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-                    placeholder="Unit"
-                    placeholderTextColor={theme.colors.placeholder}
-                    value={currentUnit}
-                    onChangeText={setCurrentUnit}
-                  />
-                </View>
-                <TouchableOpacity
-                  style={[styles.addIngredientButton, { backgroundColor: theme.colors.success }]}
-                  onPress={handleAddIngredient}
-                >
-                  <Plus size={20} color="#FFFFFF" />
-                </TouchableOpacity>
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeft}>
+                <Text style={styles.headerTitle}>Today's Meals</Text>
+                <Text style={styles.headerSubtitle}>Track your nutrition and environmental impact</Text>
               </View>
-
-              {detailedIngredients.length > 0 && (
-                <View style={styles.ingredientsList}>
-                  <Text style={[styles.ingredientsListTitle, { color: theme.colors.text }]}>
-                    Added Ingredients ({detailedIngredients.length})
-                  </Text>
-                  {detailedIngredients.map((ing, index) => (
-                    <View key={index} style={[styles.ingredientItem, { backgroundColor: theme.colors.surface }]}>
-                      <Text style={[styles.ingredientText, { color: theme.colors.text }]}>
-                        {ing.ingredient} ({ing.amount}{ing.unit})
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => handleRemoveIngredient(index)}
-                        style={styles.removeIngredientButton}
-                      >
-                        <X size={16} color={theme.colors.error} />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => setShowAddForm(!showAddForm)}
+              >
+                <Plus size={24} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.formButtons}>
-              <TouchableOpacity
-                style={[styles.cancelButton, { borderColor: theme.colors.border }]}
-                onPress={() => {
-                  setShowAddForm(false);
-                  setNewMealName('');
-                  setDetailedIngredients([]);
-                }}
-              >
-                <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.submitButton, { backgroundColor: theme.colors.success }]}
-                onPress={handleAddMeal}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.submitButtonText}>
-                  {isSubmitting ? 'Adding...' : 'Add Meal'}
-                </Text>
-              </TouchableOpacity>
+            {/* Hero Image */}
+            <View style={styles.heroImageContainer}>
+              <Image 
+                source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+                style={styles.heroImage}
+              />
             </View>
           </LinearGradient>
-        </View>
-      )}
-
-      {/* Search */}
-      <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <View style={[styles.searchIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
-          <Search size={20} color={theme.colors.secondary} />
-        </View>
-        <TextInput
-          style={[styles.searchInput, { color: theme.colors.text }]}
-          placeholder="Search meals..."
-          placeholderTextColor={theme.colors.placeholder}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      {/* Meals List */}
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {filteredMeals.length === 0 ? (
-          <View style={styles.emptyState}>
-            <View style={[styles.emptyIcon, { backgroundColor: `${theme.colors.success}20` }]}>
-              <Utensils size={48} color={theme.colors.success} />
+          {/* Add Form */}
+          {showAddForm && (
+            <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}> 
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ flexGrow: 1 }}
+              >
+                <LinearGradient
+                  colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+                  style={styles.addFormGradient}
+                >
+                  <View style={styles.formHeader}>
+                    <Sparkles size={20} color={theme.colors.accent} />
+                    <Text style={[styles.formTitle, { color: theme.colors.text }]}>Add New Meal</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                    placeholder="Enter meal name (e.g., Grilled Chicken Salad)"
+                    placeholderTextColor={theme.colors.placeholder}
+                    value={newMealName}
+                    onChangeText={setNewMealName}
+                  />
+                  <View style={styles.ingredientsSection}>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add Ingredients (Optional)</Text>
+                    <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>Add each ingredient with its amount and unit for better accuracy</Text>
+                    <View style={styles.ingredientInputContainer}>
+                      <View style={styles.ingredientInputRow}>
+                        <TextInput
+                          style={[styles.input, styles.ingredientInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                          placeholder="Ingredient"
+                          placeholderTextColor={theme.colors.placeholder}
+                          value={currentIngredient}
+                          onChangeText={setCurrentIngredient}
+                        />
+                        <TextInput
+                          style={[styles.input, styles.amountInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                          placeholder="Amount"
+                          placeholderTextColor={theme.colors.placeholder}
+                          value={currentAmount}
+                          onChangeText={setCurrentAmount}
+                          keyboardType="numeric"
+                        />
+                        <TextInput
+                          style={[styles.input, styles.unitInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                          placeholder="Unit"
+                          placeholderTextColor={theme.colors.placeholder}
+                          value={currentUnit}
+                          onChangeText={setCurrentUnit}
+                        />
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.addIngredientButton, { backgroundColor: theme.colors.success }]}
+                        onPress={handleAddIngredient}
+                      >
+                        <Plus size={20} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+                    {detailedIngredients.length > 0 && (
+                      <View style={styles.ingredientsList}>
+                        <Text style={[styles.ingredientsListTitle, { color: theme.colors.text }]}>Added Ingredients ({detailedIngredients.length})</Text>
+                        {detailedIngredients.map((ing, index) => (
+                          <View key={index} style={[styles.ingredientItem, { backgroundColor: theme.colors.surface }]}> 
+                            <Text style={[styles.ingredientText, { color: theme.colors.text }]}>{ing.ingredient} ({ing.amount}{ing.unit})</Text>
+                            <TouchableOpacity
+                              onPress={() => handleRemoveIngredient(index)}
+                              style={styles.removeIngredientButton}
+                            >
+                              <X size={16} color={theme.colors.error} />
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.formButtons}>
+                    <TouchableOpacity
+                      style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+                      onPress={() => {
+                        setShowAddForm(false);
+                        setNewMealName('');
+                        setDetailedIngredients([]);
+                      }}
+                    >
+                      <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.submitButton, { backgroundColor: theme.colors.success }]}
+                      onPress={handleAddMeal}
+                      disabled={isSubmitting}
+                    >
+                      <Text style={styles.submitButtonText}>{isSubmitting ? 'Adding...' : 'Add Meal'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              </ScrollView>
             </View>
-            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No meals logged yet</Text>
-            <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
-              {searchQuery ? 'No meals match your search' : 'Start tracking your meals to see your nutrition and environmental impact'}
-            </Text>
+          )}
+          {/* Search */}
+          <View style={[styles.searchContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <View style={[styles.searchIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+              <Search size={20} color={theme.colors.secondary} />
+            </View>
+            <TextInput
+              style={[styles.searchInput, { color: theme.colors.text }]}
+              placeholder="Search meals..."
+              placeholderTextColor={theme.colors.placeholder}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           </View>
-        ) : (
-          <View style={styles.mealsContainer}>
-            {filteredMeals.map((meal) => (
-              <MealCard key={meal.id} meal={meal} />
-            ))}
-          </View>
-        )}
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
-
-      {/* Edit Modal */}
-      <EditMealModal
-        isVisible={showEditModal}
-        meal={editingMeal}
-        onClose={() => {
-          setShowEditModal(false);
-          setEditingMeal(null);
-        }}
-        onSave={handleSaveEditedMeal}
-      />
-
-      {/* Global Alert and Toast Components */}
-      {AlertComponent}
-      {ToastComponent}
-    </SafeAreaView>
+          {/* Meals List */}
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            {filteredMeals.length === 0 ? (
+              <View style={styles.emptyState}>
+                <View style={[styles.emptyIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+                  <Utensils size={48} color={theme.colors.success} />
+                </View>
+                <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No meals logged yet</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
+                  {searchQuery ? 'No meals match your search' : 'Start tracking your meals to see your nutrition and environmental impact'}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.mealsContainer}>
+                {filteredMeals.map((meal) => (
+                  <MealCard key={meal.id} meal={meal} />
+                ))}
+              </View>
+            )}
+            <View style={styles.bottomSpacing} />
+          </ScrollView>
+          {/* Edit Modal */}
+          <EditMealModal
+            isVisible={showEditModal}
+            meal={editingMeal}
+            onClose={() => {
+              setShowEditModal(false);
+              setEditingMeal(null);
+            }}
+            onSave={handleSaveEditedMeal}
+          />
+          {/* Global Alert and Toast Components */}
+          {AlertComponent}
+          {ToastComponent}
+        </ScrollView>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -960,7 +961,8 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: 16,
+    paddingHorizontal: 16,
+    height: 48,
     fontSize: 16,
     fontWeight: '500',
   },
@@ -978,30 +980,42 @@ const styles = StyleSheet.create({
   },
   ingredientInputContainer: {
     flexDirection: 'row',
-    gap: 8,
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
     marginBottom: 16,
   },
   ingredientInputRow: {
     flex: 1,
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'stretch',
   },
   ingredientInput: {
     flex: 2,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+    marginRight: -1,
   },
   amountInput: {
     flex: 1,
+    borderRadius: 0,
+    marginRight: -1,
   },
   unitInput: {
     flex: 1,
+    borderRadius: 0,
+    marginRight: -1,
   },
   addIngredientButton: {
     width: 48,
     height: 48,
-    borderRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 0,
   },
   ingredientsList: {
     gap: 8,

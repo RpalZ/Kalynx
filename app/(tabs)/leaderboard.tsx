@@ -106,19 +106,19 @@ export default function LeaderboardScreen() {
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1:
-        return <Crown size={28} color="#FFD700" />;
+        return <Crown size={28} color="#B8860B" />;
       case 2:
-        return <Medal size={28} color="#E5E7EB" />;
+        return <Medal size={28} color="#6B7280" />;
       case 3:
-        return <Award size={28} color="#CD7F32" />;
+        return <Award size={28} color="#8B5C2B" />;
       default:
         return (
           <View style={[styles.rankNumberContainer, { 
-            backgroundColor: isDark ? '#374151' : '#F3F4F6',
-            borderColor: isDark ? '#4B5563' : '#D1D5DB'
+            backgroundColor: isDark ? '#374151' : '#E5E7EB',
+            borderColor: isDark ? '#4B5563' : '#9CA3AF'
           }]}>
             <Text style={[styles.rankNumber, { 
-              color: isDark ? '#E5E7EB' : '#374151',
+              color: isDark ? '#E5E7EB' : '#1F2937',
               fontWeight: '800'
             }]}>{rank}</Text>
           </View>
@@ -129,26 +129,26 @@ export default function LeaderboardScreen() {
   const getRankGradient = (rank: number) => {
     switch (rank) {
       case 1:
-        return ['#FFD700', '#FFA500'];
+        return ['#FFD700', '#B8860B'] as const;
       case 2:
-        return ['#E5E7EB', '#9CA3AF'];
+        return ['#9CA3AF', '#6B7280'] as const;
       case 3:
-        return ['#CD7F32', '#A0522D'];
+        return ['#8B5C2B', '#A0522D'] as const;
       default:
-        return isDark ? ['#374151', '#4B5563'] : ['#F9FAFB', '#F3F4F6'];
+        return isDark ? ['#374151', '#4B5563'] as const : ['#F3F4F6', '#E5E7EB'] as const;
     }
   };
 
   const getScoreColor = (rank: number) => {
     switch (rank) {
       case 1:
-        return '#FFD700';
+        return '#B8860B';
       case 2:
-        return '#C0C0C0';
+        return '#6B7280';
       case 3:
-        return '#CD7F32';
+        return '#8B5C2B';
       default:
-        return isDark ? '#E5E7EB' : '#374151';
+        return isDark ? '#E5E7EB' : '#1F2937';
     }
   };
 
@@ -173,12 +173,12 @@ export default function LeaderboardScreen() {
       <LinearGradient
         colors={
           isCurrentUser 
-            ? isDark ? ['#064E3B', '#065F46'] : ['#ECFDF5', '#D1FAE5']
+            ? isDark ? ['#064E3B', '#065F46'] as const : ['#ECFDF5', '#D1FAE5'] as const
             : entry.rank <= 3 
               ? getRankGradient(entry.rank)
               : isDark 
-                ? ['#1F2937', '#374151'] 
-                : ['#FFFFFF', '#F9FAFB']
+                ? ['#1F2937', '#374151'] as const
+                : ['#FFFFFF', '#F9FAFB'] as const
         }
         style={styles.leaderboardItemGradient}
       >
@@ -192,8 +192,8 @@ export default function LeaderboardScreen() {
               styles.userName, 
               { 
                 color: entry.rank <= 3 
-                  ? isDark ? '#FFFFFF' : '#1F2937'
-                  : isDark ? '#F3F4F6' : '#1F2937'
+                  ? isDark ? '#FFFFFF' : '#111827'
+                  : isDark ? '#F3F4F6' : '#111827'
               }, 
               isCurrentUser && { fontWeight: '800', color: '#10B981' }
             ]}>
@@ -202,14 +202,14 @@ export default function LeaderboardScreen() {
             </Text>
             {entry.rank <= 3 && (
               <View style={[styles.topBadge, { backgroundColor: getScoreColor(entry.rank) }]}>
-                <Text style={styles.topBadgeText}>TOP {entry.rank}</Text>
+                <Text style={[styles.topBadgeText, { color: '#fff', textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: {width: 0, height: 1}, textShadowRadius: 2 }]}>TOP {entry.rank}</Text>
               </View>
             )}
           </View>
           <Text style={[styles.userStats, { 
             color: entry.rank <= 3 
-              ? isDark ? '#E5E7EB' : '#6B7280'
-              : isDark ? '#9CA3AF' : '#6B7280'
+              ? isDark ? '#E5E7EB' : '#374151'
+              : isDark ? '#9CA3AF' : '#374151'
           }]}>
             {entry.days_active} days active • Avg: {entry.avg_combined_score}
           </Text>
@@ -253,7 +253,7 @@ export default function LeaderboardScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
           <LinearGradient
-            colors={isDark ? ['#1F2937', '#374151'] : ['#FFFFFF', '#F9FAFB']}
+            colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
             style={[styles.loadingCard, { borderColor: theme.colors.border }]}
           >
             <View style={[styles.loadingIcon, { backgroundColor: '#F59E0B20' }]}>
@@ -280,7 +280,7 @@ export default function LeaderboardScreen() {
       >
         {/* Header */}
         <LinearGradient
-          colors={['#F59E0B', '#D97706']}
+          colors={['#F59E0B', '#D97706'] as const}
           style={styles.header}
         >
           <View style={styles.headerContent}>
@@ -354,7 +354,7 @@ export default function LeaderboardScreen() {
               borderColor: isDark ? '#374151' : '#E5E7EB'
             }]}>
               <LinearGradient
-                colors={isDark ? ['#1F2937', '#374151'] : ['#FFFFFF', '#F9FAFB']}
+                colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
                 style={styles.tipCardGradient}
               >
                 <View style={[styles.tipIcon, { backgroundColor: '#10B98120' }]}>
@@ -374,7 +374,7 @@ export default function LeaderboardScreen() {
               borderColor: isDark ? '#374151' : '#E5E7EB'
             }]}>
               <LinearGradient
-                colors={isDark ? ['#1F2937', '#374151'] : ['#FFFFFF', '#F9FAFB']}
+                colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
                 style={styles.tipCardGradient}
               >
                 <View style={[styles.tipIcon, { backgroundColor: '#F59E0B20' }]}>
@@ -394,7 +394,7 @@ export default function LeaderboardScreen() {
               borderColor: isDark ? '#374151' : '#E5E7EB'
             }]}>
               <LinearGradient
-                colors={isDark ? ['#1F2937', '#374151'] : ['#FFFFFF', '#F9FAFB']}
+                colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
                 style={styles.tipCardGradient}
               >
                 <View style={[styles.tipIcon, { backgroundColor: '#8B5CF620' }]}>
@@ -415,7 +415,7 @@ export default function LeaderboardScreen() {
         {(!leaderboardData || leaderboardData.leaderboard.length === 0) && (
           <View style={styles.emptyState}>
             <LinearGradient
-              colors={isDark ? ['#1F2937', '#374151'] : ['#FFFFFF', '#F9FAFB']}
+              colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
               style={[styles.emptyCard, { borderColor: theme.colors.border }]}
             >
               <View style={[styles.emptyIcon, { backgroundColor: '#F59E0B20' }]}>

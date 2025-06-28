@@ -54,7 +54,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="eco"
         options={{
-          title: 'Eco Impact',
+          title: 'KaliAI',
           tabBarIcon: ({ size, color }) => (
             <Leaf size={size} color={color} />
           ),
