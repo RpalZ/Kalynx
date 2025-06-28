@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { VictoryChart, VictoryLine, VictoryAxis, VictoryTheme, VictoryArea } from 'victory-native';
-import { TrendingUp, Calendar, Maximize2, X, BarChart3, Flame, Leaf, Zap } from 'lucide-react-native';
+import { TrendingUp, Calendar, Maximize2, X, ChartBar as BarChart3, Flame, Leaf, Zap } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 
