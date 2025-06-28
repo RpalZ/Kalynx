@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   RefreshControl,
   Dimensions,
   Image,
@@ -18,6 +17,8 @@ import { Plus, Search, Utensils, Flame, Activity, Leaf, Droplet, X, ChefHat, Clo
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useCustomAlert } from '@/components/CustomAlert';
+import { useToast } from '@/components/Toast';
 
 const { width } = Dimensions.get('window');
 
@@ -47,6 +48,8 @@ interface EditMealModalProps {
 
 const EditMealModal = ({ isVisible, meal, onClose, onSave }: EditMealModalProps) => {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
+  const { showToast, ToastComponent } = useToast();
   const [editedMeal, setEditedMeal] = useState<Meal | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -61,12 +64,20 @@ const EditMealModal = ({ isVisible, meal, onClose, onSave }: EditMealModalProps)
 
     // Validate inputs
     if (!editedMeal.name.trim()) {
-      Alert.alert('Error', 'Meal name cannot be empty');
+      showAlert({
+        type: 'error',
+        title: 'Invalid Input',
+        message: 'Meal name cannot be empty',
+      });
       return;
     }
 
     if (editedMeal.calories < 0 || editedMeal.protein < 0 || editedMeal.carbon_impact < 0 || editedMeal.water_impact < 0) {
-      Alert.alert('Error', 'Values cannot be negative');
+      showAlert({
+        type: 'error',
+        title: 'Invalid Values',
+        message: 'Values cannot be negative',
+      });
       return;
     }
 
@@ -116,15 +127,26 @@ const EditMealModal = ({ isVisible, meal, onClose, onSave }: EditMealModalProps)
         console.log('✅ Meal updated successfully:', updatedMeal);
         onSave(updatedMeal);
         onClose();
-        Alert.alert('Success', 'Meal updated successfully!');
+        showToast({
+          type: 'success',
+          message: 'Meal updated successfully!',
+        });
       } else {
         const errorText = await response.text();
         console.error('❌ Error updating meal:', response.status, errorText);
-        Alert.alert('Error', errorText || 'Failed to update meal');
+        showAlert({
+          type: 'error',
+          title: 'Update Failed',
+          message: errorText || 'Failed to update meal',
+        });
       }
     } catch (error) {
       console.error('💥 Error updating meal:', error);
-      Alert.alert('Error', 'Failed to update meal');
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to update meal. Please check your connection.',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -133,133 +155,139 @@ const EditMealModal = ({ isVisible, meal, onClose, onSave }: EditMealModalProps)
   if (!editedMeal) return null;
 
   return (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={isVisible}
-      onRequestClose={onClose}
-    >
-      <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
-        <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
-          <View style={styles.modalHeader}>
-            <Edit3 size={24} color={theme.colors.secondary} />
-            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Edit Meal</Text>
-            <TouchableOpacity onPress={onClose}>
-              <X size={24} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Meal Name</Text>
-              <TextInput
-                style={[styles.modalInput, { 
-                  borderColor: theme.colors.border, 
-                  color: theme.colors.text, 
-                  backgroundColor: theme.colors.surface 
-                }]}
-                value={editedMeal.name}
-                onChangeText={(text) => setEditedMeal({ ...editedMeal, name: text })}
-                placeholder="Enter meal name"
-                placeholderTextColor={theme.colors.placeholder}
-              />
+    <>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isVisible}
+        onRequestClose={onClose}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+            <View style={styles.modalHeader}>
+              <Edit3 size={24} color={theme.colors.secondary} />
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Edit Meal</Text>
+              <TouchableOpacity onPress={onClose}>
+                <X size={24} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.inputRow}>
-              <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Calories</Text>
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Meal Name</Text>
                 <TextInput
                   style={[styles.modalInput, { 
                     borderColor: theme.colors.border, 
                     color: theme.colors.text, 
                     backgroundColor: theme.colors.surface 
                   }]}
-                  value={editedMeal.calories.toString()}
-                  onChangeText={(text) => setEditedMeal({ ...editedMeal, calories: Number(text) || 0 })}
-                  placeholder="0"
+                  value={editedMeal.name}
+                  onChangeText={(text) => setEditedMeal({ ...editedMeal, name: text })}
+                  placeholder="Enter meal name"
                   placeholderTextColor={theme.colors.placeholder}
-                  keyboardType="numeric"
                 />
               </View>
 
-              <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Protein (g)</Text>
-                <TextInput
-                  style={[styles.modalInput, { 
-                    borderColor: theme.colors.border, 
-                    color: theme.colors.text, 
-                    backgroundColor: theme.colors.surface 
-                  }]}
-                  value={editedMeal.protein.toString()}
-                  onChangeText={(text) => setEditedMeal({ ...editedMeal, protein: Number(text) || 0 })}
-                  placeholder="0"
-                  placeholderTextColor={theme.colors.placeholder}
-                  keyboardType="numeric"
-                />
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Calories</Text>
+                  <TextInput
+                    style={[styles.modalInput, { 
+                      borderColor: theme.colors.border, 
+                      color: theme.colors.text, 
+                      backgroundColor: theme.colors.surface 
+                    }]}
+                    value={editedMeal.calories.toString()}
+                    onChangeText={(text) => setEditedMeal({ ...editedMeal, calories: Number(text) || 0 })}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.placeholder}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Protein (g)</Text>
+                  <TextInput
+                    style={[styles.modalInput, { 
+                      borderColor: theme.colors.border, 
+                      color: theme.colors.text, 
+                      backgroundColor: theme.colors.surface 
+                    }]}
+                    value={editedMeal.protein.toString()}
+                    onChangeText={(text) => setEditedMeal({ ...editedMeal, protein: Number(text) || 0 })}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.placeholder}
+                    keyboardType="numeric"
+                  />
+                </View>
               </View>
+
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Carbon Impact (kg CO₂)</Text>
+                  <TextInput
+                    style={[styles.modalInput, { 
+                      borderColor: theme.colors.border, 
+                      color: theme.colors.text, 
+                      backgroundColor: theme.colors.surface 
+                    }]}
+                    value={editedMeal.carbon_impact.toString()}
+                    onChangeText={(text) => setEditedMeal({ ...editedMeal, carbon_impact: Number(text) || 0 })}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.placeholder}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Water Impact (L)</Text>
+                  <TextInput
+                    style={[styles.modalInput, { 
+                      borderColor: theme.colors.border, 
+                      color: theme.colors.text, 
+                      backgroundColor: theme.colors.surface 
+                    }]}
+                    value={editedMeal.water_impact.toString()}
+                    onChangeText={(text) => setEditedMeal({ ...editedMeal, water_impact: Number(text) || 0 })}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.placeholder}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.colors.surface }]}
+                onPress={onClose}
+              >
+                <Text style={[styles.modalButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.colors.secondary }]}
+                onPress={handleSave}
+                disabled={isSaving}
+              >
+                <Save size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Text>
+              </TouchableOpacity>
             </View>
-
-            <View style={styles.inputRow}>
-              <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Carbon Impact (kg CO₂)</Text>
-                <TextInput
-                  style={[styles.modalInput, { 
-                    borderColor: theme.colors.border, 
-                    color: theme.colors.text, 
-                    backgroundColor: theme.colors.surface 
-                  }]}
-                  value={editedMeal.carbon_impact.toString()}
-                  onChangeText={(text) => setEditedMeal({ ...editedMeal, carbon_impact: Number(text) || 0 })}
-                  placeholder="0"
-                  placeholderTextColor={theme.colors.placeholder}
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Water Impact (L)</Text>
-                <TextInput
-                  style={[styles.modalInput, { 
-                    borderColor: theme.colors.border, 
-                    color: theme.colors.text, 
-                    backgroundColor: theme.colors.surface 
-                  }]}
-                  value={editedMeal.water_impact.toString()}
-                  onChangeText={(text) => setEditedMeal({ ...editedMeal, water_impact: Number(text) || 0 })}
-                  placeholder="0"
-                  placeholderTextColor={theme.colors.placeholder}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-          </ScrollView>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.colors.surface }]}
-              onPress={onClose}
-            >
-              <Text style={[styles.modalButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.colors.secondary }]}
-              onPress={handleSave}
-              disabled={isSaving}
-            >
-              <Save size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-              <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+      {AlertComponent}
+      {ToastComponent}
+    </>
   );
 };
 
 export default function MealsScreen() {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
+  const { showToast, ToastComponent } = useToast();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -312,13 +340,21 @@ export default function MealsScreen() {
 
       if (error) {
         console.error('Error fetching meals:', error);
-        Alert.alert('Error', 'Failed to load meals');
+        showAlert({
+          type: 'error',
+          title: 'Loading Error',
+          message: 'Failed to load meals. Please try again.',
+        });
       } else {
         setMeals(mealsData || []);
       }
     } catch (error) {
       console.error('Error:', error);
-      Alert.alert('Error', 'Failed to load meals');
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to load meals. Please check your connection.',
+      });
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -331,10 +367,11 @@ export default function MealsScreen() {
   };
 
   const handleDeleteMeal = async (mealId: string, mealName: string) => {
-    Alert.alert(
-      'Delete Meal',
-      `Are you sure you want to delete "${mealName}"?`,
-      [
+    showAlert({
+      type: 'warning',
+      title: 'Delete Meal',
+      message: `Are you sure you want to delete "${mealName}"?`,
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
@@ -378,20 +415,31 @@ export default function MealsScreen() {
                 
                 // Update the local state to remove the deleted meal
                 setMeals(prevMeals => prevMeals.filter(meal => meal.id !== mealId));
-                Alert.alert('Success', 'Meal deleted successfully!');
+                showToast({
+                  type: 'success',
+                  message: 'Meal deleted successfully!',
+                });
               } else {
                 const errorText = await response.text();
                 console.error('❌ Error deleting meal:', response.status, errorText);
-                Alert.alert('Error', errorText || 'Failed to delete meal');
+                showAlert({
+                  type: 'error',
+                  title: 'Delete Failed',
+                  message: errorText || 'Failed to delete meal',
+                });
               }
             } catch (error) {
               console.error('💥 Error deleting meal:', error);
-              Alert.alert('Error', 'Failed to delete meal. Please check your connection and try again.');
+              showAlert({
+                type: 'error',
+                title: 'Network Error',
+                message: 'Failed to delete meal. Please check your connection and try again.',
+              });
             }
           }
         }
       ]
-    );
+    });
   };
 
   const handleEditMeal = (meal: Meal) => {
@@ -409,17 +457,29 @@ export default function MealsScreen() {
 
   const handleAddIngredient = () => {
     if (!currentIngredient.trim()) {
-      Alert.alert('Error', 'Please enter an ingredient name');
+      showAlert({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please enter an ingredient name',
+      });
       return;
     }
     
     if (!currentAmount.trim()) {
-      Alert.alert('Error', 'Please enter an amount');
+      showAlert({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please enter an amount',
+      });
       return;
     }
 
     if (!currentUnit.trim()) {
-      Alert.alert('Error', 'Please enter a unit (g/ml)');
+      showAlert({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please enter a unit (g/ml)',
+      });
       return;
     }
     
@@ -442,7 +502,11 @@ export default function MealsScreen() {
 
   const handleAddMeal = async () => {
     if (!newMealName.trim()) {
-      Alert.alert('Error', 'Please enter a meal name');
+      showAlert({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please enter a meal name',
+      });
       return;
     }
 
@@ -476,14 +540,25 @@ export default function MealsScreen() {
         setDetailedIngredients([]);
         setShowAddForm(false);
         fetchMeals();
-        Alert.alert('Success', 'Meal logged successfully!');
+        showToast({
+          type: 'success',
+          message: 'Meal logged successfully!',
+        });
       } else {
         const errorData = await response.text();
-        Alert.alert('Error', errorData || 'Failed to log meal');
+        showAlert({
+          type: 'error',
+          title: 'Failed to Log Meal',
+          message: errorData || 'Failed to log meal',
+        });
       }
     } catch (error) {
       console.error('Error adding meal:', error);
-      Alert.alert('Error', 'Failed to log meal');
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to log meal. Please check your connection.',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -788,6 +863,10 @@ export default function MealsScreen() {
         }}
         onSave={handleSaveEditedMeal}
       />
+
+      {/* Global Alert and Toast Components */}
+      {AlertComponent}
+      {ToastComponent}
     </SafeAreaView>
   );
 }
