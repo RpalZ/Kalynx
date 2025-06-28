@@ -15,6 +15,7 @@ import { Svg, Path, Circle, Line, Text as SvgText, G } from 'react-native-svg';
 import { TrendingUp, Calendar, Maximize2, X, ChartBar as BarChart3, Flame, Leaf, Zap } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
+import { useFocusEffect } from 'expo-router';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -41,6 +42,12 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
   useEffect(() => {
     fetchChartData();
   }, [timeframe]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchChartData();
+    }, [])
+  );
 
   const fetchChartData = async () => {
     setIsLoading(true);
