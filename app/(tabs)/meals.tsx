@@ -79,7 +79,15 @@ const EditMealModal = ({ isVisible, meal, onClose, onSave }: EditMealModalProps)
         return;
       }
 
-      console.log('Updating meal with ID:', editedMeal.id);
+      console.log('🔄 Updating meal with ID:', editedMeal.id);
+      console.log('📊 Update data:', {
+        name: editedMeal.name.trim(),
+        calories: Number(editedMeal.calories),
+        protein: Number(editedMeal.protein),
+        carbon_impact: Number(editedMeal.carbon_impact),
+        water_impact: Number(editedMeal.water_impact),
+      });
+
       const token = session.session.access_token;
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/update-meal`,
@@ -100,21 +108,22 @@ const EditMealModal = ({ isVisible, meal, onClose, onSave }: EditMealModalProps)
         }
       );
 
-      console.log('Update response status:', response.status);
+      console.log('📡 Update response status:', response.status);
+      console.log('📡 Update response headers:', Object.fromEntries(response.headers.entries()));
       
       if (response.ok) {
         const updatedMeal = await response.json();
-        console.log('Meal updated successfully:', updatedMeal);
+        console.log('✅ Meal updated successfully:', updatedMeal);
         onSave(updatedMeal);
         onClose();
         Alert.alert('Success', 'Meal updated successfully!');
       } else {
         const errorText = await response.text();
-        console.error('Error updating meal:', response.status, errorText);
+        console.error('❌ Error updating meal:', response.status, errorText);
         Alert.alert('Error', errorText || 'Failed to update meal');
       }
     } catch (error) {
-      console.error('Error updating meal:', error);
+      console.error('💥 Error updating meal:', error);
       Alert.alert('Error', 'Failed to update meal');
     } finally {
       setIsSaving(false);
@@ -339,8 +348,15 @@ export default function MealsScreen() {
                 return;
               }
 
-              console.log('Deleting meal with ID:', mealId);
+              console.log('🗑️ Deleting meal with ID:', mealId);
+              console.log('🔑 Using token:', session.session.access_token.substring(0, 20) + '...');
+
               const token = session.session.access_token;
+              const requestBody = { mealId: mealId };
+              
+              console.log('📦 Request body:', JSON.stringify(requestBody));
+              console.log('🌐 Request URL:', `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-meal`);
+
               const response = await fetch(
                 `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-meal`,
                 {
@@ -349,27 +365,28 @@ export default function MealsScreen() {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
                   },
-                  body: JSON.stringify({
-                    mealId: mealId,
-                  }),
+                  body: JSON.stringify(requestBody),
                 }
               );
 
-              console.log('Delete response status:', response.status);
+              console.log('📡 Delete response status:', response.status);
+              console.log('📡 Delete response headers:', Object.fromEntries(response.headers.entries()));
 
               if (response.ok) {
                 const result = await response.json();
-                console.log('Meal deleted successfully:', result);
-                setMeals(meals.filter(meal => meal.id !== mealId));
+                console.log('✅ Meal deleted successfully:', result);
+                
+                // Update the local state to remove the deleted meal
+                setMeals(prevMeals => prevMeals.filter(meal => meal.id !== mealId));
                 Alert.alert('Success', 'Meal deleted successfully!');
               } else {
                 const errorText = await response.text();
-                console.error('Error deleting meal:', response.status, errorText);
+                console.error('❌ Error deleting meal:', response.status, errorText);
                 Alert.alert('Error', errorText || 'Failed to delete meal');
               }
             } catch (error) {
-              console.error('Error deleting meal:', error);
-              Alert.alert('Error', 'Failed to delete meal');
+              console.error('💥 Error deleting meal:', error);
+              Alert.alert('Error', 'Failed to delete meal. Please check your connection and try again.');
             }
           }
         }
@@ -378,13 +395,13 @@ export default function MealsScreen() {
   };
 
   const handleEditMeal = (meal: Meal) => {
-    console.log('Editing meal:', meal);
+    console.log('✏️ Editing meal:', meal);
     setEditingMeal(meal);
     setShowEditModal(true);
   };
 
   const handleSaveEditedMeal = (updatedMeal: Meal) => {
-    console.log('Saving edited meal:', updatedMeal);
+    console.log('💾 Saving edited meal:', updatedMeal);
     setMeals(meals.map(meal => meal.id === updatedMeal.id ? updatedMeal : meal));
     setShowEditModal(false);
     setEditingMeal(null);
