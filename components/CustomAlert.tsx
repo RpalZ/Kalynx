@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AlertTriangle, CheckCircle, Info, X, AlertCircle } from 'lucide-react-native';
+import { TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Info, X, CircleAlert as AlertCircle } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
