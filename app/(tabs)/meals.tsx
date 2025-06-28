@@ -79,6 +79,7 @@ const EditMealModal = ({ isVisible, meal, onClose, onSave }: EditMealModalProps)
         return;
       }
 
+      console.log('Updating meal with ID:', editedMeal.id);
       const token = session.session.access_token;
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/update-meal`,
@@ -99,14 +100,17 @@ const EditMealModal = ({ isVisible, meal, onClose, onSave }: EditMealModalProps)
         }
       );
 
+      console.log('Update response status:', response.status);
+      
       if (response.ok) {
         const updatedMeal = await response.json();
+        console.log('Meal updated successfully:', updatedMeal);
         onSave(updatedMeal);
         onClose();
         Alert.alert('Success', 'Meal updated successfully!');
       } else {
         const errorText = await response.text();
-        console.error('Error updating meal:', errorText);
+        console.error('Error updating meal:', response.status, errorText);
         Alert.alert('Error', errorText || 'Failed to update meal');
       }
     } catch (error) {
@@ -328,17 +332,40 @@ export default function MealsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { error } = await supabase
-                .from('meals')
-                .delete()
-                .eq('id', mealId);
+              const { data: session } = await supabase.auth.getSession();
+              
+              if (!session.session) {
+                router.replace('/auth');
+                return;
+              }
 
-              if (error) {
-                console.error('Error deleting meal:', error);
-                Alert.alert('Error', 'Failed to delete meal');
-              } else {
+              console.log('Deleting meal with ID:', mealId);
+              const token = session.session.access_token;
+              const response = await fetch(
+                `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-meal`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    mealId: mealId,
+                  }),
+                }
+              );
+
+              console.log('Delete response status:', response.status);
+
+              if (response.ok) {
+                const result = await response.json();
+                console.log('Meal deleted successfully:', result);
                 setMeals(meals.filter(meal => meal.id !== mealId));
                 Alert.alert('Success', 'Meal deleted successfully!');
+              } else {
+                const errorText = await response.text();
+                console.error('Error deleting meal:', response.status, errorText);
+                Alert.alert('Error', errorText || 'Failed to delete meal');
               }
             } catch (error) {
               console.error('Error deleting meal:', error);
@@ -351,11 +378,13 @@ export default function MealsScreen() {
   };
 
   const handleEditMeal = (meal: Meal) => {
+    console.log('Editing meal:', meal);
     setEditingMeal(meal);
     setShowEditModal(true);
   };
 
   const handleSaveEditedMeal = (updatedMeal: Meal) => {
+    console.log('Saving edited meal:', updatedMeal);
     setMeals(meals.map(meal => meal.id === updatedMeal.id ? updatedMeal : meal));
     setShowEditModal(false);
     setEditingMeal(null);
