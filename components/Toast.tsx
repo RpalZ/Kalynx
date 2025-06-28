@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-react-native';
+import { CircleCheck as CheckCircle, CircleAlert as AlertCircle, TriangleAlert as AlertTriangle, Info, X } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
