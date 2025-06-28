@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, Search, Utensils, Flame, Activity, Leaf, Droplet, X, ChefHat, Clock, Sparkles, Edit3, Trash2, Save, MoreVertical } from 'lucide-react-native';
+import { Plus, Search, Utensils, Flame, Activity, Leaf, Droplet, X, ChefHat, Clock, Sparkles, CreditCard as Edit3, Trash2, Save, MoveVertical as MoreVertical } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
