@@ -31,6 +31,7 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <Home size={size} color={color} />
           ),
+          tabBarAccessibilityHint: undefined,
         }}
       />
       <Tabs.Screen
@@ -40,6 +41,7 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <Utensils size={size} color={color} />
           ),
+          tabBarAccessibilityHint: undefined,
         }}
       />
       <Tabs.Screen
@@ -49,6 +51,7 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <Dumbbell size={size} color={color} />
           ),
+          tabBarAccessibilityHint: undefined,
         }}
       />
       <Tabs.Screen
@@ -58,6 +61,7 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <Leaf size={size} color={color} />
           ),
+          tabBarAccessibilityHint: undefined,
         }}
       />
       <Tabs.Screen
@@ -67,6 +71,7 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <Trophy size={size} color={color} />
           ),
+          tabBarAccessibilityHint: undefined,
         }}
       />
       <Tabs.Screen
@@ -76,6 +81,7 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <Camera size={size} color={color} />
           ),
+          tabBarAccessibilityHint: undefined,
         }}
       />
       <Tabs.Screen
@@ -85,6 +91,7 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <User size={size} color={color} />
           ),
+          tabBarAccessibilityHint: undefined,
         }}
       />
     </Tabs>
