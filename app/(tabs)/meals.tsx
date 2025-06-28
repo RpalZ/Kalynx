@@ -10,6 +10,8 @@ import {
   Dimensions,
   Image,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,7 +22,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useCustomAlert } from '@/components/CustomAlert';
 import { useToast } from '@/components/Toast';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 interface Meal {
   id: string;
@@ -162,121 +164,130 @@ const EditMealModal = ({ isVisible, meal, onClose, onSave }: EditMealModalProps)
         visible={isVisible}
         onRequestClose={onClose}
       >
-        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
-            <View style={styles.modalHeader}>
-              <Edit3 size={24} color={theme.colors.secondary} />
-              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Edit Meal</Text>
-              <TouchableOpacity onPress={onClose}>
-                <X size={24} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Meal Name</Text>
-                <TextInput
-                  style={[styles.modalInput, { 
-                    borderColor: theme.colors.border, 
-                    color: theme.colors.text, 
-                    backgroundColor: theme.colors.surface 
-                  }]}
-                  value={editedMeal.name}
-                  onChangeText={(text) => setEditedMeal({ ...editedMeal, name: text })}
-                  placeholder="Enter meal name"
-                  placeholderTextColor={theme.colors.placeholder}
-                />
+        <KeyboardAvoidingView 
+          style={styles.modalKeyboardView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+            <View style={[styles.modalContent, { backgroundColor: theme.colors.card, maxHeight: height * 0.85 }]}>
+              <View style={styles.modalHeader}>
+                <Edit3 size={24} color={theme.colors.secondary} />
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Edit Meal</Text>
+                <TouchableOpacity onPress={onClose}>
+                  <X size={24} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
               </View>
 
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Calories</Text>
-                  <TextInput
-                    style={[styles.modalInput, { 
-                      borderColor: theme.colors.border, 
-                      color: theme.colors.text, 
-                      backgroundColor: theme.colors.surface 
-                    }]}
-                    value={editedMeal.calories.toString()}
-                    onChangeText={(text) => setEditedMeal({ ...editedMeal, calories: Number(text) || 0 })}
-                    placeholder="0"
-                    placeholderTextColor={theme.colors.placeholder}
-                    keyboardType="numeric"
-                  />
-                </View>
-
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Protein (g)</Text>
-                  <TextInput
-                    style={[styles.modalInput, { 
-                      borderColor: theme.colors.border, 
-                      color: theme.colors.text, 
-                      backgroundColor: theme.colors.surface 
-                    }]}
-                    value={editedMeal.protein.toString()}
-                    onChangeText={(text) => setEditedMeal({ ...editedMeal, protein: Number(text) || 0 })}
-                    placeholder="0"
-                    placeholderTextColor={theme.colors.placeholder}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Carbon Impact (kg CO₂)</Text>
-                  <TextInput
-                    style={[styles.modalInput, { 
-                      borderColor: theme.colors.border, 
-                      color: theme.colors.text, 
-                      backgroundColor: theme.colors.surface 
-                    }]}
-                    value={editedMeal.carbon_impact.toString()}
-                    onChangeText={(text) => setEditedMeal({ ...editedMeal, carbon_impact: Number(text) || 0 })}
-                    placeholder="0"
-                    placeholderTextColor={theme.colors.placeholder}
-                    keyboardType="numeric"
-                  />
-                </View>
-
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Water Impact (L)</Text>
-                  <TextInput
-                    style={[styles.modalInput, { 
-                      borderColor: theme.colors.border, 
-                      color: theme.colors.text, 
-                      backgroundColor: theme.colors.surface 
-                    }]}
-                    value={editedMeal.water_impact.toString()}
-                    onChangeText={(text) => setEditedMeal({ ...editedMeal, water_impact: Number(text) || 0 })}
-                    placeholder="0"
-                    placeholderTextColor={theme.colors.placeholder}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.colors.surface }]}
-                onPress={onClose}
+              <ScrollView 
+                style={styles.modalBody} 
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
               >
-                <Text style={[styles.modalButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.colors.secondary }]}
-                onPress={handleSave}
-                disabled={isSaving}
-              >
-                <Save size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </Text>
-              </TouchableOpacity>
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Meal Name</Text>
+                  <TextInput
+                    style={[styles.modalInput, { 
+                      borderColor: theme.colors.border, 
+                      color: theme.colors.text, 
+                      backgroundColor: theme.colors.surface 
+                    }]}
+                    value={editedMeal.name}
+                    onChangeText={(text) => setEditedMeal({ ...editedMeal, name: text })}
+                    placeholder="Enter meal name"
+                    placeholderTextColor={theme.colors.placeholder}
+                  />
+                </View>
+
+                <View style={styles.inputRow}>
+                  <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                    <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Calories</Text>
+                    <TextInput
+                      style={[styles.modalInput, { 
+                        borderColor: theme.colors.border, 
+                        color: theme.colors.text, 
+                        backgroundColor: theme.colors.surface 
+                      }]}
+                      value={editedMeal.calories.toString()}
+                      onChangeText={(text) => setEditedMeal({ ...editedMeal, calories: Number(text) || 0 })}
+                      placeholder="0"
+                      placeholderTextColor={theme.colors.placeholder}
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                    <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Protein (g)</Text>
+                    <TextInput
+                      style={[styles.modalInput, { 
+                        borderColor: theme.colors.border, 
+                        color: theme.colors.text, 
+                        backgroundColor: theme.colors.surface 
+                      }]}
+                      value={editedMeal.protein.toString()}
+                      onChangeText={(text) => setEditedMeal({ ...editedMeal, protein: Number(text) || 0 })}
+                      placeholder="0"
+                      placeholderTextColor={theme.colors.placeholder}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputRow}>
+                  <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                    <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Carbon Impact (kg CO₂)</Text>
+                    <TextInput
+                      style={[styles.modalInput, { 
+                        borderColor: theme.colors.border, 
+                        color: theme.colors.text, 
+                        backgroundColor: theme.colors.surface 
+                      }]}
+                      value={editedMeal.carbon_impact.toString()}
+                      onChangeText={(text) => setEditedMeal({ ...editedMeal, carbon_impact: Number(text) || 0 })}
+                      placeholder="0"
+                      placeholderTextColor={theme.colors.placeholder}
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                    <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Water Impact (L)</Text>
+                    <TextInput
+                      style={[styles.modalInput, { 
+                        borderColor: theme.colors.border, 
+                        color: theme.colors.text, 
+                        backgroundColor: theme.colors.surface 
+                      }]}
+                      value={editedMeal.water_impact.toString()}
+                      onChangeText={(text) => setEditedMeal({ ...editedMeal, water_impact: Number(text) || 0 })}
+                      placeholder="0"
+                      placeholderTextColor={theme.colors.placeholder}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+              </ScrollView>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.colors.surface }]}
+                  onPress={onClose}
+                >
+                  <Text style={[styles.modalButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.colors.secondary }]}
+                  onPress={handleSave}
+                  disabled={isSaving}
+                >
+                  <Save size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                  <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       {AlertComponent}
       {ToastComponent}
@@ -705,110 +716,121 @@ export default function MealsScreen() {
         </View>
       </LinearGradient>
 
-      {/* Add Form */}
+      {/* Add Form - Now with proper height constraints */}
       {showAddForm && (
-        <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
-          <LinearGradient
-            colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
-            style={styles.addFormGradient}
-          >
-            <View style={styles.formHeader}>
-              <Sparkles size={20} color={theme.colors.accent} />
-              <Text style={[styles.formTitle, { color: theme.colors.text }]}>Add New Meal</Text>
-            </View>
-            
-            <TextInput
-              style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-              placeholder="Enter meal name (e.g., Grilled Chicken Salad)"
-              placeholderTextColor={theme.colors.placeholder}
-              value={newMealName}
-              onChangeText={setNewMealName}
-            />
-            
-            <View style={styles.ingredientsSection}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add Ingredients (Optional)</Text>
-              <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
-                Add each ingredient with its amount and unit for better accuracy
-              </Text>
+        <KeyboardAvoidingView 
+          style={[styles.addFormContainer, { maxHeight: height * 0.6 }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+            <LinearGradient
+              colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+              style={styles.addFormGradient}
+            >
+              <View style={styles.formHeader}>
+                <Sparkles size={20} color={theme.colors.accent} />
+                <Text style={[styles.formTitle, { color: theme.colors.text }]}>Add New Meal</Text>
+              </View>
+              
+              <ScrollView 
+                style={styles.formScrollView}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                <TextInput
+                  style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                  placeholder="Enter meal name (e.g., Grilled Chicken Salad)"
+                  placeholderTextColor={theme.colors.placeholder}
+                  value={newMealName}
+                  onChangeText={setNewMealName}
+                />
+                
+                <View style={styles.ingredientsSection}>
+                  <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add Ingredients (Optional)</Text>
+                  <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
+                    Add each ingredient with its amount and unit for better accuracy
+                  </Text>
 
-              <View style={styles.ingredientInputContainer}>
-                <View style={styles.ingredientInputRow}>
-                  <TextInput
-                    style={[styles.input, styles.ingredientInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-                    placeholder="Ingredient"
-                    placeholderTextColor={theme.colors.placeholder}
-                    value={currentIngredient}
-                    onChangeText={setCurrentIngredient}
-                  />
-                  <TextInput
-                    style={[styles.input, styles.amountInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-                    placeholder="Amount"
-                    placeholderTextColor={theme.colors.placeholder}
-                    value={currentAmount}
-                    onChangeText={setCurrentAmount}
-                    keyboardType="numeric"
-                  />
-                  <TextInput
-                    style={[styles.input, styles.unitInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-                    placeholder="Unit"
-                    placeholderTextColor={theme.colors.placeholder}
-                    value={currentUnit}
-                    onChangeText={setCurrentUnit}
-                  />
+                  <View style={styles.ingredientInputContainer}>
+                    <View style={styles.ingredientInputRow}>
+                      <TextInput
+                        style={[styles.input, styles.ingredientInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                        placeholder="Ingredient"
+                        placeholderTextColor={theme.colors.placeholder}
+                        value={currentIngredient}
+                        onChangeText={setCurrentIngredient}
+                      />
+                      <TextInput
+                        style={[styles.input, styles.amountInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                        placeholder="Amount"
+                        placeholderTextColor={theme.colors.placeholder}
+                        value={currentAmount}
+                        onChangeText={setCurrentAmount}
+                        keyboardType="numeric"
+                      />
+                      <TextInput
+                        style={[styles.input, styles.unitInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                        placeholder="Unit"
+                        placeholderTextColor={theme.colors.placeholder}
+                        value={currentUnit}
+                        onChangeText={setCurrentUnit}
+                      />
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.addIngredientButton, { backgroundColor: theme.colors.success }]}
+                      onPress={handleAddIngredient}
+                    >
+                      <Plus size={20} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {detailedIngredients.length > 0 && (
+                    <View style={styles.ingredientsList}>
+                      <Text style={[styles.ingredientsListTitle, { color: theme.colors.text }]}>
+                        Added Ingredients ({detailedIngredients.length})
+                      </Text>
+                      {detailedIngredients.map((ing, index) => (
+                        <View key={index} style={[styles.ingredientItem, { backgroundColor: theme.colors.surface }]}>
+                          <Text style={[styles.ingredientText, { color: theme.colors.text }]}>
+                            {ing.ingredient} ({ing.amount}{ing.unit})
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => handleRemoveIngredient(index)}
+                            style={styles.removeIngredientButton}
+                          >
+                            <X size={16} color={theme.colors.error} />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                 </View>
+              </ScrollView>
+
+              <View style={styles.formButtons}>
                 <TouchableOpacity
-                  style={[styles.addIngredientButton, { backgroundColor: theme.colors.success }]}
-                  onPress={handleAddIngredient}
+                  style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+                  onPress={() => {
+                    setShowAddForm(false);
+                    setNewMealName('');
+                    setDetailedIngredients([]);
+                  }}
                 >
-                  <Plus size={20} color="#FFFFFF" />
+                  <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.submitButton, { backgroundColor: theme.colors.success }]}
+                  onPress={handleAddMeal}
+                  disabled={isSubmitting}
+                >
+                  <Text style={styles.submitButtonText}>
+                    {isSubmitting ? 'Adding...' : 'Add Meal'}
+                  </Text>
                 </TouchableOpacity>
               </View>
-
-              {detailedIngredients.length > 0 && (
-                <View style={styles.ingredientsList}>
-                  <Text style={[styles.ingredientsListTitle, { color: theme.colors.text }]}>
-                    Added Ingredients ({detailedIngredients.length})
-                  </Text>
-                  {detailedIngredients.map((ing, index) => (
-                    <View key={index} style={[styles.ingredientItem, { backgroundColor: theme.colors.surface }]}>
-                      <Text style={[styles.ingredientText, { color: theme.colors.text }]}>
-                        {ing.ingredient} ({ing.amount}{ing.unit})
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => handleRemoveIngredient(index)}
-                        style={styles.removeIngredientButton}
-                      >
-                        <X size={16} color={theme.colors.error} />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-
-            <View style={styles.formButtons}>
-              <TouchableOpacity
-                style={[styles.cancelButton, { borderColor: theme.colors.border }]}
-                onPress={() => {
-                  setShowAddForm(false);
-                  setNewMealName('');
-                  setDetailedIngredients([]);
-                }}
-              >
-                <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.submitButton, { backgroundColor: theme.colors.success }]}
-                onPress={handleAddMeal}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.submitButtonText}>
-                  {isSubmitting ? 'Adding...' : 'Add Meal'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </LinearGradient>
-        </View>
+            </LinearGradient>
+          </View>
+        </KeyboardAvoidingView>
       )}
 
       {/* Search */}
@@ -940,11 +962,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  addFormContainer: {
+    // Container with height constraint
+  },
   addForm: {
     borderBottomWidth: 1,
     overflow: 'hidden',
+    flex: 1,
   },
   addFormGradient: {
+    flex: 1,
     padding: 20,
   },
   formHeader: {
@@ -956,6 +983,10 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  formScrollView: {
+    flex: 1,
+    marginBottom: 20,
   },
   input: {
     borderWidth: 1,
@@ -1028,7 +1059,6 @@ const styles = StyleSheet.create({
   formButtons: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 24,
   },
   cancelButton: {
     flex: 1,
@@ -1203,6 +1233,9 @@ const styles = StyleSheet.create({
     height: 32,
   },
   // Modal styles
+  modalKeyboardView: {
+    flex: 1,
+  },
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
@@ -1213,7 +1246,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     width: '100%',
     maxWidth: 500,
-    maxHeight: '80%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
@@ -1235,7 +1267,7 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     padding: 20,
-    maxHeight: 400,
+    maxHeight: height * 0.5,
   },
   inputGroup: {
     marginBottom: 16,

@@ -6,10 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   RefreshControl,
   Dimensions,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,8 +18,10 @@ import { Plus, Search, Dumbbell, Clock, Flame, Timer, Zap, Target, TrendingUp } 
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useCustomAlert } from '@/components/CustomAlert';
+import { useToast } from '@/components/Toast';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 interface Workout {
   id: string;
@@ -43,6 +46,8 @@ const WORKOUT_TYPES = [
 
 export default function WorkoutsScreen() {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
+  const { showToast, ToastComponent } = useToast();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -90,13 +95,21 @@ export default function WorkoutsScreen() {
 
       if (error) {
         console.error('Error fetching workouts:', error);
-        Alert.alert('Error', 'Failed to load workouts');
+        showAlert({
+          type: 'error',
+          title: 'Loading Error',
+          message: 'Failed to load workouts. Please try again.',
+        });
       } else {
         setWorkouts(workoutsData || []);
       }
     } catch (error) {
       console.error('Error:', error);
-      Alert.alert('Error', 'Failed to load workouts');
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to load workouts. Please check your connection.',
+      });
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -110,7 +123,11 @@ export default function WorkoutsScreen() {
 
   const handleAddWorkout = async () => {
     if (!selectedWorkoutType || !duration || isNaN(Number(duration)) || Number(duration) <= 0) {
-      Alert.alert('Error', 'Please select a workout type and enter a valid duration');
+      showAlert({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please select a workout type and enter a valid duration',
+      });
       return;
     }
 
@@ -144,14 +161,25 @@ export default function WorkoutsScreen() {
         setDuration('');
         setShowAddForm(false);
         fetchWorkouts();
-        Alert.alert('Success', 'Workout logged successfully!');
+        showToast({
+          type: 'success',
+          message: 'Workout logged successfully!',
+        });
       } else {
         const errorData = await response.text();
-        Alert.alert('Error', errorData || 'Failed to log workout');
+        showAlert({
+          type: 'error',
+          title: 'Failed to Log Workout',
+          message: errorData || 'Failed to log workout',
+        });
       }
     } catch (error) {
       console.error('Error adding workout:', error);
-      Alert.alert('Error', 'Failed to log workout');
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to log workout. Please check your connection.',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -279,58 +307,69 @@ export default function WorkoutsScreen() {
         </View>
       </LinearGradient>
 
-      {/* Add Form */}
+      {/* Add Form - Now with proper height constraints */}
       {showAddForm && (
-        <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
-          <LinearGradient
-            colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
-            style={styles.addFormGradient}
-          >
-            <View style={styles.formHeader}>
-              <Zap size={20} color={theme.colors.secondary} />
-              <Text style={[styles.formTitle, { color: theme.colors.text }]}>Log New Workout</Text>
-            </View>
-            
-            <Text style={[styles.formLabel, { color: theme.colors.text }]}>Workout Type</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.workoutTypes}>
-              {WORKOUT_TYPES.map((workout) => (
-                <WorkoutTypeButton key={workout.name} workout={workout} />
-              ))}
-            </ScrollView>
-            
-            <Text style={[styles.formLabel, { color: theme.colors.text }]}>Duration (minutes)</Text>
-            <TextInput
-              style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
-              placeholder="Enter duration in minutes"
-              placeholderTextColor={theme.colors.placeholder}
-              value={duration}
-              onChangeText={setDuration}
-              keyboardType="numeric"
-            />
-            
-            <View style={styles.formButtons}>
-              <TouchableOpacity
-                style={[styles.cancelButton, { borderColor: theme.colors.border }]}
-                onPress={() => {
-                  setShowAddForm(false);
-                  setSelectedWorkoutType('');
-                  setDuration('');
-                }}
+        <KeyboardAvoidingView 
+          style={[styles.addFormContainer, { maxHeight: height * 0.6 }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={[styles.addForm, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+            <LinearGradient
+              colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+              style={styles.addFormGradient}
+            >
+              <View style={styles.formHeader}>
+                <Zap size={20} color={theme.colors.secondary} />
+                <Text style={[styles.formTitle, { color: theme.colors.text }]}>Log New Workout</Text>
+              </View>
+              
+              <ScrollView 
+                style={styles.formScrollView}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
               >
-                <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.submitButton, { backgroundColor: theme.colors.secondary }]}
-                onPress={handleAddWorkout}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.submitButtonText}>
-                  {isSubmitting ? 'Adding...' : 'Add Workout'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </LinearGradient>
-        </View>
+                <Text style={[styles.formLabel, { color: theme.colors.text }]}>Workout Type</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.workoutTypes}>
+                  {WORKOUT_TYPES.map((workout) => (
+                    <WorkoutTypeButton key={workout.name} workout={workout} />
+                  ))}
+                </ScrollView>
+                
+                <Text style={[styles.formLabel, { color: theme.colors.text }]}>Duration (minutes)</Text>
+                <TextInput
+                  style={[styles.input, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                  placeholder="Enter duration in minutes"
+                  placeholderTextColor={theme.colors.placeholder}
+                  value={duration}
+                  onChangeText={setDuration}
+                  keyboardType="numeric"
+                />
+              </ScrollView>
+              
+              <View style={styles.formButtons}>
+                <TouchableOpacity
+                  style={[styles.cancelButton, { borderColor: theme.colors.border }]}
+                  onPress={() => {
+                    setShowAddForm(false);
+                    setSelectedWorkoutType('');
+                    setDuration('');
+                  }}
+                >
+                  <Text style={[styles.cancelButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.submitButton, { backgroundColor: theme.colors.secondary }]}
+                  onPress={handleAddWorkout}
+                  disabled={isSubmitting}
+                >
+                  <Text style={styles.submitButtonText}>
+                    {isSubmitting ? 'Adding...' : 'Add Workout'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </KeyboardAvoidingView>
       )}
 
       {/* Search */}
@@ -374,6 +413,10 @@ export default function WorkoutsScreen() {
         )}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* Global Alert and Toast Components */}
+      {AlertComponent}
+      {ToastComponent}
     </SafeAreaView>
   );
 }
@@ -447,11 +490,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  addFormContainer: {
+    // Container with height constraint
+  },
   addForm: {
     borderBottomWidth: 1,
     overflow: 'hidden',
+    flex: 1,
   },
   addFormGradient: {
+    flex: 1,
     padding: 20,
   },
   formHeader: {
@@ -463,6 +511,10 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  formScrollView: {
+    flex: 1,
+    marginBottom: 20,
   },
   formLabel: {
     fontSize: 16,
@@ -501,7 +553,6 @@ const styles = StyleSheet.create({
   formButtons: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 8,
   },
   cancelButton: {
     flex: 1,
