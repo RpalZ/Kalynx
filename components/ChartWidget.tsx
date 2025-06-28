@@ -104,18 +104,28 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
     }
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr: string, index: number, total: number) => {
     const date = new Date(dateStr);
-    return timeframe === 'weekly' 
-      ? date.toLocaleDateString('en-US', { weekday: 'short' })
-      : date.getDate().toString();
+    
+    if (timeframe === 'weekly') {
+      return date.toLocaleDateString('en-US', { weekday: 'short' });
+    } else {
+      // For monthly view, show fewer labels to avoid overlap
+      if (total > 15 && index % 3 !== 0) return '';
+      return date.getDate().toString();
+    }
   };
 
   // Custom SVG Chart Component
   const CustomChart = ({ width, height, isModal = false }: { width: number; height: number; isModal?: boolean }) => {
     if (chartData.length === 0) return null;
 
-    const padding = { left: 50, top: 20, right: 20, bottom: 40 };
+    const padding = { 
+      left: 60, 
+      top: 30, 
+      right: 30, 
+      bottom: isModal ? 60 : 50 
+    };
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
 
@@ -155,15 +165,26 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
 
     const dataSets = getDataSets();
     const allValues = dataSets.flatMap(set => set.data);
-    const maxValue = Math.max(...allValues, 100);
-    const minValue = Math.min(...allValues, 0);
+    
+    // Better axis scaling
+    let maxValue = Math.max(...allValues, 100);
+    let minValue = Math.min(...allValues, 0);
+    
+    // Round to nice numbers
+    maxValue = Math.ceil(maxValue / 10) * 10;
+    minValue = Math.floor(minValue / 10) * 10;
+    
+    // Ensure minimum range
+    if (maxValue - minValue < 20) {
+      maxValue = minValue + 20;
+    }
 
     // Create path for each data set
     const createPath = (data: number[]) => {
       if (data.length === 0) return '';
       
       const points = data.map((value, index) => {
-        const x = padding.left + (index / (data.length - 1)) * chartWidth;
+        const x = padding.left + (index / Math.max(data.length - 1, 1)) * chartWidth;
         const y = padding.top + chartHeight - ((value - minValue) / (maxValue - minValue)) * chartHeight;
         return { x, y };
       });
@@ -178,7 +199,7 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
 
     // Grid lines
     const gridLines = [];
-    const numGridLines = 5;
+    const numGridLines = 4;
     for (let i = 0; i <= numGridLines; i++) {
       const y = padding.top + (i / numGridLines) * chartHeight;
       gridLines.push(
@@ -195,7 +216,7 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
       );
     }
 
-    // Y-axis labels
+    // Y-axis labels with better spacing
     const yLabels = [];
     for (let i = 0; i <= numGridLines; i++) {
       const value = maxValue - (i / numGridLines) * (maxValue - minValue);
@@ -203,33 +224,38 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
       yLabels.push(
         <SvgText
           key={`y-label-${i}`}
-          x={padding.left - 10}
-          y={y + 4}
-          fontSize={12}
+          x={padding.left - 15}
+          y={y + 5}
+          fontSize={11}
           fill={theme.colors.textSecondary}
           textAnchor="end"
+          fontWeight="500"
         >
           {Math.round(value)}
         </SvgText>
       );
     }
 
-    // X-axis labels
+    // X-axis labels with better spacing
     const xLabels = chartData.map((item, index) => {
-      const x = padding.left + (index / (chartData.length - 1)) * chartWidth;
+      const label = formatDate(item.date, index, chartData.length);
+      if (!label) return null;
+      
+      const x = padding.left + (index / Math.max(chartData.length - 1, 1)) * chartWidth;
       return (
         <SvgText
           key={`x-label-${index}`}
           x={x}
-          y={height - 10}
-          fontSize={12}
+          y={height - 15}
+          fontSize={10}
           fill={theme.colors.textSecondary}
           textAnchor="middle"
+          fontWeight="500"
         >
-          {formatDate(item.date)}
+          {label}
         </SvgText>
       );
-    });
+    }).filter(Boolean);
 
     return (
       <View style={styles.chartContainer}>
@@ -269,21 +295,21 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
               <Path
                 d={createPath(dataSet.data)}
                 stroke={dataSet.color}
-                strokeWidth={3}
+                strokeWidth={isModal ? 3 : 2.5}
                 fill="none"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
               {/* Data points */}
               {dataSet.data.map((value, pointIndex) => {
-                const x = padding.left + (pointIndex / (dataSet.data.length - 1)) * chartWidth;
+                const x = padding.left + (pointIndex / Math.max(dataSet.data.length - 1, 1)) * chartWidth;
                 const y = padding.top + chartHeight - ((value - minValue) / (maxValue - minValue)) * chartHeight;
                 return (
                   <Circle
                     key={`point-${index}-${pointIndex}`}
                     cx={x}
                     cy={y}
-                    r={4}
+                    r={isModal ? 5 : 4}
                     fill={dataSet.color}
                     stroke="#FFFFFF"
                     strokeWidth={2}
@@ -346,7 +372,7 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
 
   const ChartContent = ({ isModal = false }: { isModal?: boolean }) => {
     const chartWidth = isModal ? screenWidth - 40 : screenWidth - 80;
-    const chartHeight = isModal ? 300 : 180;
+    const chartHeight = isModal ? 350 : 200;
 
     return (
       <View style={[styles.chartContainer, isModal && styles.modalChartContainer]}>
@@ -656,7 +682,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 16,
-    marginTop: 12,
+    marginTop: 16,
+    paddingHorizontal: 8,
   },
   legendItem: {
     flexDirection: 'row',
