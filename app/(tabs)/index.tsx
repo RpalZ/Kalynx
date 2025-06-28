@@ -18,6 +18,7 @@ import { Plus, Camera, TrendingUp, Leaf, Flame, Target, RefreshCw, Utensils, Dum
 import { router, Link, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/contexts/ThemeContext';
+import ChartWidget from '@/components/ChartWidget';
 
 const { width } = Dimensions.get('window');
 
@@ -271,6 +272,11 @@ export default function HomeScreen() {
             />
           </View>
         </LinearGradient>
+
+        {/* Chart Widget */}
+        <View style={styles.section}>
+          <ChartWidget />
+        </View>
 
         {/* Quick Actions */}
         <View style={styles.section}>
