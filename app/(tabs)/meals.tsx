@@ -79,26 +79,35 @@ const EditMealModal = ({ isVisible, meal, onClose, onSave }: EditMealModalProps)
         return;
       }
 
-      const { data, error } = await supabase
-        .from('meals')
-        .update({
-          name: editedMeal.name.trim(),
-          calories: Number(editedMeal.calories),
-          protein: Number(editedMeal.protein),
-          carbon_impact: Number(editedMeal.carbon_impact),
-          water_impact: Number(editedMeal.water_impact),
-        })
-        .eq('id', editedMeal.id)
-        .select()
-        .single();
+      const token = session.session.access_token;
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/update-meal`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            mealId: editedMeal.id,
+            name: editedMeal.name.trim(),
+            calories: Number(editedMeal.calories),
+            protein: Number(editedMeal.protein),
+            carbon_impact: Number(editedMeal.carbon_impact),
+            water_impact: Number(editedMeal.water_impact),
+          }),
+        }
+      );
 
-      if (error) {
-        console.error('Error updating meal:', error);
-        Alert.alert('Error', 'Failed to update meal');
-      } else {
-        onSave(data);
+      if (response.ok) {
+        const updatedMeal = await response.json();
+        onSave(updatedMeal);
         onClose();
         Alert.alert('Success', 'Meal updated successfully!');
+      } else {
+        const errorText = await response.text();
+        console.error('Error updating meal:', errorText);
+        Alert.alert('Error', errorText || 'Failed to update meal');
       }
     } catch (error) {
       console.error('Error updating meal:', error);
