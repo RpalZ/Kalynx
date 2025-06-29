@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Chrome as Home, Utensils, Dumbbell, Leaf, Trophy, Camera, User, Settings, Bell, Search, Menu, Sparkles } from 'lucide-react-native';
+import { Chrome as Home, Utensils, Dumbbell, Leaf, Trophy, Camera, User, Settings, Bell, Menu, Sparkles, LogOut } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { router } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -27,28 +29,53 @@ const TABLET_BREAKPOINT = 768;
 
 export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   children,
-  activeTab = 'home',
+  activeTab = 'index',
   onTabChange,
   showSidebar = true,
   onToggleSidebar,
 }) => {
   const { theme, isDark } = useTheme();
+  const [user, setUser] = useState<any>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const isDesktop = Platform.OS === 'web' && screenWidth >= DESKTOP_BREAKPOINT;
   const isTablet = Platform.OS === 'web' && screenWidth >= TABLET_BREAKPOINT && screenWidth < DESKTOP_BREAKPOINT;
 
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  const fetchUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setUser(user);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      router.replace('/auth');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   const navigationItems = [
-    { id: 'home', label: 'Dashboard', icon: Home, color: theme.colors.primary },
-    { id: 'meals', label: 'Meals', icon: Utensils, color: theme.colors.success },
-    { id: 'workouts', label: 'Workouts', icon: Dumbbell, color: theme.colors.secondary },
-    { id: 'camera', label: 'AI Scanner', icon: Camera, color: theme.colors.accent },
-    { id: 'eco', label: 'KaliAI', icon: Leaf, color: theme.colors.success },
-    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, color: theme.colors.warning },
-    { id: 'profile', label: 'Profile', icon: User, color: theme.colors.info },
+    { id: 'index', label: 'Dashboard', icon: Home, color: theme.colors.primary, route: '/(tabs)/' },
+    { id: 'meals', label: 'Meals', icon: Utensils, color: theme.colors.success, route: '/(tabs)/meals' },
+    { id: 'workouts', label: 'Workouts', icon: Dumbbell, color: theme.colors.secondary, route: '/(tabs)/workouts' },
+    { id: 'camera', label: 'AI Scanner', icon: Camera, color: theme.colors.accent, route: '/(tabs)/camera' },
+    { id: 'eco', label: 'KaliAI', icon: Leaf, color: theme.colors.success, route: '/(tabs)/eco' },
+    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, color: theme.colors.warning, route: '/(tabs)/leaderboard' },
+    { id: 'profile', label: 'Profile', icon: User, color: theme.colors.info, route: '/(tabs)/profile' },
   ];
 
   const sidebarWidth = isDesktop ? 280 : isTablet ? 240 : 200;
   const headerHeight = 80;
   const contentPadding = isDesktop ? 32 : isTablet ? 24 : 16;
+
+  const handleNavigation = (item: any) => {
+    onTabChange?.(item.id);
+    router.push(item.route);
+  };
 
   const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => (
     <TouchableOpacity
@@ -59,7 +86,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
           borderColor: isActive ? item.color : 'transparent',
         }
       ]}
-      onPress={() => onTabChange?.(item.id)}
+      onPress={() => handleNavigation(item)}
     >
       <View style={[
         styles.navIconContainer,
@@ -148,7 +175,10 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
 
         {/* Bottom Section */}
         <View style={styles.sidebarBottom}>
-          <TouchableOpacity style={[styles.settingsButton, { backgroundColor: theme.colors.surface }]}>
+          <TouchableOpacity 
+            style={[styles.settingsButton, { backgroundColor: theme.colors.surface }]}
+            onPress={() => router.push('/(tabs)/profile')}
+          >
             <Settings size={18} color={theme.colors.textSecondary} />
             <Text style={[styles.settingsText, { color: theme.colors.textSecondary }]}>
               Settings
@@ -181,11 +211,13 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
             </TouchableOpacity>
           )}
           
-          {/* Search Bar */}
-          <View style={[styles.searchContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-            <Search size={18} color={theme.colors.placeholder} />
-            <Text style={[styles.searchPlaceholder, { color: theme.colors.placeholder }]}>
-              Search meals, workouts, or ask KaliAI...
+          {/* Welcome Text instead of Search */}
+          <View style={styles.welcomeSection}>
+            <Text style={[styles.welcomeText, { color: theme.colors.text }]}>
+              Welcome back, {user?.user_metadata?.name || 'there'}!
+            </Text>
+            <Text style={[styles.welcomeSubtext, { color: theme.colors.textSecondary }]}>
+              Here's your sustainability dashboard
             </Text>
           </View>
         </View>
@@ -196,11 +228,58 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
             <Bell size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
           
-          <View style={[styles.userProfile, { backgroundColor: theme.colors.surface }]}>
-            <View style={[styles.userAvatar, { backgroundColor: theme.colors.primary }]}>
-              <User size={16} color="#FFFFFF" />
-            </View>
-            <Text style={[styles.userName, { color: theme.colors.text }]}>John Doe</Text>
+          <View style={styles.profileSection}>
+            <TouchableOpacity 
+              style={[styles.userProfile, { backgroundColor: theme.colors.surface }]}
+              onPress={() => setShowProfileMenu(!showProfileMenu)}
+            >
+              <View style={[styles.userAvatar, { backgroundColor: theme.colors.primary }]}>
+                <User size={16} color="#FFFFFF" />
+              </View>
+              <Text style={[styles.userName, { color: theme.colors.text }]}>
+                {user?.user_metadata?.name || 'User'}
+              </Text>
+            </TouchableOpacity>
+            
+            {/* Profile Dropdown Menu */}
+            {showProfileMenu && (
+              <View style={[styles.profileMenu, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <TouchableOpacity 
+                  style={styles.profileMenuItem}
+                  onPress={() => {
+                    setShowProfileMenu(false);
+                    router.push('/(tabs)/profile');
+                  }}
+                >
+                  <User size={16} color={theme.colors.textSecondary} />
+                  <Text style={[styles.profileMenuText, { color: theme.colors.text }]}>Profile</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.profileMenuItem}
+                  onPress={() => {
+                    setShowProfileMenu(false);
+                    router.push('/(tabs)/profile');
+                  }}
+                >
+                  <Settings size={16} color={theme.colors.textSecondary} />
+                  <Text style={[styles.profileMenuText, { color: theme.colors.text }]}>Settings</Text>
+                </TouchableOpacity>
+                
+                <View style={[styles.profileMenuDivider, { backgroundColor: theme.colors.border }]} />
+                
+                <TouchableOpacity 
+                  style={styles.profileMenuItem}
+                  onPress={() => {
+                    setShowProfileMenu(false);
+                    handleSignOut();
+                  }}
+                >
+                  <LogOut size={16} color={theme.colors.error} />
+                  <Text style={[styles.profileMenuText, { color: theme.colors.error }]}>Sign Out</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -238,6 +317,14 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
       {showSidebar && <Sidebar />}
       <Header />
       <MainContent />
+      
+      {/* Overlay to close profile menu */}
+      {showProfileMenu && (
+        <TouchableOpacity 
+          style={styles.overlay}
+          onPress={() => setShowProfileMenu(false)}
+        />
+      )}
     </View>
   );
 };
@@ -390,18 +477,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 12,
-    maxWidth: 400,
+  welcomeSection: {
     flex: 1,
   },
-  searchPlaceholder: {
+  welcomeText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  welcomeSubtext: {
     fontSize: 14,
     fontWeight: '500',
   },
@@ -416,6 +500,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  profileSection: {
+    position: 'relative',
   },
   userProfile: {
     flexDirection: 'row',
@@ -435,6 +522,44 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  profileMenu: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    marginTop: 8,
+    minWidth: 180,
+    borderRadius: 12,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 1000,
+  },
+  profileMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  profileMenuText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  profileMenuDivider: {
+    height: 1,
+    marginVertical: 4,
+  },
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
   },
   
   // Main Content Styles

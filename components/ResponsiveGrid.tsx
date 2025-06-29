@@ -33,7 +33,7 @@ export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
 
   const gridStyles = isWeb ? {
     display: 'grid',
-    gridTemplateColumns: `repeat(${currentColumns}, 1fr)`,
+    gridTemplateColumns: `repeat(${currentColumns}, minmax(0, 1fr))`,
     gap: gap,
     maxWidth: maxWidth,
     width: '100%',
@@ -78,8 +78,10 @@ export const GridItem: React.FC<GridItemProps> = ({
 
   const itemStyles = isWeb ? {
     gridColumn: `span ${currentSpan}`,
+    minWidth: 0, // Prevents overflow
   } : {
     flex: currentSpan,
+    minWidth: 0,
   };
 
   return (

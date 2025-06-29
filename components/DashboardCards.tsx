@@ -31,9 +31,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   const isDesktop = Platform.OS === 'web' && screenWidth >= 1024;
   
   const cardSizes = {
-    small: { padding: 16, iconSize: 20, titleSize: 14, valueSize: 20 },
-    medium: { padding: 20, iconSize: 24, titleSize: 16, valueSize: 24 },
-    large: { padding: 24, iconSize: 28, titleSize: 18, valueSize: 32 },
+    small: { padding: 16, iconSize: 20, titleSize: 14, valueSize: 20, minHeight: 120 },
+    medium: { padding: 20, iconSize: 24, titleSize: 16, valueSize: 24, minHeight: 140 },
+    large: { padding: 24, iconSize: 28, titleSize: 18, valueSize: 32, minHeight: 160 },
   };
   
   const currentSize = cardSizes[size];
@@ -45,7 +45,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         { 
           backgroundColor: theme.colors.card,
           borderColor: theme.colors.border,
-          minHeight: isDesktop ? 140 : 120,
+          minHeight: currentSize.minHeight,
+          flex: 1,
+          minWidth: isDesktop ? 200 : 150,
         }
       ]}
       onPress={onPress}
@@ -131,9 +133,9 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
   const isDesktop = Platform.OS === 'web' && screenWidth >= 1024;
   
   const cardSizes = {
-    small: { padding: 16, iconSize: 20, titleSize: 14 },
-    medium: { padding: 20, iconSize: 24, titleSize: 16 },
-    large: { padding: 24, iconSize: 28, titleSize: 18 },
+    small: { padding: 16, iconSize: 20, titleSize: 14, minHeight: 120 },
+    medium: { padding: 20, iconSize: 24, titleSize: 16, minHeight: 140 },
+    large: { padding: 24, iconSize: 28, titleSize: 18, minHeight: 160 },
   };
   
   const currentSize = cardSizes[size];
@@ -142,7 +144,11 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
     <TouchableOpacity
       style={[
         styles.quickActionCard,
-        { minHeight: isDesktop ? 140 : 120 }
+        { 
+          minHeight: currentSize.minHeight,
+          flex: 1,
+          minWidth: isDesktop ? 200 : 150,
+        }
       ]}
       onPress={onPress}
     >
@@ -262,8 +268,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   metricCard: {
-    flex: 1,
-    minWidth: 280,
     borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
@@ -275,6 +279,7 @@ const styles = StyleSheet.create({
   },
   metricGradient: {
     flex: 1,
+    justifyContent: 'space-between',
   },
   metricHeader: {
     flexDirection: 'row',
@@ -303,17 +308,17 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     fontWeight: '800',
+    marginBottom: 4,
   },
   metricTitle: {
     fontWeight: '600',
+    marginBottom: 2,
   },
   metricSubtitle: {
     fontSize: 12,
     fontWeight: '500',
   },
   quickActionCard: {
-    flex: 1,
-    minWidth: 280,
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
