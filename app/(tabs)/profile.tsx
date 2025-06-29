@@ -34,7 +34,7 @@ interface UserStats {
   currentStreak: number;
   totalCO2Saved: number;
   totalWaterSaved: number;
-  rank: number;
+  rank: number | null;
 }
 
 interface Achievement {
@@ -122,6 +122,7 @@ export default function ProfileScreen() {
 
   const fetchUserStats = async (userId: string) => {
     try {
+      // Fetch basic data
       const { data: meals } = await supabase
         .from('meals')
         .select('*')
@@ -137,12 +138,14 @@ export default function ProfileScreen() {
         .select('*')
         .eq('user_id', userId);
 
+      // Fetch daily summary for environmental data
       const today = new Date().toISOString().split('T')[0];
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
         console.error('No session found for fetching daily summary');
         return;
       }
+      
       const summaryResponse = await fetch(
         `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-daily-summary?date=${today}`,
         {
@@ -151,11 +154,34 @@ export default function ProfileScreen() {
           },
         }
       );
+      
       let summaryData = { totalCarbonSaved: 0, totalWaterSaved: 0 };
       if (summaryResponse.ok) {
         summaryData = await summaryResponse.json();
       } else {
         console.error('Failed to fetch daily summary for profile stats:', await summaryResponse.text());
+      }
+
+      // Fetch user's rank from leaderboard
+      let userRank = null;
+      try {
+        const leaderboardResponse = await fetch(
+          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-leaderboard`,
+          {
+            headers: {
+              'Authorization': `Bearer ${session.session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (leaderboardResponse.ok) {
+          const leaderboardData = await leaderboardResponse.json();
+          const currentUserEntry = leaderboardData.leaderboard.find((entry: any) => entry.user_id === userId);
+          userRank = currentUserEntry?.rank || null;
+        }
+      } catch (error) {
+        console.error('Error fetching leaderboard for rank:', error);
       }
 
       const totalMeals = meals?.length || 0;
@@ -165,8 +191,8 @@ export default function ProfileScreen() {
       const avgEcoScore = scores?.length ? 
         scores.reduce((sum, score) => sum + (score.eco_score || 0), 0) / scores.length : 0;
       
-      const currentStreak = 7;
-      const rank = 42;
+      // Calculate current streak (simplified - could be enhanced with actual streak logic)
+      const currentStreak = Math.min(totalMeals, 7); // Simple approximation
 
       setUserStats({
         totalMeals,
@@ -176,7 +202,7 @@ export default function ProfileScreen() {
         currentStreak,
         totalCO2Saved: summaryData.totalCarbonSaved,
         totalWaterSaved: summaryData.totalWaterSaved,
-        rank,
+        rank: userRank,
       });
     } catch (error) {
       console.error('Error fetching user stats:', error);
@@ -405,7 +431,9 @@ export default function ProfileScreen() {
                   <Text style={styles.profileName}>{profile?.name || 'User'}</Text>
                   <Text style={styles.profileEmail}>{profile?.email}</Text>
                   {userStats && (
-                    <Text style={styles.profileRank}>Rank #{userStats.rank} • {userStats.currentStreak} day streak</Text>
+                    <Text style={styles.profileRank}>
+                      {userStats.rank ? `Rank #${userStats.rank}` : 'Unranked'} • {userStats.currentStreak} day streak
+                    </Text>
                   )}
                 </View>
               )}
@@ -501,7 +529,7 @@ export default function ProfileScreen() {
 
         {/* Menu Options */}
         <View style={[styles.section, styles.lastSection]}>
-          <View style={[styles.menuContainer, { backgroundColor: theme.colors.card }]}>
+          <View style={styles.menuContainer}>
             <LinearGradient
               colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
               style={styles.menuGradient}
@@ -583,6 +611,18 @@ export default function ProfileScreen() {
                   value={`${userStats.totalWaterSaved.toFixed(0)}L`}
                   icon={Star}
                   color={theme.colors.info}
+                />
+                <StatCard
+                  title="Current Rank"
+                  value={userStats.rank ? `#${userStats.rank}` : 'Unranked'}
+                  icon={Trophy}
+                  color={theme.colors.warning}
+                />
+                <StatCard
+                  title="Current Streak"
+                  value={`${userStats.currentStreak} days`}
+                  icon={Calendar}
+                  color={theme.colors.accent}
                 />
               </View>
             </ScrollView>
