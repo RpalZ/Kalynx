@@ -17,7 +17,6 @@ import { Trophy, Medal, Award, TrendingUp, RefreshCw, Crown, Star, Target, Zap, 
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
-import { LoadingScreen, useContentEntrance } from '@/components/LoadingScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -52,7 +51,6 @@ export default function LeaderboardScreen() {
   const [progressAnimation] = useState(new Animated.Value(0));
   const [sparkleAnimation] = useState(new Animated.Value(0));
   const [bounceAnimation] = useState(new Animated.Value(0));
-  const { animateIn, animatedStyle } = useContentEntrance();
 
   useEffect(() => {
     checkAuth();
@@ -66,12 +64,6 @@ export default function LeaderboardScreen() {
       }
     }, [currentUser])
   );
-
-  useEffect(() => {
-    if (!isLoading && leaderboardData) {
-      animateIn();
-    }
-  }, [isLoading, leaderboardData]);
 
   useEffect(() => {
     if (userRank && leaderboardData) {
@@ -612,18 +604,36 @@ export default function LeaderboardScreen() {
 
   if (isLoading) {
     return (
-      <LoadingScreen
-        type="leaderboard"
-        message="🍳 Cooking up the leaderboard..."
-        icon={<ChefHat size={64} color="#FF6B35" />}
-      />
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.loadingContainer}>
+          <LinearGradient
+            colors={['#FF6B35', '#F7931E', '#FFD23F']}
+            style={styles.loadingCard}
+          >
+            <Animated.View style={{
+              transform: [{
+                rotate: sparkleAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '360deg'],
+                })
+              }]
+            }}>
+              <ChefHat size={64} color="#FFFFFF" />
+            </Animated.View>
+            <Text style={styles.loadingText}>🍳 Cooking up the leaderboard...</Text>
+            <Text style={styles.loadingSubtext}>
+              Mixing ingredients and calculating delicious scores! 🔥
+            </Text>
+          </LinearGradient>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Animated.ScrollView
-        style={[styles.scrollView, animatedStyle]}
+      <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -777,7 +787,7 @@ export default function LeaderboardScreen() {
         )}
 
         <View style={styles.bottomSpacing} />
-      </Animated.ScrollView>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -786,8 +796,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
+  loadingContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  loadingCard: {
+    padding: 40,
+    borderRadius: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 16,
+    maxWidth: 320,
+  },
+  loadingText: {
+    fontSize: 24,
+    fontWeight: '800',
+    marginTop: 20,
+    marginBottom: 8,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '600',
   },
   header: {
     paddingHorizontal: 24,
@@ -1059,6 +1097,9 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
   },
   
+  scrollView: {
+    flex: 1,
+  },
   section: {
     padding: 20,
   },

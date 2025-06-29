@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
-  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Svg, Path, Circle, Line, Text as SvgText, G } from 'react-native-svg';
@@ -17,7 +16,6 @@ import { TrendingUp, Calendar, Maximize2, X, ChartBar as BarChart3, Flame, Leaf,
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { useFocusEffect } from 'expo-router';
-import { LoadingScreen } from '@/components/LoadingScreen';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -40,8 +38,6 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState<'all' | 'calories' | 'fitness' | 'eco'>('all');
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
     fetchChartData();
@@ -52,24 +48,6 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
       fetchChartData();
     }, [])
   );
-
-  useEffect(() => {
-    if (!isLoading && chartData.length > 0) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [isLoading, chartData]);
 
   const fetchChartData = async () => {
     setIsLoading(true);
@@ -425,28 +403,9 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
     );
   };
 
-  if (isLoading) {
-    return (
-      <LoadingScreen
-        type="chart"
-        message="Loading chart data..."
-        icon={<BarChart3 size={48} color={theme.colors.info} />}
-      />
-    );
-  }
-
   return (
     <>
-      <Animated.View 
-        style={[
-          styles.widget, 
-          { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }]
-          }
-        ]}
-      >
+      <View style={[styles.widget, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
         <LinearGradient
           colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
           style={styles.widgetGradient}
@@ -517,7 +476,7 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
           {/* Chart */}
           <ChartContent />
         </LinearGradient>
-      </Animated.View>
+      </View>
 
       {/* Modal */}
       <Modal

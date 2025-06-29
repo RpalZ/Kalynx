@@ -12,7 +12,6 @@ import {
   Modal,
   TextInput,
   Dimensions,
-  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,7 +21,6 @@ import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '@/contexts/ThemeContext';
-import { LoadingScreen, useContentEntrance } from '@/components/LoadingScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -170,8 +168,6 @@ export default function CameraScreen() {
   const [directRecipes, setDirectRecipes] = useState<Recipe[]>([]);
   const [manualIngredients, setManualIngredients] = useState<string[]>([]);
   const [manualRecipes, setManualRecipes] = useState<Recipe[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { animateIn, animatedStyle } = useContentEntrance();
 
   useEffect(() => {
     let mounted = true;
@@ -179,10 +175,6 @@ export default function CameraScreen() {
     const checkPermission = async () => {
       if (!permission?.granted && mounted) {
         await requestPermission();
-      }
-      setIsLoading(false);
-      if (mounted) {
-        animateIn();
       }
     };
     
@@ -576,19 +568,9 @@ export default function CameraScreen() {
     </View>
   );
 
-  if (isLoading) {
-    return (
-      <LoadingScreen
-        type="camera"
-        message="Loading camera..."
-        icon={<CameraIcon size={48} color={theme.colors.accent} />}
-      />
-    );
-  }
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Animated.ScrollView style={[styles.scrollView, animatedStyle]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <LinearGradient
           colors={[theme.colors.gradient.accent[0], theme.colors.gradient.accent[1]]}
@@ -853,7 +835,7 @@ export default function CameraScreen() {
         </View>
 
         <View style={styles.bottomSpacing} />
-      </Animated.ScrollView>
+      </ScrollView>
 
       <AddIngredientModal
         isVisible={isAddIngredientModalVisible}
@@ -874,9 +856,6 @@ export default function CameraScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  scrollView: {
     flex: 1,
   },
   header: {
@@ -921,6 +900,9 @@ const styles = StyleSheet.create({
   heroImage: {
     width: '100%',
     height: '100%',
+  },
+  scrollView: {
+    flex: 1,
   },
   section: {
     padding: 20,
