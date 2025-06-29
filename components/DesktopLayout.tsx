@@ -9,20 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  Home, 
-  Utensils, 
-  Dumbbell, 
-  Leaf, 
-  Trophy, 
-  Camera, 
-  User, 
-  Settings,
-  Bell,
-  Search,
-  Menu,
-  Sparkles
-} from 'lucide-react-native';
+import { Chrome as Home, Utensils, Dumbbell, Leaf, Trophy, Camera, User, Settings, Bell, Search, Menu, Sparkles } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width: screenWidth } = Dimensions.get('window');
