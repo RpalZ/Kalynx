@@ -254,129 +254,113 @@ export default function HomeScreen() {
         {/* Quick Actions */}
         <View style={[styles.section, isDesktop && styles.desktopSection]}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Actions</Text>
-          <ResponsiveGrid
-            columns={{ mobile: 2, tablet: 2, desktop: 4 }}
-            gap={isMobile ? 12 : 16}
-          >
-            <GridItem>
-              <QuickActionCard
-                title="Log Meal"
-                subtitle="Track nutrition & impact"
-                icon={Utensils}
-                gradient={['#10B981', '#059669']}
-                onPress={() => router.push('/meals')}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-            </GridItem>
-            <GridItem>
-              <QuickActionCard
-                title="Log Workout"
-                subtitle="Record your activity"
-                icon={Dumbbell}
-                gradient={['#3B82F6', '#2563EB']}
-                onPress={() => router.push('/workouts')}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-            </GridItem>
-            <GridItem>
-              <QuickActionCard
-                title="Scan Fridge"
-                subtitle="AI recipe suggestions"
-                icon={Camera}
-                gradient={['#8B5CF6', '#7C3AED']}
-                onPress={() => router.push('/(tabs)/camera' as any)}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-            </GridItem>
-            <GridItem>
-              <QuickActionCard
-                title="View Progress"
-                subtitle="See your achievements"
-                icon={Award}
-                gradient={['#F59E0B', '#D97706']}
-                onPress={() => router.push('/(tabs)/leaderboard')}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-            </GridItem>
-          </ResponsiveGrid>
+          <View style={[
+            styles.quickActionsGrid,
+            {
+              gap: isMobile ? 12 : 16,
+            }
+          ]}>
+            <QuickActionCard
+              title="Log Meal"
+              subtitle="Track nutrition & impact"
+              icon={Utensils}
+              gradient={['#10B981', '#059669']}
+              onPress={() => router.push('/meals')}
+              size={isDesktop ? 'medium' : 'small'}
+            />
+            <QuickActionCard
+              title="Log Workout"
+              subtitle="Record your activity"
+              icon={Dumbbell}
+              gradient={['#3B82F6', '#2563EB']}
+              onPress={() => router.push('/workouts')}
+              size={isDesktop ? 'medium' : 'small'}
+            />
+            <QuickActionCard
+              title="Scan Fridge"
+              subtitle="AI recipe suggestions"
+              icon={Camera}
+              gradient={['#8B5CF6', '#7C3AED']}
+              onPress={() => router.push('/(tabs)/camera' as any)}
+              size={isDesktop ? 'medium' : 'small'}
+            />
+            <QuickActionCard
+              title="View Progress"
+              subtitle="See your achievements"
+              icon={Award}
+              gradient={['#F59E0B', '#D97706']}
+              onPress={() => router.push('/(tabs)/leaderboard')}
+              size={isDesktop ? 'medium' : 'small'}
+            />
+          </View>
         </View>
 
         {/* Stats Overview */}
         {summary && (
           <View style={[styles.section, isDesktop && styles.desktopSection]}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Overview</Text>
-            <ResponsiveGrid
-              columns={{ mobile: 2, tablet: 3, desktop: 6 }}
-              gap={isMobile ? 12 : 16}
-            >
-              <GridItem>
-                <MetricCard
-                  title="Meals Logged"
-                  value={summary.mealsCount}
-                  subtitle="today"
-                  icon={Target}
-                  color={theme.colors.success}
-                  trend={5}
-                  onPress={() => handleCardPress('meals')}
-                  size={isDesktop ? 'medium' : 'small'}
-                />
-              </GridItem>
-              <GridItem>
-                <MetricCard
-                  title="Workouts"
-                  value={summary.workoutsCount}
-                  subtitle="completed"
-                  icon={Zap}
-                  color={theme.colors.secondary}
-                  trend={-2}
-                  onPress={() => handleCardPress('workouts')}
-                  size={isDesktop ? 'medium' : 'small'}
-                />
-              </GridItem>
-              <GridItem>
-                <MetricCard
-                  title="Calories"
-                  value={summary.totalCalories.toFixed(0)}
-                  subtitle="consumed"
-                  icon={Flame}
-                  color={theme.colors.error}
-                  trend={12}
-                  size={isDesktop ? 'medium' : 'small'}
-                />
-              </GridItem>
-              <GridItem>
-                <MetricCard
-                  title="CO₂ Impact"
-                  value={`${summary.totalCO2e.toFixed(1)}kg`}
-                  subtitle="saved"
-                  icon={Leaf}
-                  color={theme.colors.success}
-                  trend={8}
-                  size={isDesktop ? 'medium' : 'small'}
-                />
-              </GridItem>
-              <GridItem>
-                <MetricCard
-                  title="Water Impact"
-                  value={`${summary.totalWater.toFixed(0)}L`}
-                  subtitle="used"
-                  icon={Droplet}
-                  color={theme.colors.info}
-                  trend={15}
-                  size={isDesktop ? 'medium' : 'small'}
-                />
-              </GridItem>
-              <GridItem>
-                <MetricCard
-                  title="Net Balance"
-                  value={Math.abs(summary.netCalories).toFixed(0)}
-                  subtitle={summary.netCalories > 0 ? 'surplus' : 'deficit'}
-                  icon={Target}
-                  color={summary.netCalories > 0 ? theme.colors.error : theme.colors.success}
-                  size={isDesktop ? 'medium' : 'small'}
-                />
-              </GridItem>
-            </ResponsiveGrid>
+            <View style={[
+              styles.statsGrid,
+              {
+                gap: isMobile ? 12 : 16,
+              }
+            ]}>
+              <MetricCard
+                title="Meals Logged"
+                value={summary.mealsCount}
+                subtitle="today"
+                icon={Target}
+                color={theme.colors.success}
+                trend={5}
+                onPress={() => handleCardPress('meals')}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+              <MetricCard
+                title="Workouts"
+                value={summary.workoutsCount}
+                subtitle="completed"
+                icon={Zap}
+                color={theme.colors.secondary}
+                trend={-2}
+                onPress={() => handleCardPress('workouts')}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+              <MetricCard
+                title="Calories"
+                value={summary.totalCalories.toFixed(0)}
+                subtitle="consumed"
+                icon={Flame}
+                color={theme.colors.error}
+                trend={12}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+              <MetricCard
+                title="CO₂ Impact"
+                value={`${summary.totalCO2e.toFixed(1)}kg`}
+                subtitle="saved"
+                icon={Leaf}
+                color={theme.colors.success}
+                trend={8}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+              <MetricCard
+                title="Water Impact"
+                value={`${summary.totalWater.toFixed(0)}L`}
+                subtitle="used"
+                icon={Droplet}
+                color={theme.colors.info}
+                trend={15}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+              <MetricCard
+                title="Net Balance"
+                value={Math.abs(summary.netCalories).toFixed(0)}
+                subtitle={summary.netCalories > 0 ? 'surplus' : 'deficit'}
+                icon={Target}
+                color={summary.netCalories > 0 ? theme.colors.error : theme.colors.success}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+            </View>
           </View>
         )}
 
@@ -396,15 +380,30 @@ export default function HomeScreen() {
               >
                 <View style={styles.scoresContainer}>
                   <View style={styles.scoreItem}>
-                    <ScoreRing score={score.fitness_score} color={theme.colors.secondary} />
+                    <ScoreRing 
+                      score={score.fitness_score} 
+                      color={theme.colors.secondary} 
+                      size={isMobile ? 70 : 80}
+                      strokeWidth={isMobile ? 6 : 8}
+                    />
                     <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Fitness</Text>
                   </View>
                   <View style={styles.scoreItem}>
-                    <ScoreRing score={score.eco_score} color={theme.colors.success} />
+                    <ScoreRing 
+                      score={score.eco_score} 
+                      color={theme.colors.success} 
+                      size={isMobile ? 70 : 80}
+                      strokeWidth={isMobile ? 6 : 8}
+                    />
                     <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Eco Impact</Text>
                   </View>
                   <View style={styles.scoreItem}>
-                    <ScoreRing score={score.combined_score} color={theme.colors.accent} size={100} strokeWidth={10} />
+                    <ScoreRing 
+                      score={score.combined_score} 
+                      color={theme.colors.accent} 
+                      size={isMobile ? 80 : 100} 
+                      strokeWidth={isMobile ? 8 : 10} 
+                    />
                     <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Overall</Text>
                   </View>
                 </View>
@@ -563,6 +562,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 16,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   scoresCard: {
     borderRadius: 20,

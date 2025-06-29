@@ -34,28 +34,25 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   
   const cardSizes = {
     small: { 
-      padding: isMobile ? 12 : 16, 
-      iconSize: isMobile ? 16 : 20, 
-      titleSize: isMobile ? 12 : 14, 
-      valueSize: isMobile ? 16 : 20, 
-      minHeight: isMobile ? 100 : 120,
-      minWidth: isMobile ? 100 : 120,
+      padding: isMobile ? 16 : 20, 
+      iconSize: isMobile ? 18 : 20, 
+      titleSize: isMobile ? 11 : 14, 
+      valueSize: isMobile ? 18 : 20, 
+      minHeight: isMobile ? 110 : 120,
     },
     medium: { 
       padding: isMobile ? 16 : 20, 
       iconSize: isMobile ? 20 : 24, 
-      titleSize: isMobile ? 14 : 16, 
+      titleSize: isMobile ? 12 : 16, 
       valueSize: isMobile ? 20 : 24, 
       minHeight: isMobile ? 120 : 140,
-      minWidth: isMobile ? 140 : 160,
     },
     large: { 
       padding: isMobile ? 20 : 24, 
       iconSize: isMobile ? 24 : 28, 
-      titleSize: isMobile ? 16 : 18, 
+      titleSize: isMobile ? 14 : 18, 
       valueSize: isMobile ? 24 : 32, 
       minHeight: isMobile ? 140 : 160,
-      minWidth: isMobile ? 160 : 200,
     },
   };
   
@@ -69,9 +66,8 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           backgroundColor: theme.colors.card,
           borderColor: theme.colors.border,
           minHeight: currentSize.minHeight,
-          minWidth: currentSize.minWidth,
-          flex: isMobile ? 1 : undefined,
-          maxWidth: isMobile ? '48%' : undefined,
+          width: isMobile ? '48%' : undefined,
+          flex: isMobile ? 0 : 1,
         }
       ]}
       onPress={onPress}
@@ -110,7 +106,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           { 
             color: color,
             fontSize: currentSize.valueSize,
-            marginBottom: isMobile ? 4 : 8,
+            marginBottom: isMobile ? 6 : 8,
           }
         ]}>
           {value}
@@ -122,7 +118,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
             color: theme.colors.text,
             fontSize: currentSize.titleSize,
             marginBottom: 2,
-            lineHeight: currentSize.titleSize * 1.2,
+            lineHeight: currentSize.titleSize * 1.3,
           }
         ]}>
           {title}
@@ -167,25 +163,25 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
   
   const cardSizes = {
     small: { 
-      padding: isMobile ? 12 : 16, 
+      padding: isMobile ? 16 : 20, 
       iconSize: isMobile ? 20 : 24, 
       titleSize: isMobile ? 12 : 14, 
-      minHeight: isMobile ? 100 : 120,
-      minWidth: isMobile ? 140 : 160,
+      subtitleSize: isMobile ? 10 : 12,
+      minHeight: isMobile ? 120 : 140,
     },
     medium: { 
-      padding: isMobile ? 16 : 20, 
+      padding: isMobile ? 18 : 20, 
       iconSize: isMobile ? 24 : 28, 
-      titleSize: isMobile ? 14 : 16, 
-      minHeight: isMobile ? 120 : 140,
-      minWidth: isMobile ? 160 : 180,
+      titleSize: isMobile ? 13 : 16, 
+      subtitleSize: isMobile ? 11 : 14,
+      minHeight: isMobile ? 130 : 150,
     },
     large: { 
       padding: isMobile ? 20 : 24, 
       iconSize: isMobile ? 28 : 32, 
-      titleSize: isMobile ? 16 : 18, 
+      titleSize: isMobile ? 14 : 18, 
+      subtitleSize: isMobile ? 12 : 16,
       minHeight: isMobile ? 140 : 160,
-      minWidth: isMobile ? 180 : 200,
     },
   };
   
@@ -197,9 +193,8 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
         styles.quickActionCard,
         { 
           minHeight: currentSize.minHeight,
-          minWidth: currentSize.minWidth,
-          flex: isMobile ? 1 : undefined,
-          maxWidth: isMobile ? '48%' : undefined,
+          width: isMobile ? '48%' : undefined,
+          flex: isMobile ? 0 : 1,
         }
       ]}
       onPress={onPress}
@@ -213,9 +208,10 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
             styles.quickActionIcon, 
             { 
               backgroundColor: 'rgba(255,255,255,0.2)',
-              width: isMobile ? 40 : 56,
-              height: isMobile ? 40 : 56,
+              width: isMobile ? 44 : 56,
+              height: isMobile ? 44 : 56,
               borderRadius: isMobile ? 12 : 16,
+              marginBottom: isMobile ? 12 : 16,
             }
           ]}>
             <Icon size={currentSize.iconSize} color="#FFFFFF" />
@@ -225,7 +221,8 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
               styles.quickActionTitle,
               { 
                 fontSize: currentSize.titleSize,
-                lineHeight: currentSize.titleSize * 1.3,
+                lineHeight: currentSize.titleSize * 1.2,
+                marginBottom: isMobile ? 4 : 6,
               }
             ]}>
               {title}
@@ -233,8 +230,8 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
             <Text style={[
               styles.quickActionSubtitle,
               {
-                fontSize: isMobile ? 11 : 14,
-                lineHeight: isMobile ? 14 : 20,
+                fontSize: currentSize.subtitleSize,
+                lineHeight: currentSize.subtitleSize * 1.3,
               }
             ]}>
               {subtitle}
@@ -404,7 +401,6 @@ const styles = StyleSheet.create({
   },
   quickActionContent: {
     alignItems: 'center',
-    gap: 12,
   },
   quickActionIcon: {
     justifyContent: 'center',
@@ -416,7 +412,6 @@ const styles = StyleSheet.create({
   quickActionTitle: {
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 4,
     textAlign: 'center',
   },
   quickActionSubtitle: {
