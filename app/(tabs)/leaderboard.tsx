@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Trophy, Medal, Award, TrendingUp, RefreshCw, Crown, Star, Target, Zap, Flame, Sparkles, Shield, Users, Calendar, ChartBar as BarChart3, Swords, ArrowUp, ArrowDown, ChefHat, Utensils } from 'lucide-react-native';
+import { Trophy, Medal, Award, TrendingUp, RefreshCw, Crown, Star, Target, Zap, Sparkles, Users, Calendar, ChartBar as BarChart3, Swords, ArrowUp, ArrowDown } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -46,16 +46,12 @@ export default function LeaderboardScreen() {
   const [userRank, setUserRank] = useState<LeaderboardEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [battleAnimation] = useState(new Animated.Value(0));
-  const [progressAnimation] = useState(new Animated.Value(0));
-  const [sparkleAnimation] = useState(new Animated.Value(0));
-  const [bounceAnimation] = useState(new Animated.Value(0));
+  const [fadeAnimation] = useState(new Animated.Value(0));
 
   useEffect(() => {
     checkAuth();
   }, []);
 
-  // Auto-refresh when tab is focused
   useFocusEffect(
     React.useCallback(() => {
       if (currentUser) {
@@ -65,63 +61,14 @@ export default function LeaderboardScreen() {
   );
 
   useEffect(() => {
-    if (userRank && leaderboardData) {
-      // Start sparkle animation
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(sparkleAnimation, {
-            toValue: 1,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(sparkleAnimation, {
-            toValue: 0,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-
-      // Start bounce animation for top 3
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(bounceAnimation, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(bounceAnimation, {
-            toValue: 0,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-
-      // Start battle animation
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(battleAnimation, {
-            toValue: 1,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(battleAnimation, {
-            toValue: 0,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-
-      // Animate progress bars
-      Animated.timing(progressAnimation, {
+    if (leaderboardData) {
+      Animated.timing(fadeAnimation, {
         toValue: 1,
-        duration: 1500,
-        useNativeDriver: false,
+        duration: 800,
+        useNativeDriver: true,
       }).start();
     }
-  }, [userRank, leaderboardData]);
+  }, [leaderboardData]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -178,319 +125,37 @@ export default function LeaderboardScreen() {
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1:
-        return (
-          <Animated.View style={{
-            transform: [{
-              scale: bounceAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 1.2],
-              })
-            }]
-          }}>
-            <Crown size={36} color="#FFD700" />
-          </Animated.View>
-        );
+        return <Crown size={24} color="#FFD700" />;
       case 2:
-        return (
-          <Animated.View style={{
-            transform: [{
-              scale: bounceAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 1.1],
-              })
-            }]
-          }}>
-            <Medal size={34} color="#E5E7EB" />
-          </Animated.View>
-        );
+        return <Medal size={22} color="#C0C0C0" />;
       case 3:
-        return (
-          <Animated.View style={{
-            transform: [{
-              scale: bounceAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 1.05],
-              })
-            }]
-          }}>
-            <Award size={32} color="#D97706" />
-          </Animated.View>
-        );
+        return <Award size={20} color="#CD7F32" />;
       default:
         return (
-          <View style={[styles.rankNumberContainer, { 
-            backgroundColor: isDark ? '#4B5563' : '#E5E7EB',
-            borderColor: isDark ? '#6B7280' : '#9CA3AF'
-          }]}>
-            <Text style={[styles.rankNumber, { 
-              color: isDark ? '#FFFFFF' : '#111827',
-              fontWeight: '800'
-            }]}>{rank}</Text>
+          <View style={[styles.rankNumberContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            <Text style={[styles.rankNumber, { color: theme.colors.text }]}>{rank}</Text>
           </View>
         );
     }
   };
 
-  const getRankGradient = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return ['#FFD700', '#FF6B35', '#FF8E53'] as const; // Golden orange gradient
-      case 2:
-        return ['#E5E7EB', '#A78BFA', '#8B5CF6'] as const; // Silver purple gradient
-      case 3:
-        return ['#D97706', '#F59E0B', '#FCD34D'] as const; // Bronze yellow gradient
-      default:
-        return isDark ? ['#374151', '#4B5563'] as const : ['#F9FAFB', '#F3F4F6'] as const;
-    }
-  };
-
-  const getScoreColor = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return '#FF6B35';
-      case 2:
-        return '#8B5CF6';
-      case 3:
-        return '#F59E0B';
-      default:
-        return isDark ? '#F9FAFB' : '#111827';
-    }
-  };
-
-  const getNextTarget = () => {
-    if (!userRank || !leaderboardData) return null;
-    
-    const nextRankUser = leaderboardData.leaderboard.find(entry => entry.rank === userRank.rank - 1);
-    return nextRankUser;
-  };
-
-  const getPointsToNext = () => {
-    const nextTarget = getNextTarget();
-    if (!nextTarget || !userRank) return 0;
-    return nextTarget.avg_combined_score - userRank.avg_combined_score;
-  };
-
-  const getBattleOpponent = () => {
-    if (!userRank || !leaderboardData) return null;
-    
-    // Find someone close in ranking for battle visualization
-    const closeRanks = leaderboardData.leaderboard.filter(entry => 
-      Math.abs(entry.rank - userRank.rank) <= 2 && entry.user_id !== userRank.user_id
-    );
-    
-    return closeRanks[0] || null;
-  };
-
-  const CompetitionArena = () => {
-    const nextTarget = getNextTarget();
-    const pointsToNext = getPointsToNext();
-    const battleOpponent = getBattleOpponent();
-
-    if (!userRank) {
-      return (
-        <View style={styles.arenaContainer}>
-          <LinearGradient
-            colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
-            style={styles.noRankArena}
-          >
-            <Animated.View style={[
-              styles.arenaIcon,
-              {
-                transform: [{
-                  rotate: sparkleAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['0deg', '360deg'],
-                  })
-                }]
-              }
-            ]}>
-              <Trophy size={40} color="#FFFFFF" />
-            </Animated.View>
-            <View style={styles.arenaInfo}>
-              <Text style={styles.arenaTitle}>Join the Competition!</Text>
-              <Text style={styles.arenaSubtitle}>Start tracking to see your ranking</Text>
-            </View>
-          </LinearGradient>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.arenaContainer}>
-        {/* Battle Visualization */}
-        {battleOpponent && (
-          <LinearGradient
-            colors={[theme.colors.gradient.secondary[0], theme.colors.gradient.secondary[1]]}
-            style={styles.battleSection}
-          >
-            <View style={styles.battleHeader}>
-              <Text style={styles.battleTitle}>Competition Zone</Text>
-            </View>
-            <View style={styles.battleArena}>
-              {/* User Side */}
-              <View style={styles.battleUser}>
-                <Animated.View style={[
-                  styles.battleAvatar,
-                  {
-                    transform: [{
-                      scale: battleAnimation.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [1, 1.1],
-                      })
-                    }]
-                  }
-                ]}>
-                  <Text style={styles.battleUserInitial}>
-                    {userRank.name.charAt(0).toUpperCase()}
-                  </Text>
-                </Animated.View>
-                <Text style={styles.battleUserName}>You</Text>
-                <Text style={styles.battleUserScore}>{userRank.avg_combined_score}</Text>
-              </View>
-
-              {/* VS Indicator */}
-              <View style={styles.vsIndicator}>
-                <Animated.View style={[
-                  styles.vsIcon,
-                  {
-                    transform: [{
-                      rotate: battleAnimation.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ['0deg', '360deg'],
-                      })
-                    }]
-                  }
-                ]}>
-                  <Swords size={24} color="#FFFFFF" />
-                </Animated.View>
-                <Text style={styles.vsText}>VS</Text>
-              </View>
-
-              {/* Opponent Side */}
-              <View style={styles.battleUser}>
-                <Animated.View style={[
-                  styles.battleAvatar,
-                  styles.opponentAvatar,
-                  {
-                    transform: [{
-                      scale: battleAnimation.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [1, 1.05],
-                      })
-                    }]
-                  }
-                ]}>
-                  <Text style={styles.battleUserInitial}>
-                    {battleOpponent.name.charAt(0).toUpperCase()}
-                  </Text>
-                </Animated.View>
-                <Text style={styles.battleUserName}>{battleOpponent.name}</Text>
-                <Text style={styles.battleUserScore}>{battleOpponent.avg_combined_score}</Text>
-              </View>
-            </View>
-          </LinearGradient>
-        )}
-
-        {/* Next Target Section */}
-        {nextTarget && (
-          <LinearGradient
-            colors={[theme.colors.gradient.accent[0], theme.colors.gradient.accent[1]]}
-            style={styles.targetSection}
-          >
-            <View style={styles.targetHeader}>
-              <Target size={20} color="#FFFFFF" />
-              <Text style={styles.targetTitle}>Next Target</Text>
-            </View>
-            
-            <View style={styles.targetCard}>
-              <View style={styles.targetUser}>
-                <View style={styles.targetAvatar}>
-                  <Text style={styles.targetInitial}>
-                    {nextTarget.name.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-                <View style={styles.targetInfo}>
-                  <Text style={styles.targetName}>{nextTarget.name}</Text>
-                  <Text style={styles.targetRank}>Rank #{nextTarget.rank}</Text>
-                </View>
-              </View>
-              
-              <View style={styles.targetProgress}>
-                <View style={styles.progressHeader}>
-                  <Text style={styles.progressLabel}>Points needed</Text>
-                  <Text style={styles.progressValue}>+{pointsToNext}</Text>
-                </View>
-                
-                <View style={styles.progressBarContainer}>
-                  <Animated.View 
-                    style={[
-                      styles.progressBar,
-                      {
-                        width: progressAnimation.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['0%', `${Math.min((userRank.avg_combined_score / nextTarget.avg_combined_score) * 100, 95)}%`],
-                        })
-                      }
-                    ]}
-                  />
-                  <Animated.View style={[
-                    styles.progressSparkle,
-                    {
-                      opacity: sparkleAnimation,
-                      transform: [{
-                        translateX: sparkleAnimation.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0, 200],
-                        })
-                      }]
-                    }
-                  ]}>
-                    <Sparkles size={12} color="#FFD700" />
-                  </Animated.View>
-                </View>
-                
-                <View style={styles.progressStats}>
-                  <Text style={styles.progressStat}>You: {userRank.avg_combined_score}</Text>
-                  <Text style={styles.progressStat}>Target: {nextTarget.avg_combined_score}</Text>
-                </View>
-              </View>
-            </View>
-          </LinearGradient>
-        )}
-      </View>
-    );
-  };
-
   const LeaderboardItem = ({ entry, isCurrentUser = false }: { entry: LeaderboardEntry; isCurrentUser?: boolean }) => (
-    <View style={[
+    <Animated.View style={[
       styles.leaderboardItem,
       { 
         backgroundColor: theme.colors.card,
-        borderColor: theme.colors.border,
-        shadowColor: isDark ? '#000000' : '#000000',
+        borderColor: isCurrentUser ? theme.colors.primary : theme.colors.border,
+        opacity: fadeAnimation,
+        transform: [{
+          translateY: fadeAnimation.interpolate({
+            inputRange: [0, 1],
+            outputRange: [20, 0],
+          })
+        }]
       },
-      isCurrentUser && [styles.currentUserItem, { 
-        borderColor: theme.colors.success,
-        backgroundColor: isDark ? '#064E3B' : '#ECFDF5',
-        shadowColor: theme.colors.success
-      }],
-      entry.rank <= 3 && [styles.topThreeItem, { 
-        backgroundColor: isDark ? '#1E1B4B' : '#FEF3C7',
-        borderColor: theme.colors.border
-      }]
+      isCurrentUser && styles.currentUserItem,
     ]}>
-      <LinearGradient
-        colors={
-          isCurrentUser 
-            ? [theme.colors.success, '#059669', '#047857'] as const
-            : entry.rank <= 3 
-              ? getRankGradient(entry.rank)
-              : isDark 
-                ? ['#1F2937', '#374151'] as const
-                : ['#FFFFFF', '#F9FAFB'] as const
-        }
-        style={styles.leaderboardItemGradient}
-      >
+      <View style={styles.itemContent}>
         <View style={styles.rankContainer}>
           {getRankIcon(entry.rank)}
         </View>
@@ -499,73 +164,44 @@ export default function LeaderboardScreen() {
           <View style={styles.userNameContainer}>
             <Text style={[
               styles.userName, 
-              { 
-                color: entry.rank <= 3 || isCurrentUser
-                  ? '#FFFFFF'
-                  : isDark ? '#FFFFFF' : '#111827'
-              }, 
-              isCurrentUser && { fontWeight: '800' }
+              { color: theme.colors.text },
+              isCurrentUser && { fontWeight: '700' }
             ]}>
               {entry.name}
               {isCurrentUser && ' (You)'}
             </Text>
             {entry.rank <= 3 && (
-              <Animated.View style={[
-                styles.topBadge, 
-                { 
-                  backgroundColor: getScoreColor(entry.rank),
-                  transform: [{
-                    scale: sparkleAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1, 1.1],
-                    })
-                  }]
-                }
-              ]}>
+              <View style={[styles.topBadge, { backgroundColor: theme.colors.warning }]}>
                 <Text style={styles.topBadgeText}>TOP {entry.rank}</Text>
-              </Animated.View>
+              </View>
             )}
           </View>
-          <Text style={[styles.userStats, { 
-            color: entry.rank <= 3 || isCurrentUser
-              ? 'rgba(255,255,255,0.9)'
-              : isDark ? '#D1D5DB' : '#6B7280'
-          }]}>
+          <Text style={[styles.userStats, { color: theme.colors.textSecondary }]}>
             {entry.days_active} days active • Avg: {entry.avg_combined_score}
           </Text>
         </View>
         
         <View style={styles.scoreContainer}>
-          <Text style={[styles.combinedScore, { 
-            color: entry.rank <= 3 || isCurrentUser ? '#FFFFFF' : getScoreColor(entry.rank),
-            fontSize: entry.rank <= 3 ? 32 : 28,
-            fontWeight: '900'
-          }]}>
+          <Text style={[styles.combinedScore, { color: theme.colors.text }]}>
             {entry.avg_combined_score}
           </Text>
           <View style={styles.subScores}>
             <View style={styles.subScore}>
-              <View style={[styles.subScoreIcon, { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
-                <Zap size={12} color="#FFFFFF" />
-              </View>
-              <Text style={[styles.subScoreValue, { 
-                color: entry.rank <= 3 || isCurrentUser ? '#FFFFFF' : isDark ? '#E5E7EB' : '#374151',
-                fontWeight: '700'
-              }]}>{entry.avg_fitness_score}</Text>
+              <Zap size={12} color={theme.colors.secondary} />
+              <Text style={[styles.subScoreValue, { color: theme.colors.textSecondary }]}>
+                {entry.avg_fitness_score}
+              </Text>
             </View>
             <View style={styles.subScore}>
-              <View style={[styles.subScoreIcon, { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
-                <Star size={12} color="#FFFFFF" />
-              </View>
-              <Text style={[styles.subScoreValue, { 
-                color: entry.rank <= 3 || isCurrentUser ? '#FFFFFF' : isDark ? '#E5E7EB' : '#374151',
-                fontWeight: '700'
-              }]}>{entry.avg_eco_score}</Text>
+              <Star size={12} color={theme.colors.success} />
+              <Text style={[styles.subScoreValue, { color: theme.colors.textSecondary }]}>
+                {entry.avg_eco_score}
+              </Text>
             </View>
           </View>
         </View>
-      </LinearGradient>
-    </View>
+      </View>
+    </Animated.View>
   );
 
   if (isLoading) {
@@ -573,7 +209,7 @@ export default function LeaderboardScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
           <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
-            <Trophy size={48} color={theme.colors.warning} />
+            <Trophy size={48} color={theme.colors.primary} />
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading leaderboard...</Text>
           </View>
         </View>
@@ -590,32 +226,17 @@ export default function LeaderboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header with Competition Arena */}
-        <LinearGradient
-          colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
-          style={styles.header}
-        >
+        {/* Header */}
+        <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.headerLeft}>
-              <View style={styles.headerTitleContainer}>
-                <Animated.View style={{
-                  transform: [{
-                    rotate: sparkleAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0deg', '15deg'],
-                    })
-                  }]
-                }}>
-                  <Trophy size={36} color="#FFFFFF" />
-                </Animated.View>
-                <Text style={styles.headerTitle}>Leaderboard</Text>
-              </View>
-              <Text style={styles.headerSubtitle}>
+              <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Leaderboard</Text>
+              <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
                 {leaderboardData ? `${leaderboardData.period.days} days of competition` : 'See how you rank against others'}
               </Text>
             </View>
             <TouchableOpacity 
-              style={styles.refreshButton}
+              style={[styles.refreshButton, { backgroundColor: theme.colors.surface }]}
               onPress={onRefresh}
               disabled={refreshing}
             >
@@ -624,21 +245,46 @@ export default function LeaderboardScreen() {
                   rotate: refreshing ? '360deg' : '0deg'
                 }]
               }}>
-                <RefreshCw size={24} color="#FFFFFF" />
+                <RefreshCw size={20} color={theme.colors.textSecondary} />
               </Animated.View>
             </TouchableOpacity>
           </View>
-          
-          {/* Competition Arena Content */}
-          <CompetitionArena />
-        </LinearGradient>
+        </View>
 
-        {/* Top Performers */}
+        {/* User Position Card */}
+        {userRank && (
+          <View style={styles.section}>
+            <View style={[styles.userPositionCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <LinearGradient
+                colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
+                style={styles.userPositionGradient}
+              >
+                <View style={styles.userPositionContent}>
+                  <View style={styles.userPositionLeft}>
+                    <Text style={styles.userPositionTitle}>Your Position</Text>
+                    <Text style={styles.userPositionRank}>#{userRank.rank}</Text>
+                  </View>
+                  <View style={styles.userPositionRight}>
+                    <Text style={styles.userPositionScore}>{userRank.avg_combined_score}</Text>
+                    <Text style={styles.userPositionLabel}>Score</Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </View>
+          </View>
+        )}
+
+        {/* Leaderboard List */}
         {leaderboardData && leaderboardData.leaderboard.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Crown size={24} color="#FFD700" />
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Top Performers</Text>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Rankings</Text>
+              <View style={styles.periodBadge}>
+                <Calendar size={14} color={theme.colors.textSecondary} />
+                <Text style={[styles.periodText, { color: theme.colors.textSecondary }]}>
+                  {leaderboardData.period.days}d
+                </Text>
+              </View>
             </View>
             <View style={styles.leaderboardContainer}>
               {leaderboardData.leaderboard.map((entry) => (
@@ -652,82 +298,58 @@ export default function LeaderboardScreen() {
           </View>
         )}
 
-        {/* Achievement Tips */}
+        {/* Tips Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Target size={20} color="#8B5CF6" />
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Tips for Success</Text>
-          </View>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Tips</Text>
           <View style={styles.tipsContainer}>
-            <LinearGradient
-              colors={[theme.colors.gradient.success[0], theme.colors.gradient.success[1]]}
-              style={styles.tipCard}
-            >
-              <View style={styles.tipIcon}>
-                <TrendingUp size={24} color="#FFFFFF" />
+            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <View style={[styles.tipIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+                <TrendingUp size={20} color={theme.colors.success} />
               </View>
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Stay Consistent</Text>
-                <Text style={styles.tipText}>
+                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Stay Consistent</Text>
+                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
                   Log meals and workouts daily for better scores
                 </Text>
               </View>
-            </LinearGradient>
+            </View>
             
-            <LinearGradient
-              colors={[theme.colors.gradient.warning[0], theme.colors.gradient.warning[1]]}
-              style={styles.tipCard}
-            >
-              <View style={styles.tipIcon}>
-                <Trophy size={24} color="#FFFFFF" />
+            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <View style={[styles.tipIcon, { backgroundColor: `${theme.colors.warning}20` }]}>
+                <Target size={20} color={theme.colors.warning} />
               </View>
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Balance is Key</Text>
-                <Text style={styles.tipText}>
+                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Balance is Key</Text>
+                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
                   Mix fitness goals with eco-friendly choices
                 </Text>
               </View>
-            </LinearGradient>
+            </View>
             
-            <LinearGradient
-              colors={[theme.colors.gradient.accent[0], theme.colors.gradient.accent[1]]}
-              style={styles.tipCard}
-            >
-              <View style={styles.tipIcon}>
-                <Flame size={24} color="#FFFFFF" />
+            <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <View style={[styles.tipIcon, { backgroundColor: `${theme.colors.accent}20` }]}>
+                <Sparkles size={20} color={theme.colors.accent} />
               </View>
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>Quality Over Quantity</Text>
-                <Text style={styles.tipText}>
+                <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Quality Over Quantity</Text>
+                <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
                   Focus on sustainable habits for long-term success
                 </Text>
               </View>
-            </LinearGradient>
+            </View>
           </View>
         </View>
 
         {/* Empty State */}
         {(!leaderboardData || leaderboardData.leaderboard.length === 0) && (
           <View style={styles.emptyState}>
-            <LinearGradient
-              colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
-              style={styles.emptyCard}
-            >
-              <Animated.View style={{
-                transform: [{
-                  scale: bounceAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [1, 1.2],
-                  })
-                }]
-              }}>
-                <Trophy size={80} color="#FFFFFF" />
-              </Animated.View>
-              <Text style={styles.emptyTitle}>No Rankings Yet</Text>
-              <Text style={styles.emptySubtitle}>
+            <View style={[styles.emptyCard, { backgroundColor: theme.colors.card }]}>
+              <Trophy size={64} color={theme.colors.disabled} />
+              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Rankings Yet</Text>
+              <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
                 Start tracking your meals and workouts to join the competition!
               </Text>
-            </LinearGradient>
+            </View>
           </View>
         )}
 
@@ -762,333 +384,149 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontWeight: '500',
   },
+  scrollView: {
+    flex: 1,
+  },
   header: {
     paddingHorizontal: 24,
     paddingTop: 20,
-    paddingBottom: 32,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    paddingBottom: 24,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 24,
   },
   headerLeft: {
     flex: 1,
   },
-  headerTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#FFFFFF',
+    fontSize: 32,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   refreshButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
-  // Competition Arena Styles
-  arenaContainer: {
-    gap: 20,
-  },
-  noRankArena: {
-    borderRadius: 24,
-    padding: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  arenaIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  arenaInfo: {
-    flex: 1,
-  },
-  arenaTitle: {
-    fontSize: 20,
-    color: '#FFFFFF',
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  arenaSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
-  },
-  
-  // Battle Section
-  battleSection: {
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  battleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  battleTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  battleArena: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  battleUser: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  battleAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#10B981',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  opponentAvatar: {
-    backgroundColor: '#EF4444',
-  },
-  battleUserInitial: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-  battleUserName: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 4,
-    color: '#FFFFFF',
-  },
-  battleUserScore: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-  vsIndicator: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  vsIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  vsText: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-  
-  // Target Section
-  targetSection: {
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  targetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  targetTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    flex: 1,
-  },
-  targetCard: {
-    gap: 16,
-  },
-  targetUser: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  targetAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  targetInitial: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-  targetInfo: {
-    flex: 1,
-  },
-  targetName: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 2,
-    color: '#FFFFFF',
-  },
-  targetRank: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
-  },
-  targetProgress: {
-    gap: 12,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  progressLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
-  },
-  progressValue: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  progressBarContainer: {
-    height: 12,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 6,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 6,
-  },
-  progressSparkle: {
-    position: 'absolute',
-    top: -2,
-    left: 0,
-  },
-  progressStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  progressStat: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
-  },
-  
-  scrollView: {
-    flex: 1,
-  },
-  section: {
-    padding: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    flex: 1,
-  },
-  leaderboardContainer: {
-    gap: 16,
-  },
-  leaderboardItem: {
-    borderRadius: 24,
-    borderWidth: 2,
-    overflow: 'hidden',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  leaderboardItemGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-  },
-  currentUserItem: {
-    borderWidth: 3,
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-  },
-  topThreeItem: {
-    borderWidth: 2,
-    shadowOpacity: 0.25,
-  },
-  rankContainer: {
-    width: 64,
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  rankNumberContainer: {
     width: 44,
     height: 44,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  section: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  periodBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  periodText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  userPositionCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  userPositionGradient: {
+    padding: 20,
+  },
+  userPositionContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  userPositionLeft: {
+    flex: 1,
+  },
+  userPositionTitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  userPositionRank: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  userPositionRight: {
+    alignItems: 'flex-end',
+  },
+  userPositionScore: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  userPositionLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+  },
+  leaderboardContainer: {
+    gap: 12,
+  },
+  leaderboardItem: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  currentUserItem: {
     borderWidth: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+  },
+  itemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  rankContainer: {
+    width: 48,
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  rankNumberContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
   },
   rankNumber: {
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 14,
+    fontWeight: '700',
   },
   userInfo: {
     flex: 1,
@@ -1098,79 +536,62 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 6,
+    marginBottom: 4,
     flexWrap: 'wrap',
   },
   userName: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '600',
   },
   topBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   topBadgeText: {
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   userStats: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
   },
   scoreContainer: {
     alignItems: 'flex-end',
   },
   combinedScore: {
-    fontSize: 28,
-    fontWeight: '900',
-    marginBottom: 8,
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 4,
   },
   subScores: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   subScore: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  subScoreIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  subScoreValue: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  tipsContainer: {
-    gap: 16,
-  },
-  tipCard: {
-    borderRadius: 20,
-    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
+    gap: 2,
+  },
+  subScoreValue: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  tipsContainer: {
+    gap: 12,
+  },
+  tipCard: {
+    flexDirection: 'row',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
   },
   tipIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1178,46 +599,35 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tipTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 6,
-    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   tipText: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: 13,
+    lineHeight: 18,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 32,
+    padding: 48,
   },
   emptyCard: {
-    padding: 40,
-    borderRadius: 32,
+    padding: 32,
+    borderRadius: 20,
     alignItems: 'center',
-    maxWidth: 320,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    elevation: 16,
+    maxWidth: 280,
   },
   emptyTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    marginTop: 20,
-    marginBottom: 12,
-    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 16,
+    marginBottom: 8,
   },
   emptySubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 24,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.9)',
+    lineHeight: 20,
   },
   bottomSpacing: {
     height: 32,
