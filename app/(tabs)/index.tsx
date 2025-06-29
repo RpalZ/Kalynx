@@ -41,17 +41,6 @@ interface DailyScore {
   combined_score: number;
 }
 
-const CARD_SIZE_WEB = 220;
-const CARD_SIZE_MOBILE = Math.min(width * 0.44, 180);
-
-const GAP = 16;
-const CARDS_PER_ROW = 2;
-const MAX_CARD_SIZE = 162;
-const windowWidth = Dimensions.get('window').width;
-const gridPadding = 40; // section padding left+right
-const baseCardSize = (windowWidth - gridPadding - GAP * (CARDS_PER_ROW - 1)) / CARDS_PER_ROW;
-const cardSize = Math.min(baseCardSize * 0.9, MAX_CARD_SIZE);
-
 export default function HomeScreen() {
   const { theme, isDark } = useTheme();
   const [summary, setSummary] = useState<DailySummary | null>(null);
@@ -62,6 +51,7 @@ export default function HomeScreen() {
 
   const isDesktop = Platform.OS === 'web' && width >= 1024;
   const isTablet = Platform.OS === 'web' && width >= 768 && width < 1024;
+  const isMobile = width < 768;
 
   React.useLayoutEffect(() => {
     checkAuth();
@@ -266,7 +256,7 @@ export default function HomeScreen() {
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Actions</Text>
           <ResponsiveGrid
             columns={{ mobile: 2, tablet: 2, desktop: 4 }}
-            gap={16}
+            gap={isMobile ? 12 : 16}
           >
             <GridItem>
               <QuickActionCard
@@ -317,7 +307,7 @@ export default function HomeScreen() {
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Overview</Text>
             <ResponsiveGrid
               columns={{ mobile: 2, tablet: 3, desktop: 6 }}
-              gap={16}
+              gap={isMobile ? 12 : 16}
             >
               <GridItem>
                 <MetricCard
@@ -513,11 +503,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 32,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerContent: {
     flexDirection: 'row',
@@ -533,15 +523,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   userName: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#D1FAE5',
-    lineHeight: 22,
+    lineHeight: 20,
   },
   refreshButton: {
     padding: 12,
@@ -563,14 +553,14 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   section: {
-    padding: 20,
+    padding: 16,
   },
   desktopSection: {
     paddingHorizontal: 32,
     paddingVertical: 24,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     marginBottom: 16,
   },
