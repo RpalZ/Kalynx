@@ -1,18 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  TrendingUp, 
-  Flame, 
-  Leaf, 
-  Droplet, 
-  Target, 
-  Zap,
-  Calendar,
-  Award,
-  Users,
-  BarChart3
-} from 'lucide-react-native';
+import { TrendingUp, Flame, Leaf, Droplet, Target, Zap, Calendar, Award, Users, ChartBar as BarChart3 } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width: screenWidth } = Dimensions.get('window');
