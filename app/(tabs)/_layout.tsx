@@ -52,15 +52,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="camera"
-        options={{
-          title: 'Camera',
-          tabBarIcon: ({ size, color }) => (
-            <Camera size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="eco"
         options={{
           title: 'KaliAI',
@@ -75,6 +66,15 @@ export default function TabLayout() {
           title: 'Leaderboard',
           tabBarIcon: ({ size, color }) => (
             <Trophy size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="camera"
+        options={{
+          title: 'Camera',
+          tabBarIcon: ({ size, color }) => (
+            <Camera size={size} color={color} />
           ),
         }}
       />
