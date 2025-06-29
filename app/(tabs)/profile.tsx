@@ -10,6 +10,7 @@ import {
   Modal,
   Dimensions,
   Image,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +18,7 @@ import { User, Settings, LogOut, CreditCard as Edit, Save, X, Mail, Crown, Star,
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+import { LoadingScreen, useContentEntrance } from '@/components/LoadingScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -63,10 +65,17 @@ export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [units, setUnits] = useState('metric');
   const [language, setLanguage] = useState('en');
+  const { animateIn, animatedStyle } = useContentEntrance();
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (!isLoading && profile) {
+      animateIn();
+    }
+  }, [isLoading, profile]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -339,20 +348,17 @@ export default function ProfileScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
-            <User size={48} color={theme.colors.accent} />
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading profile...</Text>
-          </View>
-        </View>
-      </SafeAreaView>
+      <LoadingScreen
+        type="profile"
+        message="Loading profile..."
+        icon={<User size={48} color={theme.colors.accent} />}
+      />
     );
   }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <Animated.ScrollView style={[styles.scrollView, animatedStyle]} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <LinearGradient
           colors={[theme.colors.gradient.accent[0], theme.colors.gradient.accent[1]]}
@@ -536,7 +542,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.bottomSpacing} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Stats Modal */}
       <Modal
@@ -714,27 +720,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  loadingCard: {
-    padding: 32,
-    borderRadius: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  loadingText: {
-    fontSize: 16,
-    marginTop: 16,
-    fontWeight: '500',
   },
   scrollView: {
     flex: 1,

@@ -11,6 +11,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +21,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCustomAlert } from '@/components/CustomAlert';
 import { useToast } from '@/components/Toast';
+import { LoadingScreen, useContentEntrance } from '@/components/LoadingScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -55,6 +57,7 @@ export default function MealsScreen() {
   const [currentIngredient, setCurrentIngredient] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
   const [currentUnit, setCurrentUnit] = useState('g');
+  const { animateIn, animatedStyle } = useContentEntrance();
 
   useEffect(() => {
     checkAuth();
@@ -65,6 +68,12 @@ export default function MealsScreen() {
       fetchMeals();
     }, [])
   );
+
+  useEffect(() => {
+    if (!isLoading && meals) {
+      animateIn();
+    }
+  }, [isLoading, meals]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -391,14 +400,11 @@ export default function MealsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
-            <ChefHat size={48} color={theme.colors.success} />
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your meals...</Text>
-          </View>
-        </View>
-      </SafeAreaView>
+      <LoadingScreen
+        type="meals"
+        message="Loading your meals..."
+        icon={<ChefHat size={48} color={theme.colors.success} />}
+      />
     );
   }
 
@@ -409,8 +415,8 @@ export default function MealsScreen() {
       keyboardVerticalOffset={64}
     >
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background, flex: 1 }]}> 
-        <ScrollView
-          style={{ flex: 1 }}
+        <Animated.ScrollView
+          style={[{ flex: 1 }, animatedStyle]}
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
@@ -580,7 +586,7 @@ export default function MealsScreen() {
           {/* Global Alert and Toast Components */}
           {AlertComponent}
           {ToastComponent}
-        </ScrollView>
+        </Animated.ScrollView>
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -589,27 +595,6 @@ export default function MealsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  loadingCard: {
-    padding: 32,
-    borderRadius: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  loadingText: {
-    fontSize: 16,
-    marginTop: 16,
-    fontWeight: '500',
   },
   header: {
     paddingHorizontal: 24,

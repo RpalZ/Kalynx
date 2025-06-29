@@ -11,6 +11,7 @@ import {
   Dimensions,
   Image,
   Platform,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,6 +20,7 @@ import { router, Link, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/contexts/ThemeContext';
 import ChartWidget from '@/components/ChartWidget';
+import { LoadingScreen, useContentEntrance } from '@/components/LoadingScreen';
 
 const { width } = Dimensions.get('window');
 
@@ -58,6 +60,7 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const { animateIn, animatedStyle } = useContentEntrance();
 
   React.useLayoutEffect(() => {
     checkAuth();
@@ -68,6 +71,12 @@ export default function HomeScreen() {
       fetchDashboardData();
     }, [])
   );
+
+  useEffect(() => {
+    if (!isLoading && (summary || score)) {
+      animateIn();
+    }
+  }, [isLoading, summary, score]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -224,21 +233,18 @@ export default function HomeScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
-            <View style={[styles.loadingSpinner, { borderColor: theme.colors.border, borderTopColor: theme.colors.primary }]} />
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your dashboard...</Text>
-          </View>
-        </View>
-      </SafeAreaView>
+      <LoadingScreen
+        type="default"
+        message="Loading your dashboard..."
+        icon={<TrendingUp size={48} color={theme.colors.primary} />}
+      />
     );
   }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView
-        style={styles.scrollView}
+      <Animated.ScrollView
+        style={[styles.scrollView, animatedStyle]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -455,7 +461,7 @@ export default function HomeScreen() {
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
@@ -466,33 +472,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  loadingCard: {
-    padding: 32,
-    borderRadius: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  loadingSpinner: {
-    width: 40,
-    height: 40,
-    borderWidth: 4,
-    borderRadius: 20,
-    marginBottom: 16,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: '500',
   },
   header: {
     paddingHorizontal: 24,
