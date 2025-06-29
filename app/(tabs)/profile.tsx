@@ -501,26 +501,26 @@ export default function ProfileScreen() {
 
         {/* Menu Options */}
         <View style={[styles.section, styles.lastSection]}>
-          <View style={[styles.menuContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+          <View style={[styles.menuContainer, { backgroundColor: theme.colors.card }]}>
             <LinearGradient
               colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
               style={styles.menuGradient}
             >
-              <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.colors.border }]} onPress={() => setShowStatsModal(true)}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setShowStatsModal(true)}>
                 <View style={[styles.menuIcon, { backgroundColor: `${theme.colors.info}20` }]}>
                   <TrendingUp size={20} color={theme.colors.info} />
                 </View>
                 <Text style={[styles.menuText, { color: theme.colors.text }]}>Detailed Statistics</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.colors.border }]} onPress={() => setShowSettingsModal(true)}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setShowSettingsModal(true)}>
                 <View style={[styles.menuIcon, { backgroundColor: `${theme.colors.textSecondary}20` }]}>
                   <Settings size={20} color={theme.colors.textSecondary} />
                 </View>
                 <Text style={[styles.menuText, { color: theme.colors.text }]}>Settings</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
+              <TouchableOpacity style={[styles.menuItem, styles.lastMenuItem]} onPress={handleSignOut}>
                 <View style={[styles.menuIcon, { backgroundColor: `${theme.colors.error}20` }]}>
                   <LogOut size={20} color={theme.colors.error} />
                 </View>
@@ -708,6 +708,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -731,9 +734,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
   },
   header: {
     paddingHorizontal: 24,
@@ -940,7 +940,6 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     borderRadius: 16,
-    borderWidth: 1,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -955,8 +954,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderBottomWidth: 1,
     gap: 16,
+  },
+  lastMenuItem: {
+    borderBottomWidth: 0,
   },
   menuIcon: {
     width: 36,
