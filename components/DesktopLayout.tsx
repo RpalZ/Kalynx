@@ -59,13 +59,13 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   };
 
   const navigationItems = [
-    { id: 'index', label: 'Dashboard', icon: Home, color: theme.colors.primary, route: '/(tabs)/' },
-    { id: 'meals', label: 'Meals', icon: Utensils, color: theme.colors.success, route: '/(tabs)/meals' },
-    { id: 'workouts', label: 'Workouts', icon: Dumbbell, color: theme.colors.secondary, route: '/(tabs)/workouts' },
-    { id: 'camera', label: 'AI Scanner', icon: Camera, color: theme.colors.accent, route: '/(tabs)/camera' },
-    { id: 'eco', label: 'KaliAI', icon: Leaf, color: theme.colors.success, route: '/(tabs)/eco' },
-    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, color: theme.colors.warning, route: '/(tabs)/leaderboard' },
-    { id: 'profile', label: 'Profile', icon: User, color: theme.colors.info, route: '/(tabs)/profile' },
+    { id: 'index', label: 'Dashboard', icon: Home, color: theme.colors.primary },
+    { id: 'meals', label: 'Meals', icon: Utensils, color: theme.colors.success },
+    { id: 'workouts', label: 'Workouts', icon: Dumbbell, color: theme.colors.secondary },
+    { id: 'camera', label: 'AI Scanner', icon: Camera, color: theme.colors.accent },
+    { id: 'eco', label: 'KaliAI', icon: Leaf, color: theme.colors.success },
+    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, color: theme.colors.warning },
+    { id: 'profile', label: 'Profile', icon: User, color: theme.colors.info },
   ];
 
   const sidebarWidth = isDesktop ? 280 : isTablet ? 240 : 200;
@@ -73,20 +73,18 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   const contentPadding = isDesktop ? 32 : isTablet ? 24 : 16;
 
   const handleNavigation = (item: any) => {
-    console.log('Navigating to:', item.route, 'for tab:', item.id);
+    console.log('Navigating to tab:', item.id);
     onTabChange?.(item.id);
     
     try {
-      // Use router.push with the route string directly
-      router.push(item.route);
+      // Use simple route paths that match the file structure
+      if (item.id === 'index') {
+        router.push('/');
+      } else {
+        router.push(`/${item.id}`);
+      }
     } catch (error) {
       console.error('Navigation error:', error);
-      // Fallback navigation
-      if (item.id === 'index') {
-        router.push('/(tabs)/');
-      } else {
-        router.push(`/(tabs)/${item.id}`);
-      }
     }
   };
 
@@ -190,7 +188,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
         <View style={styles.sidebarBottom}>
           <TouchableOpacity 
             style={[styles.settingsButton, { backgroundColor: theme.colors.surface }]}
-            onPress={() => router.push('/(tabs)/profile')}
+            onPress={() => router.push('/profile')}
           >
             <Settings size={18} color={theme.colors.textSecondary} />
             <Text style={[styles.settingsText, { color: theme.colors.textSecondary }]}>
@@ -261,7 +259,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
                   style={styles.profileMenuItem}
                   onPress={() => {
                     setShowProfileMenu(false);
-                    router.push('/(tabs)/profile');
+                    router.push('/profile');
                   }}
                 >
                   <User size={16} color={theme.colors.textSecondary} />
@@ -272,7 +270,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
                   style={styles.profileMenuItem}
                   onPress={() => {
                     setShowProfileMenu(false);
-                    router.push('/(tabs)/profile');
+                    router.push('/profile');
                   }}
                 >
                   <Settings size={16} color={theme.colors.textSecondary} />
