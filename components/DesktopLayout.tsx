@@ -59,7 +59,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   };
 
   const navigationItems = [
-    { id: 'index', label: 'Dashboard', icon: Home, color: theme.colors.primary, route: '/(tabs)/' },
+    { id: 'index', label: 'Dashboard', icon: Home, color: theme.colors.primary, route: { pathname: '/(tabs)/', params: { screen: 'index' } } },
     { id: 'meals', label: 'Meals', icon: Utensils, color: theme.colors.success, route: '/(tabs)/meals' },
     { id: 'workouts', label: 'Workouts', icon: Dumbbell, color: theme.colors.secondary, route: '/(tabs)/workouts' },
     { id: 'camera', label: 'AI Scanner', icon: Camera, color: theme.colors.accent, route: '/(tabs)/camera' },
