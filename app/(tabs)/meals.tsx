@@ -8,7 +8,6 @@ import {
   TextInput,
   RefreshControl,
   Dimensions,
-  Image,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -431,13 +430,6 @@ export default function MealsScreen() {
                 <Plus size={24} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
-            {/* Hero Image */}
-            <View style={styles.heroImageContainer}>
-              <Image 
-                source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-                style={styles.heroImage}
-              />
-            </View>
           </LinearGradient>
           {/* Add Form */}
           {showAddForm && (
@@ -622,7 +614,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
   },
   headerLeft: {
     flex: 1,
@@ -644,16 +635,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  heroImageContainer: {
-    height: 100,
-    borderRadius: 16,
-    overflow: 'hidden',
-    opacity: 0.8,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
   },
   addForm: {
     borderBottomWidth: 1,

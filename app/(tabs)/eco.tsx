@@ -11,7 +11,6 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -474,14 +473,6 @@ export default function KaliAIScreen() {
             <Text style={styles.statusText}>Online</Text>
           </View>
         </View>
-        
-        {/* Hero Image */}
-        <View style={styles.heroImageContainer}>
-          <Image 
-            source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-            style={styles.heroImage}
-          />
-        </View>
       </LinearGradient>
 
       {/* Quick Actions */}
@@ -596,7 +587,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
   headerInfo: {
     flexDirection: 'row',
@@ -635,16 +625,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#D1FAE5',
     fontWeight: '500',
-  },
-  heroImageContainer: {
-    height: 80,
-    borderRadius: 12,
-    overflow: 'hidden',
-    opacity: 0.8,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
   },
   quickActions: {
     flexDirection: 'row',

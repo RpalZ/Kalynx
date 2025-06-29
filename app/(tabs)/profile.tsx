@@ -9,7 +9,6 @@ import {
   TextInput,
   Modal,
   Dimensions,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -431,14 +430,6 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
-          
-          {/* Hero Image */}
-          <View style={styles.heroImageContainer}>
-            <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-              style={styles.heroImage}
-            />
-          </View>
         </LinearGradient>
 
         {/* Quick Stats */}
@@ -837,16 +828,6 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 12,
-  },
-  heroImageContainer: {
-    height: 100,
-    borderRadius: 16,
-    overflow: 'hidden',
-    opacity: 0.8,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
   },
   section: {
     padding: 20,
