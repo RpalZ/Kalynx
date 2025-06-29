@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Trophy, Medal, Award, TrendingUp, RefreshCw, Crown, Star, Target, Zap, Flame, Sparkles, Shield } from 'lucide-react-native';
+import { Trophy, Medal, Award, TrendingUp, RefreshCw, Crown, Star, Target, Zap, Flame, Sparkles, Shield, Users, Calendar, BarChart3 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -50,6 +50,15 @@ export default function LeaderboardScreen() {
   useEffect(() => {
     checkAuth();
   }, []);
+
+  // Auto-refresh when tab is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      if (currentUser) {
+        fetchLeaderboard();
+      }
+    }, [currentUser])
+  );
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -106,19 +115,19 @@ export default function LeaderboardScreen() {
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1:
-        return <Crown size={28} color="#B8860B" />;
+        return <Crown size={32} color="#FFD700" />;
       case 2:
-        return <Medal size={28} color="#6B7280" />;
+        return <Medal size={32} color="#C0C0C0" />;
       case 3:
-        return <Award size={28} color="#8B5C2B" />;
+        return <Award size={32} color="#CD7F32" />;
       default:
         return (
           <View style={[styles.rankNumberContainer, { 
-            backgroundColor: isDark ? '#374151' : '#E5E7EB',
-            borderColor: isDark ? '#4B5563' : '#9CA3AF'
+            backgroundColor: isDark ? '#374151' : '#F3F4F6',
+            borderColor: isDark ? '#6B7280' : '#D1D5DB'
           }]}>
             <Text style={[styles.rankNumber, { 
-              color: isDark ? '#E5E7EB' : '#1F2937',
+              color: isDark ? '#F9FAFB' : '#111827',
               fontWeight: '800'
             }]}>{rank}</Text>
           </View>
@@ -129,13 +138,13 @@ export default function LeaderboardScreen() {
   const getRankGradient = (rank: number) => {
     switch (rank) {
       case 1:
-        return ['#FFD700', '#B8860B'] as const;
+        return ['#FFD700', '#FFA500'] as const;
       case 2:
-        return ['#9CA3AF', '#6B7280'] as const;
+        return ['#C0C0C0', '#A8A8A8'] as const;
       case 3:
-        return ['#8B5C2B', '#A0522D'] as const;
+        return ['#CD7F32', '#B8860B'] as const;
       default:
-        return isDark ? ['#374151', '#4B5563'] as const : ['#F3F4F6', '#E5E7EB'] as const;
+        return isDark ? ['#374151', '#4B5563'] as const : ['#F9FAFB', '#F3F4F6'] as const;
     }
   };
 
@@ -148,7 +157,7 @@ export default function LeaderboardScreen() {
       case 3:
         return '#8B5C2B';
       default:
-        return isDark ? '#E5E7EB' : '#1F2937';
+        return isDark ? '#F3F4F6' : '#111827';
     }
   };
 
@@ -193,7 +202,7 @@ export default function LeaderboardScreen() {
               { 
                 color: entry.rank <= 3 
                   ? isDark ? '#FFFFFF' : '#111827'
-                  : isDark ? '#F3F4F6' : '#111827'
+                  : isDark ? '#F9FAFB' : '#111827'
               }, 
               isCurrentUser && { fontWeight: '800', color: '#10B981' }
             ]}>
@@ -202,14 +211,19 @@ export default function LeaderboardScreen() {
             </Text>
             {entry.rank <= 3 && (
               <View style={[styles.topBadge, { backgroundColor: getScoreColor(entry.rank) }]}>
-                <Text style={[styles.topBadgeText, { color: '#fff', textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: {width: 0, height: 1}, textShadowRadius: 2 }]}>TOP {entry.rank}</Text>
+                <Text style={[styles.topBadgeText, { 
+                  color: '#FFFFFF', 
+                  textShadowColor: 'rgba(0,0,0,0.3)', 
+                  textShadowOffset: {width: 0, height: 1}, 
+                  textShadowRadius: 2 
+                }]}>TOP {entry.rank}</Text>
               </View>
             )}
           </View>
           <Text style={[styles.userStats, { 
             color: entry.rank <= 3 
               ? isDark ? '#E5E7EB' : '#374151'
-              : isDark ? '#9CA3AF' : '#374151'
+              : isDark ? '#9CA3AF' : '#6B7280'
           }]}>
             {entry.days_active} days active • Avg: {entry.avg_combined_score}
           </Text>
@@ -278,7 +292,7 @@ export default function LeaderboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
+        {/* Header with Functional Content */}
         <LinearGradient
           colors={['#F59E0B', '#D97706'] as const}
           style={styles.header}
@@ -302,13 +316,43 @@ export default function LeaderboardScreen() {
             </TouchableOpacity>
           </View>
           
-          {/* Hero Image - Updated to food theme */}
-          <View style={styles.heroImageContainer}>
-            <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-              style={styles.heroImage}
-            />
-            <View style={styles.heroOverlay} />
+          {/* Functional Header Content - User's Rank Badge + Quick Stats */}
+          <View style={styles.functionalHeader}>
+            {userRank ? (
+              <View style={styles.userRankCard}>
+                <View style={styles.userRankBadge}>
+                  {getRankIcon(userRank.rank)}
+                  <View style={styles.userRankInfo}>
+                    <Text style={styles.userRankTitle}>Your Rank</Text>
+                    <Text style={styles.userRankNumber}>#{userRank.rank}</Text>
+                  </View>
+                </View>
+                <View style={styles.quickStats}>
+                  <View style={styles.quickStat}>
+                    <Users size={16} color="#FFFFFF" />
+                    <Text style={styles.quickStatText}>{leaderboardData?.leaderboard.length || 0} users</Text>
+                  </View>
+                  <View style={styles.quickStat}>
+                    <Calendar size={16} color="#FFFFFF" />
+                    <Text style={styles.quickStatText}>{userRank.days_active} days active</Text>
+                  </View>
+                  <View style={styles.quickStat}>
+                    <BarChart3 size={16} color="#FFFFFF" />
+                    <Text style={styles.quickStatText}>{userRank.avg_combined_score} avg score</Text>
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.noRankCard}>
+                <View style={styles.noRankIcon}>
+                  <Target size={32} color="#FFFFFF" />
+                </View>
+                <View style={styles.noRankInfo}>
+                  <Text style={styles.noRankTitle}>Start Your Journey</Text>
+                  <Text style={styles.noRankSubtitle}>Log meals and workouts to join the leaderboard</Text>
+                </View>
+              </View>
+            )}
           </View>
         </LinearGradient>
 
@@ -317,7 +361,7 @@ export default function LeaderboardScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Sparkles size={20} color="#F59E0B" />
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Your Ranking</Text>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Your Performance</Text>
             </View>
             <LeaderboardItem entry={userRank} isCurrentUser={true} />
           </View>
@@ -485,7 +529,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   headerLeft: {
     flex: 1,
@@ -514,23 +558,81 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  heroImageContainer: {
-    height: 120,
+  functionalHeader: {
+    marginTop: 8,
+  },
+  userRankCard: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 20,
-    overflow: 'hidden',
-    position: 'relative',
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  heroImage: {
-    width: '100%',
-    height: '100%',
+  userRankBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 16,
   },
-  heroOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+  userRankInfo: {
+    flex: 1,
+  },
+  userRankTitle: {
+    fontSize: 14,
+    color: '#FEF3C7',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  userRankNumber: {
+    fontSize: 24,
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  quickStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  quickStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  quickStatText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  noRankCard: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  noRankIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noRankInfo: {
+    flex: 1,
+  },
+  noRankTitle: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  noRankSubtitle: {
+    fontSize: 14,
+    color: '#FEF3C7',
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
