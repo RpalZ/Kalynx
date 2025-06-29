@@ -6,19 +6,19 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   RefreshControl,
   Dimensions,
-  Image,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, Search, Dumbbell, Clock, Flame, Timer, Zap, Target, TrendingUp } from 'lucide-react-native';
+import { Plus, Search, Dumbbell, Clock, Flame, Timer, Zap, Target, TrendingUp, Trash2, MoveVertical as MoreVertical } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useCustomAlert } from '@/components/CustomAlert';
+import { useToast } from '@/components/Toast';
 
 const { width } = Dimensions.get('window');
 
@@ -45,6 +45,8 @@ const WORKOUT_TYPES = [
 
 export default function WorkoutsScreen() {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
+  const { showToast, ToastComponent } = useToast();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -92,13 +94,21 @@ export default function WorkoutsScreen() {
 
       if (error) {
         console.error('Error fetching workouts:', error);
-        Alert.alert('Error', 'Failed to load workouts');
+        showAlert({
+          type: 'error',
+          title: 'Loading Error',
+          message: 'Failed to load workouts. Please try again.',
+        });
       } else {
         setWorkouts(workoutsData || []);
       }
     } catch (error) {
       console.error('Error:', error);
-      Alert.alert('Error', 'Failed to load workouts');
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to load workouts. Please check your connection.',
+      });
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -110,9 +120,83 @@ export default function WorkoutsScreen() {
     fetchWorkouts();
   };
 
+  const handleDeleteWorkout = async (workoutId: string, workoutType: string) => {
+    showAlert({
+      type: 'warning',
+      title: 'Delete Workout',
+      message: `Are you sure you want to delete "${workoutType}"?`,
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { data: session } = await supabase.auth.getSession();
+              
+              if (!session.session) {
+                router.replace('/auth');
+                return;
+              }
+
+              console.log('🗑️ Deleting workout with ID:', workoutId);
+
+              const token = session.session.access_token;
+              const requestBody = { workoutId: workoutId };
+              
+              const response = await fetch(
+                `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-workout`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(requestBody),
+                }
+              );
+
+              console.log('📡 Delete response status:', response.status);
+
+              if (response.ok) {
+                const result = await response.json();
+                console.log('✅ Workout deleted successfully:', result);
+                
+                setWorkouts(prevWorkouts => prevWorkouts.filter(workout => workout.id !== workoutId));
+                showToast({
+                  type: 'success',
+                  message: 'Workout deleted successfully!',
+                });
+              } else {
+                const errorText = await response.text();
+                console.error('❌ Error deleting workout:', response.status, errorText);
+                showAlert({
+                  type: 'error',
+                  title: 'Delete Failed',
+                  message: errorText || 'Failed to delete workout',
+                });
+              }
+            } catch (error) {
+              console.error('💥 Error deleting workout:', error);
+              showAlert({
+                type: 'error',
+                title: 'Network Error',
+                message: 'Failed to delete workout. Please check your connection and try again.',
+              });
+            }
+          }
+        }
+      ]
+    });
+  };
+
   const handleAddWorkout = async () => {
     if (!selectedWorkoutType || !duration || isNaN(Number(duration)) || Number(duration) <= 0) {
-      Alert.alert('Error', 'Please select a workout type and enter a valid duration');
+      showAlert({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please select a workout type and enter a valid duration',
+      });
       return;
     }
 
@@ -146,14 +230,25 @@ export default function WorkoutsScreen() {
         setDuration('');
         setShowAddForm(false);
         fetchWorkouts();
-        Alert.alert('Success', 'Workout logged successfully!');
+        showToast({
+          type: 'success',
+          message: 'Workout logged successfully!',
+        });
       } else {
         const errorData = await response.text();
-        Alert.alert('Error', errorData || 'Failed to log workout');
+        showAlert({
+          type: 'error',
+          title: 'Failed to Log Workout',
+          message: errorData || 'Failed to log workout',
+        });
       }
     } catch (error) {
       console.error('Error adding workout:', error);
-      Alert.alert('Error', 'Failed to log workout');
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to log workout. Please check your connection.',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -170,6 +265,7 @@ export default function WorkoutsScreen() {
 
   const WorkoutCard = ({ workout }: { workout: Workout }) => {
     const workoutInfo = getWorkoutTypeInfo(workout.type);
+    const [showActions, setShowActions] = useState(false);
     
     return (
       <View style={[styles.workoutCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
@@ -193,7 +289,30 @@ export default function WorkoutsScreen() {
                 </Text>
               </View>
             </View>
+            <View style={styles.workoutActions}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: `${theme.colors.textSecondary}10` }]}
+                onPress={() => setShowActions(!showActions)}
+              >
+                <MoreVertical size={16} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
           </View>
+          
+          {showActions && (
+            <View style={[styles.actionsMenu, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+              <TouchableOpacity
+                style={styles.actionMenuItem}
+                onPress={() => {
+                  setShowActions(false);
+                  handleDeleteWorkout(workout.id, workout.type);
+                }}
+              >
+                <Trash2 size={16} color={theme.colors.error} />
+                <Text style={[styles.actionMenuText, { color: theme.colors.error }]}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           
           <View style={styles.workoutStats}>
             <View style={styles.statItem}>
@@ -280,13 +399,6 @@ export default function WorkoutsScreen() {
               >
                 <Plus size={24} color="#FFFFFF" />
               </TouchableOpacity>
-            </View>
-            {/* Hero Image */}
-            <View style={styles.heroImageContainer}>
-              <Image 
-                source={{ uri: 'https://images.pexels.com/photos/416778/pexels-photo-416778.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-                style={styles.heroImage}
-              />
             </View>
           </LinearGradient>
           {/* Add Form */}
@@ -385,6 +497,9 @@ export default function WorkoutsScreen() {
             )}
             <View style={styles.bottomSpacing} />
           </ScrollView>
+          {/* Global Alert and Toast Components */}
+          {AlertComponent}
+          {ToastComponent}
         </ScrollView>
       </SafeAreaView>
     </KeyboardAvoidingView>
@@ -427,7 +542,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
   },
   headerLeft: {
     flex: 1,
@@ -449,16 +563,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  heroImageContainer: {
-    height: 100,
-    borderRadius: 16,
-    overflow: 'hidden',
-    opacity: 0.8,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
   },
   addForm: {
     borderBottomWidth: 1,
@@ -612,6 +716,33 @@ const styles = StyleSheet.create({
   workoutTimeText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  workoutActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionsMenu: {
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  actionMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 12,
+  },
+  actionMenuText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   workoutStats: {
     flexDirection: 'row',

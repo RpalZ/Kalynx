@@ -585,13 +585,6 @@ export default function CameraScreen() {
               <Sparkles size={24} color="#FFFFFF" />
             </View>
           </View>
-          {/* Hero Image */}
-          <View style={styles.heroImageContainer}>
-            <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-              style={styles.heroImage}
-            />
-          </View>
         </LinearGradient>
         {/* Camera/Upload Section */}
         <View style={styles.section}>
@@ -869,7 +862,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
   },
   headerLeft: {
     flex: 1,
@@ -890,16 +882,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  heroImageContainer: {
-    height: 100,
-    borderRadius: 16,
-    overflow: 'hidden',
-    opacity: 0.8,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
   },
   scrollView: {
     flex: 1,

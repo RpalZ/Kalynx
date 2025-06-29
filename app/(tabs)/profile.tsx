@@ -9,7 +9,6 @@ import {
   TextInput,
   Modal,
   Dimensions,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -35,7 +34,7 @@ interface UserStats {
   currentStreak: number;
   totalCO2Saved: number;
   totalWaterSaved: number;
-  rank: number;
+  rank: number | null;
 }
 
 interface Achievement {
@@ -121,8 +120,66 @@ export default function ProfileScreen() {
     }
   };
 
+  const calculateCurrentStreak = async (userId: string): Promise<number> => {
+    try {
+      // Get the last 30 days of meals to calculate streak
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const { data: meals, error } = await supabase
+        .from('meals')
+        .select('created_at')
+        .eq('user_id', userId)
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error || !meals) {
+        console.error('Error fetching meals for streak:', error);
+        return 0;
+      }
+
+      // Group meals by date
+      const mealsByDate = new Map<string, number>();
+      meals.forEach(meal => {
+        const date = new Date(meal.created_at).toISOString().split('T')[0];
+        mealsByDate.set(date, (mealsByDate.get(date) || 0) + 1);
+      });
+
+      // Calculate current streak starting from today
+      let streak = 0;
+      const today = new Date();
+      
+      for (let i = 0; i < 30; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(today.getDate() - i);
+        const dateStr = checkDate.toISOString().split('T')[0];
+        
+        if (mealsByDate.has(dateStr) && mealsByDate.get(dateStr)! > 0) {
+          streak++;
+        } else {
+          // If we haven't logged anything today, check if we're still early in the day
+          if (i === 0) {
+            const now = new Date();
+            const hour = now.getHours();
+            // If it's before 6 PM, don't break the streak yet
+            if (hour < 18) {
+              continue;
+            }
+          }
+          break;
+        }
+      }
+
+      return streak;
+    } catch (error) {
+      console.error('Error calculating streak:', error);
+      return 0;
+    }
+  };
+
   const fetchUserStats = async (userId: string) => {
     try {
+      // Fetch basic data
       const { data: meals } = await supabase
         .from('meals')
         .select('*')
@@ -138,12 +195,14 @@ export default function ProfileScreen() {
         .select('*')
         .eq('user_id', userId);
 
+      // Fetch daily summary for environmental data
       const today = new Date().toISOString().split('T')[0];
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
         console.error('No session found for fetching daily summary');
         return;
       }
+      
       const summaryResponse = await fetch(
         `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-daily-summary?date=${today}`,
         {
@@ -152,11 +211,34 @@ export default function ProfileScreen() {
           },
         }
       );
+      
       let summaryData = { totalCarbonSaved: 0, totalWaterSaved: 0 };
       if (summaryResponse.ok) {
         summaryData = await summaryResponse.json();
       } else {
         console.error('Failed to fetch daily summary for profile stats:', await summaryResponse.text());
+      }
+
+      // Fetch user's rank from leaderboard
+      let userRank = null;
+      try {
+        const leaderboardResponse = await fetch(
+          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-leaderboard`,
+          {
+            headers: {
+              'Authorization': `Bearer ${session.session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (leaderboardResponse.ok) {
+          const leaderboardData = await leaderboardResponse.json();
+          const currentUserEntry = leaderboardData.leaderboard.find((entry: any) => entry.user_id === userId);
+          userRank = currentUserEntry?.rank || null;
+        }
+      } catch (error) {
+        console.error('Error fetching leaderboard for rank:', error);
       }
 
       const totalMeals = meals?.length || 0;
@@ -166,8 +248,8 @@ export default function ProfileScreen() {
       const avgEcoScore = scores?.length ? 
         scores.reduce((sum, score) => sum + (score.eco_score || 0), 0) / scores.length : 0;
       
-      const currentStreak = 7;
-      const rank = 42;
+      // Calculate actual current streak
+      const currentStreak = await calculateCurrentStreak(userId);
 
       setUserStats({
         totalMeals,
@@ -177,7 +259,7 @@ export default function ProfileScreen() {
         currentStreak,
         totalCO2Saved: summaryData.totalCarbonSaved,
         totalWaterSaved: summaryData.totalWaterSaved,
-        rank,
+        rank: userRank,
       });
     } catch (error) {
       console.error('Error fetching user stats:', error);
@@ -351,8 +433,12 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Header */}
         <LinearGradient
           colors={[theme.colors.gradient.accent[0], theme.colors.gradient.accent[1]]}
@@ -402,7 +488,9 @@ export default function ProfileScreen() {
                   <Text style={styles.profileName}>{profile?.name || 'User'}</Text>
                   <Text style={styles.profileEmail}>{profile?.email}</Text>
                   {userStats && (
-                    <Text style={styles.profileRank}>Rank #{userStats.rank} • {userStats.currentStreak} day streak</Text>
+                    <Text style={styles.profileRank}>
+                      {userStats.rank ? `Rank #${userStats.rank}` : 'Unranked'} • {userStats.currentStreak} day streak
+                    </Text>
                   )}
                 </View>
               )}
@@ -430,14 +518,6 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
-          
-          {/* Hero Image */}
-          <View style={styles.heroImageContainer}>
-            <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-              style={styles.heroImage}
-            />
           </View>
         </LinearGradient>
 
@@ -505,27 +585,27 @@ export default function ProfileScreen() {
         )}
 
         {/* Menu Options */}
-        <View style={styles.section}>
-          <View style={[styles.menuContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View style={[styles.section, styles.lastSection]}>
+          <View style={styles.menuContainer}>
             <LinearGradient
               colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
               style={styles.menuGradient}
             >
-              <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.colors.border }]} onPress={() => setShowStatsModal(true)}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setShowStatsModal(true)}>
                 <View style={[styles.menuIcon, { backgroundColor: `${theme.colors.info}20` }]}>
                   <TrendingUp size={20} color={theme.colors.info} />
                 </View>
                 <Text style={[styles.menuText, { color: theme.colors.text }]}>Detailed Statistics</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.colors.border }]} onPress={() => setShowSettingsModal(true)}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setShowSettingsModal(true)}>
                 <View style={[styles.menuIcon, { backgroundColor: `${theme.colors.textSecondary}20` }]}>
                   <Settings size={20} color={theme.colors.textSecondary} />
                 </View>
                 <Text style={[styles.menuText, { color: theme.colors.text }]}>Settings</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
+              <TouchableOpacity style={[styles.menuItem, styles.lastMenuItem]} onPress={handleSignOut}>
                 <View style={[styles.menuIcon, { backgroundColor: `${theme.colors.error}20` }]}>
                   <LogOut size={20} color={theme.colors.error} />
                 </View>
@@ -534,8 +614,6 @@ export default function ProfileScreen() {
             </LinearGradient>
           </View>
         </View>
-
-        <View style={styles.bottomSpacing} />
       </ScrollView>
 
       {/* Stats Modal */}
@@ -590,6 +668,18 @@ export default function ProfileScreen() {
                   value={`${userStats.totalWaterSaved.toFixed(0)}L`}
                   icon={Star}
                   color={theme.colors.info}
+                />
+                <StatCard
+                  title="Current Rank"
+                  value={userStats.rank ? `#${userStats.rank}` : 'Unranked'}
+                  icon={Trophy}
+                  color={theme.colors.warning}
+                />
+                <StatCard
+                  title="Current Streak"
+                  value={`${userStats.currentStreak} days`}
+                  icon={Calendar}
+                  color={theme.colors.accent}
                 />
               </View>
             </ScrollView>
@@ -715,6 +805,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -747,7 +840,6 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 32,
   },
   headerContent: {
-    marginBottom: 20,
   },
   profileSection: {
     alignItems: 'center',
@@ -838,18 +930,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 12,
   },
-  heroImageContainer: {
-    height: 100,
-    borderRadius: 16,
-    overflow: 'hidden',
-    opacity: 0.8,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
   section: {
     padding: 20,
+  },
+  lastSection: {
+    paddingBottom: 40,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -952,7 +1037,6 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     borderRadius: 16,
-    borderWidth: 1,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -967,8 +1051,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderBottomWidth: 1,
     gap: 16,
+  },
+  lastMenuItem: {
+    borderBottomWidth: 0,
   },
   menuIcon: {
     width: 36,
@@ -1093,8 +1179,5 @@ const styles = StyleSheet.create({
   },
   toggleKnobActive: {
     transform: [{ translateX: 22 }],
-  },
-  bottomSpacing: {
-    height: 32,
   },
 });

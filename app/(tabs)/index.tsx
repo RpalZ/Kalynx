@@ -9,7 +9,6 @@ import {
   RefreshControl,
   Alert,
   Dimensions,
-  Image,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -263,14 +262,6 @@ export default function HomeScreen() {
               <RefreshCw size={24} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
-          
-          {/* Hero Image */}
-          <View style={styles.heroImageContainer}>
-            <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-              style={styles.heroImage}
-            />
-          </View>
         </LinearGradient>
 
         {/* Quick Actions */}
@@ -505,7 +496,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
   },
   headerLeft: {
     flex: 1,
@@ -530,17 +520,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  heroImageContainer: {
-    height: 120,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginTop: 8,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.8,
   },
   section: {
     padding: 20,
