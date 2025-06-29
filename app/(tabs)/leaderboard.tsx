@@ -606,25 +606,10 @@ export default function LeaderboardScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <LinearGradient
-            colors={['#FF6B35', '#F7931E', '#FFD23F']}
-            style={styles.loadingCard}
-          >
-            <Animated.View style={{
-              transform: [{
-                rotate: sparkleAnimation.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0deg', '360deg'],
-                })
-              }]
-            }}>
-              <ChefHat size={64} color="#FFFFFF" />
-            </Animated.View>
-            <Text style={styles.loadingText}>🍳 Cooking up the leaderboard...</Text>
-            <Text style={styles.loadingSubtext}>
-              Mixing ingredients and calculating delicious scores! 🔥
-            </Text>
-          </LinearGradient>
+          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
+            <Trophy size={48} color={theme.colors.warning} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading leaderboard...</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -803,29 +788,19 @@ const styles = StyleSheet.create({
     padding: 32,
   },
   loadingCard: {
-    padding: 40,
-    borderRadius: 32,
+    padding: 32,
+    borderRadius: 20,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    elevation: 16,
-    maxWidth: 320,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
   loadingText: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginTop: 20,
-    marginBottom: 8,
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-  loadingSubtext: {
     fontSize: 16,
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
+    marginTop: 16,
+    fontWeight: '500',
   },
   header: {
     paddingHorizontal: 24,
