@@ -59,7 +59,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   };
 
   const navigationItems = [
-    { id: 'index', label: 'Dashboard', icon: Home, color: theme.colors.primary, route: { pathname: '/(tabs)/', params: { screen: 'index' } } },
+    { id: 'index', label: 'Dashboard', icon: Home, color: theme.colors.primary, route: '/(tabs)/' },
     { id: 'meals', label: 'Meals', icon: Utensils, color: theme.colors.success, route: '/(tabs)/meals' },
     { id: 'workouts', label: 'Workouts', icon: Dumbbell, color: theme.colors.secondary, route: '/(tabs)/workouts' },
     { id: 'camera', label: 'AI Scanner', icon: Camera, color: theme.colors.accent, route: '/(tabs)/camera' },
@@ -73,8 +73,21 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   const contentPadding = isDesktop ? 32 : isTablet ? 24 : 16;
 
   const handleNavigation = (item: any) => {
+    console.log('Navigating to:', item.route, 'for tab:', item.id);
     onTabChange?.(item.id);
-    router.push(item.route);
+    
+    try {
+      // Use router.push with the route string directly
+      router.push(item.route);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // Fallback navigation
+      if (item.id === 'index') {
+        router.push('/(tabs)/');
+      } else {
+        router.push(`/(tabs)/${item.id}`);
+      }
+    }
   };
 
   const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => (
