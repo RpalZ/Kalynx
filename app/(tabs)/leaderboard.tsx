@@ -498,24 +498,24 @@ export default function LeaderboardScreen() {
     <View style={[
       styles.leaderboardItem,
       { 
-        backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-        borderColor: theme.colors.border, // Use theme border color instead of rank-specific colors
+        backgroundColor: theme.colors.card,
+        borderColor: theme.colors.border,
         shadowColor: isDark ? '#000000' : '#000000',
       },
       isCurrentUser && [styles.currentUserItem, { 
-        borderColor: '#10B981',
+        borderColor: theme.colors.success,
         backgroundColor: isDark ? '#064E3B' : '#ECFDF5',
-        shadowColor: '#10B981'
+        shadowColor: theme.colors.success
       }],
       entry.rank <= 3 && [styles.topThreeItem, { 
         backgroundColor: isDark ? '#1E1B4B' : '#FEF3C7',
-        borderColor: theme.colors.border // Use theme border instead of rank-specific colors
+        borderColor: theme.colors.border
       }]
     ]}>
       <LinearGradient
         colors={
           isCurrentUser 
-            ? ['#10B981', '#059669', '#047857'] as const
+            ? [theme.colors.success, '#059669', '#047857'] as const
             : entry.rank <= 3 
               ? getRankGradient(entry.rank)
               : isDark 
@@ -663,6 +663,14 @@ export default function LeaderboardScreen() {
             </TouchableOpacity>
           </View>
           
+          {/* Hero Image */}
+          <View style={styles.heroImageContainer}>
+            <Image 
+              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
+              style={styles.heroImage}
+            />
+          </View>
+          
           {/* Competition Arena Content */}
           <CompetitionArena />
         </LinearGradient>
@@ -672,7 +680,7 @@ export default function LeaderboardScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Crown size={24} color="#FFD700" />
-              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>🍕 Master Chefs Leaderboard</Text>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>🍕 Master Chefs Leaderboard</Text>
               <Text style={styles.foodEmoji}>🏆</Text>
             </View>
             <View style={styles.leaderboardContainer}>
@@ -691,12 +699,12 @@ export default function LeaderboardScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Target size={20} color="#8B5CF6" />
-            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>🚀 Recipe for Success</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>🚀 Recipe for Success</Text>
             <Text style={styles.foodEmoji}>📈</Text>
           </View>
           <View style={styles.tipsContainer}>
             <LinearGradient
-              colors={['#10B981', '#059669', '#047857']}
+              colors={[theme.colors.gradient.success[0], theme.colors.gradient.success[1]]}
               style={styles.tipCard}
             >
               <View style={styles.tipIcon}>
@@ -712,7 +720,7 @@ export default function LeaderboardScreen() {
             </LinearGradient>
             
             <LinearGradient
-              colors={['#F59E0B', '#D97706', '#B45309']}
+              colors={[theme.colors.gradient.warning[0], theme.colors.gradient.warning[1]]}
               style={styles.tipCard}
             >
               <View style={styles.tipIcon}>
@@ -728,7 +736,7 @@ export default function LeaderboardScreen() {
             </LinearGradient>
             
             <LinearGradient
-              colors={['#8B5CF6', '#7C3AED', '#6D28D9']}
+              colors={[theme.colors.gradient.accent[0], theme.colors.gradient.accent[1]]}
               style={styles.tipCard}
             >
               <View style={styles.tipIcon}>
@@ -841,6 +849,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  heroImageContainer: {
+    height: 100,
+    borderRadius: 16,
+    overflow: 'hidden',
+    opacity: 0.8,
+    marginBottom: 20,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
   },
   
   // Competition Arena Styles
@@ -1094,7 +1113,7 @@ const styles = StyleSheet.create({
   },
   leaderboardItem: {
     borderRadius: 24,
-    borderWidth: 2, // Reduced from 3 to 2 for subtler borders
+    borderWidth: 2,
     overflow: 'hidden',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
@@ -1107,12 +1126,12 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   currentUserItem: {
-    borderWidth: 3, // Keep thicker border for current user
+    borderWidth: 3,
     shadowOpacity: 0.3,
     shadowRadius: 20,
   },
   topThreeItem: {
-    borderWidth: 2, // Reduced from 4 to 2 for subtler borders
+    borderWidth: 2,
     shadowOpacity: 0.25,
   },
   rankContainer: {
@@ -1126,7 +1145,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2, // Reduced from 3 to 2
+    borderWidth: 2,
   },
   rankNumber: {
     fontSize: 20,
