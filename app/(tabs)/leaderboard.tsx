@@ -9,10 +9,11 @@ import {
   RefreshControl,
   Dimensions,
   Image,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Trophy, Medal, Award, TrendingUp, RefreshCw, Crown, Star, Target, Zap, Flame, Sparkles, Shield, Users, Calendar, ChartBar as BarChart3 } from 'lucide-react-native';
+import { Trophy, Medal, Award, TrendingUp, RefreshCw, Crown, Star, Target, Zap, Flame, Sparkles, Shield, Users, Calendar, ChartBar as BarChart3, Swords, ArrowUp, ArrowDown } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -46,6 +47,8 @@ export default function LeaderboardScreen() {
   const [userRank, setUserRank] = useState<LeaderboardEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [battleAnimation] = useState(new Animated.Value(0));
+  const [progressAnimation] = useState(new Animated.Value(0));
 
   useEffect(() => {
     checkAuth();
@@ -59,6 +62,33 @@ export default function LeaderboardScreen() {
       }
     }, [currentUser])
   );
+
+  useEffect(() => {
+    if (userRank && leaderboardData) {
+      // Start battle animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(battleAnimation, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(battleAnimation, {
+            toValue: 0,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // Animate progress bars
+      Animated.timing(progressAnimation, {
+        toValue: 1,
+        duration: 1500,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [userRank, leaderboardData]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -159,6 +189,209 @@ export default function LeaderboardScreen() {
       default:
         return isDark ? '#F3F4F6' : '#111827';
     }
+  };
+
+  const getNextTarget = () => {
+    if (!userRank || !leaderboardData) return null;
+    
+    const nextRankUser = leaderboardData.leaderboard.find(entry => entry.rank === userRank.rank - 1);
+    return nextRankUser;
+  };
+
+  const getPointsToNext = () => {
+    const nextTarget = getNextTarget();
+    if (!nextTarget || !userRank) return 0;
+    return nextTarget.avg_combined_score - userRank.avg_combined_score;
+  };
+
+  const getBattleOpponent = () => {
+    if (!userRank || !leaderboardData) return null;
+    
+    // Find someone close in ranking for battle visualization
+    const closeRanks = leaderboardData.leaderboard.filter(entry => 
+      Math.abs(entry.rank - userRank.rank) <= 2 && entry.user_id !== userRank.user_id
+    );
+    
+    return closeRanks[0] || null;
+  };
+
+  const CompetitionArena = () => {
+    const nextTarget = getNextTarget();
+    const pointsToNext = getPointsToNext();
+    const battleOpponent = getBattleOpponent();
+
+    if (!userRank) {
+      return (
+        <View style={styles.arenaContainer}>
+          <View style={styles.noRankArena}>
+            <View style={styles.arenaIcon}>
+              <Swords size={40} color="#FFFFFF" />
+            </View>
+            <View style={styles.arenaInfo}>
+              <Text style={styles.arenaTitle}>Enter the Arena</Text>
+              <Text style={styles.arenaSubtitle}>Log meals and workouts to start competing</Text>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.arenaContainer}>
+        {/* Battle Visualization */}
+        {battleOpponent && (
+          <View style={styles.battleSection}>
+            <Text style={styles.battleTitle}>Live Battle</Text>
+            <View style={styles.battleArena}>
+              {/* User Side */}
+              <View style={styles.battleUser}>
+                <Animated.View style={[
+                  styles.battleAvatar,
+                  {
+                    transform: [{
+                      scale: battleAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1.1],
+                      })
+                    }]
+                  }
+                ]}>
+                  <Text style={styles.battleUserInitial}>
+                    {userRank.name.charAt(0).toUpperCase()}
+                  </Text>
+                </Animated.View>
+                <Text style={styles.battleUserName}>You</Text>
+                <Text style={styles.battleUserScore}>{userRank.avg_combined_score}</Text>
+              </View>
+
+              {/* VS Indicator */}
+              <View style={styles.vsIndicator}>
+                <Animated.View style={[
+                  styles.vsIcon,
+                  {
+                    transform: [{
+                      rotate: battleAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '360deg'],
+                      })
+                    }]
+                  }
+                ]}>
+                  <Swords size={24} color="#FFD700" />
+                </Animated.View>
+                <Text style={styles.vsText}>VS</Text>
+              </View>
+
+              {/* Opponent Side */}
+              <View style={styles.battleUser}>
+                <Animated.View style={[
+                  styles.battleAvatar,
+                  styles.opponentAvatar,
+                  {
+                    transform: [{
+                      scale: battleAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1.05],
+                      })
+                    }]
+                  }
+                ]}>
+                  <Text style={styles.battleUserInitial}>
+                    {battleOpponent.name.charAt(0).toUpperCase()}
+                  </Text>
+                </Animated.View>
+                <Text style={styles.battleUserName}>{battleOpponent.name}</Text>
+                <Text style={styles.battleUserScore}>{battleOpponent.avg_combined_score}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Next Target Section */}
+        {nextTarget && (
+          <View style={styles.targetSection}>
+            <View style={styles.targetHeader}>
+              <Target size={20} color="#FFD700" />
+              <Text style={styles.targetTitle}>Next Target</Text>
+            </View>
+            
+            <View style={styles.targetCard}>
+              <View style={styles.targetUser}>
+                <View style={styles.targetAvatar}>
+                  <Text style={styles.targetInitial}>
+                    {nextTarget.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.targetInfo}>
+                  <Text style={styles.targetName}>{nextTarget.name}</Text>
+                  <Text style={styles.targetRank}>Rank #{nextTarget.rank}</Text>
+                </View>
+              </View>
+              
+              <View style={styles.targetProgress}>
+                <View style={styles.progressHeader}>
+                  <Text style={styles.progressLabel}>Points needed</Text>
+                  <Text style={styles.progressValue}>+{pointsToNext}</Text>
+                </View>
+                
+                <View style={styles.progressBarContainer}>
+                  <Animated.View 
+                    style={[
+                      styles.progressBar,
+                      {
+                        width: progressAnimation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0%', `${Math.min((userRank.avg_combined_score / nextTarget.avg_combined_score) * 100, 95)}%`],
+                        })
+                      }
+                    ]}
+                  />
+                </View>
+                
+                <View style={styles.progressStats}>
+                  <Text style={styles.progressStat}>You: {userRank.avg_combined_score}</Text>
+                  <Text style={styles.progressStat}>Target: {nextTarget.avg_combined_score}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Rank Progression */}
+        <View style={styles.progressionSection}>
+          <Text style={styles.progressionTitle}>Rank Progression</Text>
+          <View style={styles.progressionTrack}>
+            {[userRank.rank + 1, userRank.rank, userRank.rank - 1].filter(rank => rank > 0).map((rank, index) => {
+              const isCurrentRank = rank === userRank.rank;
+              const user = leaderboardData?.leaderboard.find(entry => entry.rank === rank);
+              
+              return (
+                <View key={rank} style={styles.progressionNode}>
+                  <View style={[
+                    styles.progressionRank,
+                    isCurrentRank && styles.currentProgressionRank
+                  ]}>
+                    {isCurrentRank ? (
+                      <Crown size={16} color="#FFD700" />
+                    ) : (
+                      <Text style={styles.progressionRankText}>#{rank}</Text>
+                    )}
+                  </View>
+                  {user && (
+                    <Text style={styles.progressionUserName}>
+                      {user.user_id === userRank.user_id ? 'You' : user.name}
+                    </Text>
+                  )}
+                  {index < 2 && rank > 1 && (
+                    <ArrowUp size={12} color="#10B981" style={styles.progressionArrow} />
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+    );
   };
 
   const LeaderboardItem = ({ entry, isCurrentUser = false }: { entry: LeaderboardEntry; isCurrentUser?: boolean }) => (
@@ -292,7 +525,7 @@ export default function LeaderboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header with Functional Content */}
+        {/* Header with Competition Arena */}
         <LinearGradient
           colors={['#F59E0B', '#D97706'] as const}
           style={styles.header}
@@ -301,10 +534,10 @@ export default function LeaderboardScreen() {
             <View style={styles.headerLeft}>
               <View style={styles.headerTitleContainer}>
                 <Trophy size={32} color="#FFFFFF" />
-                <Text style={styles.headerTitle}>Leaderboard</Text>
+                <Text style={styles.headerTitle}>Competition Arena</Text>
               </View>
               <Text style={styles.headerSubtitle}>
-                {leaderboardData ? `Past ${leaderboardData.period.days} days` : 'Community rankings'}
+                {leaderboardData ? `Battle for the top • ${leaderboardData.period.days} days` : 'Community rankings'}
               </Text>
             </View>
             <TouchableOpacity 
@@ -316,56 +549,9 @@ export default function LeaderboardScreen() {
             </TouchableOpacity>
           </View>
           
-          {/* Functional Header Content - User's Rank Badge + Quick Stats */}
-          <View style={styles.functionalHeader}>
-            {userRank ? (
-              <View style={styles.userRankCard}>
-                <View style={styles.userRankBadge}>
-                  {getRankIcon(userRank.rank)}
-                  <View style={styles.userRankInfo}>
-                    <Text style={styles.userRankTitle}>Your Rank</Text>
-                    <Text style={styles.userRankNumber}>#{userRank.rank}</Text>
-                  </View>
-                </View>
-                <View style={styles.quickStats}>
-                  <View style={styles.quickStat}>
-                    <Users size={16} color="#FFFFFF" />
-                    <Text style={styles.quickStatText}>{leaderboardData?.leaderboard.length || 0} users</Text>
-                  </View>
-                  <View style={styles.quickStat}>
-                    <Calendar size={16} color="#FFFFFF" />
-                    <Text style={styles.quickStatText}>{userRank.days_active} days active</Text>
-                  </View>
-                  <View style={styles.quickStat}>
-                    <BarChart3 size={16} color="#FFFFFF" />
-                    <Text style={styles.quickStatText}>{userRank.avg_combined_score} avg score</Text>
-                  </View>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.noRankCard}>
-                <View style={styles.noRankIcon}>
-                  <Target size={32} color="#FFFFFF" />
-                </View>
-                <View style={styles.noRankInfo}>
-                  <Text style={styles.noRankTitle}>Start Your Journey</Text>
-                  <Text style={styles.noRankSubtitle}>Log meals and workouts to join the leaderboard</Text>
-                </View>
-              </View>
-            )}
-          </View>
+          {/* Competition Arena Content */}
+          <CompetitionArena />
         </LinearGradient>
-
-        {/* Current User's Rank */}
-        {userRank && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Sparkles size={20} color="#F59E0B" />
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Your Performance</Text>
-            </View>
-            <LeaderboardItem entry={userRank} isCurrentUser={true} />
-          </View>
-        )}
 
         {/* Top Performers */}
         {leaderboardData && leaderboardData.leaderboard.length > 0 && (
@@ -558,51 +744,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  functionalHeader: {
-    marginTop: 8,
+  
+  // Competition Arena Styles
+  arenaContainer: {
+    gap: 20,
   },
-  userRankCard: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  userRankBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 16,
-  },
-  userRankInfo: {
-    flex: 1,
-  },
-  userRankTitle: {
-    fontSize: 14,
-    color: '#FEF3C7',
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  userRankNumber: {
-    fontSize: 24,
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  quickStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  quickStat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  quickStatText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  noRankCard: {
+  noRankArena: {
     backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 20,
     padding: 20,
@@ -612,7 +759,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
-  noRankIcon: {
+  arenaIcon: {
     width: 56,
     height: 56,
     borderRadius: 16,
@@ -620,20 +767,239 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  noRankInfo: {
+  arenaInfo: {
     flex: 1,
   },
-  noRankTitle: {
+  arenaTitle: {
     fontSize: 18,
     color: '#FFFFFF',
     fontWeight: '700',
     marginBottom: 4,
   },
-  noRankSubtitle: {
+  arenaSubtitle: {
     fontSize: 14,
     color: '#FEF3C7',
     fontWeight: '500',
   },
+  
+  // Battle Section
+  battleSection: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  battleTitle: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  battleArena: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  battleUser: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  battleAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#10B981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  opponentAvatar: {
+    backgroundColor: '#EF4444',
+  },
+  battleUserInitial: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  battleUserName: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  battleUserScore: {
+    fontSize: 16,
+    color: '#FFD700',
+    fontWeight: '800',
+  },
+  vsIndicator: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  vsIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,215,0,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  vsText: {
+    fontSize: 12,
+    color: '#FFD700',
+    fontWeight: '800',
+  },
+  
+  // Target Section
+  targetSection: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  targetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  targetTitle: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  targetCard: {
+    gap: 16,
+  },
+  targetUser: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  targetAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#8B5CF6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  targetInitial: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  targetInfo: {
+    flex: 1,
+  },
+  targetName: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  targetRank: {
+    fontSize: 12,
+    color: '#FEF3C7',
+    fontWeight: '500',
+  },
+  targetProgress: {
+    gap: 8,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  progressLabel: {
+    fontSize: 12,
+    color: '#FEF3C7',
+    fontWeight: '500',
+  },
+  progressValue: {
+    fontSize: 14,
+    color: '#FFD700',
+    fontWeight: '700',
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#10B981',
+    borderRadius: 4,
+  },
+  progressStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  progressStat: {
+    fontSize: 11,
+    color: '#FEF3C7',
+    fontWeight: '500',
+  },
+  
+  // Progression Section
+  progressionSection: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  progressionTitle: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  progressionTrack: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  progressionNode: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  progressionRank: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  currentProgressionRank: {
+    backgroundColor: '#FFD700',
+  },
+  progressionRankText: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  progressionUserName: {
+    fontSize: 10,
+    color: '#FEF3C7',
+    fontWeight: '500',
+    textAlign: 'center',
+    maxWidth: 60,
+  },
+  progressionArrow: {
+    marginTop: 4,
+  },
+  
   scrollView: {
     flex: 1,
   },
