@@ -30,6 +30,23 @@ export const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
 
   const currentColumns = getColumns();
   const isWeb = Platform.OS === 'web';
+  const isMobile = screenWidth < 768;
+
+  // For mobile, use flexbox with proper wrapping
+  if (isMobile) {
+    return (
+      <View style={[
+        styles.mobileGrid,
+        {
+          gap: gap,
+          maxWidth: maxWidth,
+          width: '100%',
+        }
+      ]}>
+        {children}
+      </View>
+    );
+  }
 
   const gridStyles = isWeb ? {
     display: 'grid',
@@ -75,6 +92,16 @@ export const GridItem: React.FC<GridItemProps> = ({
 
   const currentSpan = getSpan();
   const isWeb = Platform.OS === 'web';
+  const isMobile = screenWidth < 768;
+
+  // For mobile, don't use grid item styles
+  if (isMobile) {
+    return (
+      <View style={styles.mobileGridItem}>
+        {children}
+      </View>
+    );
+  }
 
   const itemStyles = isWeb ? {
     gridColumn: `span ${currentSpan}`,
@@ -97,5 +124,16 @@ const styles = StyleSheet.create({
   },
   gridItem: {
     minWidth: 0, // Prevents grid items from overflowing
+  },
+  mobileGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignSelf: 'center',
+  },
+  mobileGridItem: {
+    flex: 1,
+    minWidth: '48%', // Ensures 2 columns on mobile with gap
+    maxWidth: '48%',
   },
 });

@@ -29,11 +29,34 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 }) => {
   const { theme, isDark } = useTheme();
   const isDesktop = Platform.OS === 'web' && screenWidth >= 1024;
+  const isTablet = Platform.OS === 'web' && screenWidth >= 768 && screenWidth < 1024;
+  const isMobile = screenWidth < 768;
   
   const cardSizes = {
-    small: { padding: 16, iconSize: 20, titleSize: 14, valueSize: 20, minHeight: 120 },
-    medium: { padding: 20, iconSize: 24, titleSize: 16, valueSize: 24, minHeight: 140 },
-    large: { padding: 24, iconSize: 28, titleSize: 18, valueSize: 32, minHeight: 160 },
+    small: { 
+      padding: isMobile ? 12 : 16, 
+      iconSize: isMobile ? 16 : 20, 
+      titleSize: isMobile ? 12 : 14, 
+      valueSize: isMobile ? 16 : 20, 
+      minHeight: isMobile ? 100 : 120,
+      minWidth: isMobile ? 100 : 120,
+    },
+    medium: { 
+      padding: isMobile ? 16 : 20, 
+      iconSize: isMobile ? 20 : 24, 
+      titleSize: isMobile ? 14 : 16, 
+      valueSize: isMobile ? 20 : 24, 
+      minHeight: isMobile ? 120 : 140,
+      minWidth: isMobile ? 140 : 160,
+    },
+    large: { 
+      padding: isMobile ? 20 : 24, 
+      iconSize: isMobile ? 24 : 28, 
+      titleSize: isMobile ? 16 : 18, 
+      valueSize: isMobile ? 24 : 32, 
+      minHeight: isMobile ? 140 : 160,
+      minWidth: isMobile ? 160 : 200,
+    },
   };
   
   const currentSize = cardSizes[size];
@@ -46,8 +69,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           backgroundColor: theme.colors.card,
           borderColor: theme.colors.border,
           minHeight: currentSize.minHeight,
-          flex: 1,
-          minWidth: isDesktop ? 200 : 150,
+          minWidth: currentSize.minWidth,
+          flex: isMobile ? 1 : undefined,
+          maxWidth: isMobile ? '48%' : undefined,
         }
       ]}
       onPress={onPress}
@@ -61,13 +85,13 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           <View style={[styles.metricIconContainer, { backgroundColor: `${color}20` }]}>
             <Icon size={currentSize.iconSize} color={color} />
           </View>
-          {trend !== undefined && (
+          {trend !== undefined && !isMobile && (
             <View style={[
               styles.trendContainer,
               { backgroundColor: trend > 0 ? '#10B98120' : '#EF444420' }
             ]}>
               <TrendingUp 
-                size={12} 
+                size={10} 
                 color={trend > 0 ? '#10B981' : '#EF4444'} 
                 style={{ transform: [{ rotate: trend > 0 ? '0deg' : '180deg' }] }}
               />
@@ -86,7 +110,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           { 
             color: color,
             fontSize: currentSize.valueSize,
-            marginBottom: 8,
+            marginBottom: isMobile ? 4 : 8,
           }
         ]}>
           {value}
@@ -97,14 +121,21 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           { 
             color: theme.colors.text,
             fontSize: currentSize.titleSize,
-            marginBottom: 4,
+            marginBottom: 2,
+            lineHeight: currentSize.titleSize * 1.2,
           }
         ]}>
           {title}
         </Text>
         
         {subtitle && (
-          <Text style={[styles.metricSubtitle, { color: theme.colors.textSecondary }]}>
+          <Text style={[
+            styles.metricSubtitle, 
+            { 
+              color: theme.colors.textSecondary,
+              fontSize: isMobile ? 10 : 12,
+            }
+          ]}>
             {subtitle}
           </Text>
         )}
@@ -131,11 +162,31 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
   size = 'medium',
 }) => {
   const isDesktop = Platform.OS === 'web' && screenWidth >= 1024;
+  const isTablet = Platform.OS === 'web' && screenWidth >= 768 && screenWidth < 1024;
+  const isMobile = screenWidth < 768;
   
   const cardSizes = {
-    small: { padding: 16, iconSize: 20, titleSize: 14, minHeight: 120 },
-    medium: { padding: 20, iconSize: 24, titleSize: 16, minHeight: 140 },
-    large: { padding: 24, iconSize: 28, titleSize: 18, minHeight: 160 },
+    small: { 
+      padding: isMobile ? 12 : 16, 
+      iconSize: isMobile ? 20 : 24, 
+      titleSize: isMobile ? 12 : 14, 
+      minHeight: isMobile ? 100 : 120,
+      minWidth: isMobile ? 140 : 160,
+    },
+    medium: { 
+      padding: isMobile ? 16 : 20, 
+      iconSize: isMobile ? 24 : 28, 
+      titleSize: isMobile ? 14 : 16, 
+      minHeight: isMobile ? 120 : 140,
+      minWidth: isMobile ? 160 : 180,
+    },
+    large: { 
+      padding: isMobile ? 20 : 24, 
+      iconSize: isMobile ? 28 : 32, 
+      titleSize: isMobile ? 16 : 18, 
+      minHeight: isMobile ? 140 : 160,
+      minWidth: isMobile ? 180 : 200,
+    },
   };
   
   const currentSize = cardSizes[size];
@@ -146,8 +197,9 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
         styles.quickActionCard,
         { 
           minHeight: currentSize.minHeight,
-          flex: 1,
-          minWidth: isDesktop ? 200 : 150,
+          minWidth: currentSize.minWidth,
+          flex: isMobile ? 1 : undefined,
+          maxWidth: isMobile ? '48%' : undefined,
         }
       ]}
       onPress={onPress}
@@ -157,17 +209,36 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
         style={[styles.quickActionGradient, { padding: currentSize.padding }]}
       >
         <View style={styles.quickActionContent}>
-          <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+          <View style={[
+            styles.quickActionIcon, 
+            { 
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              width: isMobile ? 40 : 56,
+              height: isMobile ? 40 : 56,
+              borderRadius: isMobile ? 12 : 16,
+            }
+          ]}>
             <Icon size={currentSize.iconSize} color="#FFFFFF" />
           </View>
           <View style={styles.quickActionText}>
             <Text style={[
               styles.quickActionTitle,
-              { fontSize: currentSize.titleSize }
+              { 
+                fontSize: currentSize.titleSize,
+                lineHeight: currentSize.titleSize * 1.3,
+              }
             ]}>
               {title}
             </Text>
-            <Text style={styles.quickActionSubtitle}>{subtitle}</Text>
+            <Text style={[
+              styles.quickActionSubtitle,
+              {
+                fontSize: isMobile ? 11 : 14,
+                lineHeight: isMobile ? 14 : 20,
+              }
+            ]}>
+              {subtitle}
+            </Text>
           </View>
         </View>
       </LinearGradient>
@@ -264,8 +335,9 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 12,
     marginBottom: 24,
+    justifyContent: 'space-between',
   },
   metricCard: {
     borderRadius: 16,
@@ -284,26 +356,26 @@ const styles = StyleSheet.create({
   metricHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   metricIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   trendContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 2,
   },
   trendText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
   },
   metricValue: {
@@ -315,7 +387,6 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   metricSubtitle: {
-    fontSize: 12,
     fontWeight: '500',
   },
   quickActionCard: {
@@ -333,12 +404,9 @@ const styles = StyleSheet.create({
   },
   quickActionContent: {
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
   },
   quickActionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -352,9 +420,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   quickActionSubtitle: {
-    fontSize: 14,
     color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
-    lineHeight: 20,
   },
 });
