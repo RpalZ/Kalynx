@@ -29,8 +29,6 @@ const TABLET_BREAKPOINT = 768;
 
 export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   children,
-  activeTab = 'index',
-  onTabChange,
   showSidebar = true,
   onToggleSidebar,
 }) => {
@@ -75,7 +73,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
 
   // Get current active tab from pathname
   const getCurrentActiveTab = () => {
-    if (pathname === '/(tabs)' || pathname === '/(tabs)/') return 'index';
+    if (pathname === '/(tabs)' || pathname === '/(tabs)/' || pathname === '/') return 'index';
     const pathParts = pathname.split('/');
     const lastPart = pathParts[pathParts.length - 1];
     return lastPart || 'index';
@@ -87,16 +85,8 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
     console.log('🚀 Desktop navigation clicked:', item.label, 'Route:', item.route);
     
     try {
-      // Update active tab for visual feedback
-      onTabChange?.(item.id);
-      
-      // Navigate using router.push
-      if (item.id === 'index') {
-        router.push('/(tabs)/');
-      } else {
-        router.push(item.route);
-      }
-      
+      // Navigate directly without any state management
+      router.push(item.route);
       console.log('✅ Navigation completed for:', item.label);
     } catch (error) {
       console.error('❌ Navigation error:', error);
