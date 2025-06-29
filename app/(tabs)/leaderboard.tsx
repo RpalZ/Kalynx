@@ -458,7 +458,7 @@ export default function LeaderboardScreen() {
         )}
 
         {/* Tips Section */}
-        <View style={styles.section}>
+        <View style={styles.tipsSection}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Tips</Text>
           <View style={styles.tipsContainer}>
             <View style={[styles.tipCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
@@ -812,8 +812,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  // Fixed Tips Section with proper margin
+  tipsSection: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
   tipsContainer: {
     gap: 12,
+    marginTop: 16,
   },
   tipCard: {
     flexDirection: 'row',
