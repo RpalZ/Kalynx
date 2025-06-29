@@ -499,7 +499,7 @@ export default function LeaderboardScreen() {
       styles.leaderboardItem,
       { 
         backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-        borderColor: isDark ? '#4B5563' : '#D1D5DB',
+        borderColor: theme.colors.border, // Use theme border color instead of rank-specific colors
         shadowColor: isDark ? '#000000' : '#000000',
       },
       isCurrentUser && [styles.currentUserItem, { 
@@ -509,7 +509,7 @@ export default function LeaderboardScreen() {
       }],
       entry.rank <= 3 && [styles.topThreeItem, { 
         backgroundColor: isDark ? '#1E1B4B' : '#FEF3C7',
-        borderColor: entry.rank === 1 ? '#FF6B35' : entry.rank === 2 ? '#8B5CF6' : '#F59E0B'
+        borderColor: theme.colors.border // Use theme border instead of rank-specific colors
       }]
     ]}>
       <LinearGradient
@@ -1119,7 +1119,7 @@ const styles = StyleSheet.create({
   },
   leaderboardItem: {
     borderRadius: 24,
-    borderWidth: 3,
+    borderWidth: 2, // Reduced from 3 to 2 for subtler borders
     overflow: 'hidden',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
@@ -1132,12 +1132,12 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   currentUserItem: {
-    borderWidth: 4,
+    borderWidth: 3, // Keep thicker border for current user
     shadowOpacity: 0.3,
     shadowRadius: 20,
   },
   topThreeItem: {
-    borderWidth: 4,
+    borderWidth: 2, // Reduced from 4 to 2 for subtler borders
     shadowOpacity: 0.25,
   },
   rankContainer: {
@@ -1151,7 +1151,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
+    borderWidth: 2, // Reduced from 3 to 2
   },
   rankNumber: {
     fontSize: 20,
