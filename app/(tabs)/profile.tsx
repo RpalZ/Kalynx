@@ -350,8 +350,12 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Header */}
         <LinearGradient
           colors={[theme.colors.gradient.accent[0], theme.colors.gradient.accent[1]]}
@@ -496,7 +500,7 @@ export default function ProfileScreen() {
         )}
 
         {/* Menu Options */}
-        <View style={styles.section}>
+        <View style={[styles.section, styles.lastSection]}>
           <View style={[styles.menuContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
             <LinearGradient
               colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
@@ -525,8 +529,6 @@ export default function ProfileScreen() {
             </LinearGradient>
           </View>
         </View>
-
-        <View style={styles.bottomSpacing} />
       </ScrollView>
 
       {/* Stats Modal */}
@@ -730,6 +732,9 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
   header: {
     paddingHorizontal: 24,
     paddingTop: 20,
@@ -738,7 +743,6 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 32,
   },
   headerContent: {
-    marginBottom: 20,
   },
   profileSection: {
     alignItems: 'center',
@@ -831,6 +835,9 @@ const styles = StyleSheet.create({
   },
   section: {
     padding: 20,
+  },
+  lastSection: {
+    paddingBottom: 40,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1074,8 +1081,5 @@ const styles = StyleSheet.create({
   },
   toggleKnobActive: {
     transform: [{ translateX: 22 }],
-  },
-  bottomSpacing: {
-    height: 32,
   },
 });
