@@ -6,19 +6,21 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   RefreshControl,
   Dimensions,
   Image,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, Search, Dumbbell, Clock, Flame, Timer, Zap, Target, TrendingUp } from 'lucide-react-native';
+import { Plus, Search, Dumbbell, Clock, Flame, Timer, Zap, Target, TrendingUp, Edit3, Trash2, Save, X, MoreVertical } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useCustomAlert } from '@/components/CustomAlert';
+import { useToast } from '@/components/Toast';
 
 const { width } = Dimensions.get('window');
 
@@ -43,8 +45,216 @@ const WORKOUT_TYPES = [
   { name: 'Dancing', icon: '💃', color: '#EC4899' },
 ];
 
+interface EditWorkoutModalProps {
+  isVisible: boolean;
+  workout: Workout | null;
+  onClose: () => void;
+  onSave: (updatedWorkout: Workout) => void;
+}
+
+const EditWorkoutModal = ({ isVisible, workout, onClose, onSave }: EditWorkoutModalProps) => {
+  const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
+  const { showToast, ToastComponent } = useToast();
+  const [editedWorkout, setEditedWorkout] = useState<Workout | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (workout) {
+      setEditedWorkout({ ...workout });
+    }
+  }, [workout]);
+
+  const handleSave = async () => {
+    if (!editedWorkout) return;
+
+    // Validate inputs
+    if (!editedWorkout.type.trim()) {
+      showAlert({
+        type: 'error',
+        title: 'Invalid Input',
+        message: 'Workout type cannot be empty',
+      });
+      return;
+    }
+
+    if (editedWorkout.duration <= 0 || editedWorkout.calories_burned < 0) {
+      showAlert({
+        type: 'error',
+        title: 'Invalid Values',
+        message: 'Duration must be positive and calories cannot be negative',
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        router.replace('/auth');
+        return;
+      }
+
+      console.log('🔄 Updating workout with ID:', editedWorkout.id);
+      console.log('📊 Update data:', {
+        type: editedWorkout.type.trim(),
+        duration: Number(editedWorkout.duration),
+        calories_burned: Number(editedWorkout.calories_burned),
+      });
+
+      const token = session.session.access_token;
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/update-workout`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            workoutId: editedWorkout.id,
+            type: editedWorkout.type.trim(),
+            duration: Number(editedWorkout.duration),
+            calories_burned: Number(editedWorkout.calories_burned),
+          }),
+        }
+      );
+
+      console.log('📡 Update response status:', response.status);
+      
+      if (response.ok) {
+        const updatedWorkout = await response.json();
+        console.log('✅ Workout updated successfully:', updatedWorkout);
+        onSave(updatedWorkout);
+        onClose();
+        showToast({
+          type: 'success',
+          message: 'Workout updated successfully!',
+        });
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error updating workout:', response.status, errorText);
+        showAlert({
+          type: 'error',
+          title: 'Update Failed',
+          message: errorText || 'Failed to update workout',
+        });
+      }
+    } catch (error) {
+      console.error('💥 Error updating workout:', error);
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to update workout. Please check your connection.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!editedWorkout) return null;
+
+  return (
+    <>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isVisible}
+        onRequestClose={onClose}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+            <View style={styles.modalHeader}>
+              <Edit3 size={24} color={theme.colors.secondary} />
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Edit Workout</Text>
+              <TouchableOpacity onPress={onClose}>
+                <X size={24} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Workout Type</Text>
+                <TextInput
+                  style={[styles.modalInput, { 
+                    borderColor: theme.colors.border, 
+                    color: theme.colors.text, 
+                    backgroundColor: theme.colors.surface 
+                  }]}
+                  value={editedWorkout.type}
+                  onChangeText={(text) => setEditedWorkout({ ...editedWorkout, type: text })}
+                  placeholder="Enter workout type"
+                  placeholderTextColor={theme.colors.placeholder}
+                />
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Duration (minutes)</Text>
+                  <TextInput
+                    style={[styles.modalInput, { 
+                      borderColor: theme.colors.border, 
+                      color: theme.colors.text, 
+                      backgroundColor: theme.colors.surface 
+                    }]}
+                    value={editedWorkout.duration.toString()}
+                    onChangeText={(text) => setEditedWorkout({ ...editedWorkout, duration: Number(text) || 0 })}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.placeholder}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Calories Burned</Text>
+                  <TextInput
+                    style={[styles.modalInput, { 
+                      borderColor: theme.colors.border, 
+                      color: theme.colors.text, 
+                      backgroundColor: theme.colors.surface 
+                    }]}
+                    value={editedWorkout.calories_burned.toString()}
+                    onChangeText={(text) => setEditedWorkout({ ...editedWorkout, calories_burned: Number(text) || 0 })}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.placeholder}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.colors.surface }]}
+                onPress={onClose}
+              >
+                <Text style={[styles.modalButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.colors.secondary }]}
+                onPress={handleSave}
+                disabled={isSaving}
+              >
+                <Save size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {AlertComponent}
+      {ToastComponent}
+    </>
+  );
+};
+
 export default function WorkoutsScreen() {
   const { theme, isDark } = useTheme();
+  const { showAlert, AlertComponent } = useCustomAlert();
+  const { showToast, ToastComponent } = useToast();
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,6 +263,8 @@ export default function WorkoutsScreen() {
   const [selectedWorkoutType, setSelectedWorkoutType] = useState('');
   const [duration, setDuration] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -92,13 +304,21 @@ export default function WorkoutsScreen() {
 
       if (error) {
         console.error('Error fetching workouts:', error);
-        Alert.alert('Error', 'Failed to load workouts');
+        showAlert({
+          type: 'error',
+          title: 'Loading Error',
+          message: 'Failed to load workouts. Please try again.',
+        });
       } else {
         setWorkouts(workoutsData || []);
       }
     } catch (error) {
       console.error('Error:', error);
-      Alert.alert('Error', 'Failed to load workouts');
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to load workouts. Please check your connection.',
+      });
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -110,9 +330,96 @@ export default function WorkoutsScreen() {
     fetchWorkouts();
   };
 
+  const handleDeleteWorkout = async (workoutId: string, workoutType: string) => {
+    showAlert({
+      type: 'warning',
+      title: 'Delete Workout',
+      message: `Are you sure you want to delete "${workoutType}"?`,
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { data: session } = await supabase.auth.getSession();
+              
+              if (!session.session) {
+                router.replace('/auth');
+                return;
+              }
+
+              console.log('🗑️ Deleting workout with ID:', workoutId);
+
+              const token = session.session.access_token;
+              const requestBody = { workoutId: workoutId };
+              
+              const response = await fetch(
+                `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-workout`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(requestBody),
+                }
+              );
+
+              console.log('📡 Delete response status:', response.status);
+
+              if (response.ok) {
+                const result = await response.json();
+                console.log('✅ Workout deleted successfully:', result);
+                
+                setWorkouts(prevWorkouts => prevWorkouts.filter(workout => workout.id !== workoutId));
+                showToast({
+                  type: 'success',
+                  message: 'Workout deleted successfully!',
+                });
+              } else {
+                const errorText = await response.text();
+                console.error('❌ Error deleting workout:', response.status, errorText);
+                showAlert({
+                  type: 'error',
+                  title: 'Delete Failed',
+                  message: errorText || 'Failed to delete workout',
+                });
+              }
+            } catch (error) {
+              console.error('💥 Error deleting workout:', error);
+              showAlert({
+                type: 'error',
+                title: 'Network Error',
+                message: 'Failed to delete workout. Please check your connection and try again.',
+              });
+            }
+          }
+        }
+      ]
+    });
+  };
+
+  const handleEditWorkout = (workout: Workout) => {
+    console.log('✏️ Editing workout:', workout);
+    setEditingWorkout(workout);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEditedWorkout = (updatedWorkout: Workout) => {
+    console.log('💾 Saving edited workout:', updatedWorkout);
+    setWorkouts(workouts.map(workout => workout.id === updatedWorkout.id ? updatedWorkout : workout));
+    setShowEditModal(false);
+    setEditingWorkout(null);
+  };
+
   const handleAddWorkout = async () => {
     if (!selectedWorkoutType || !duration || isNaN(Number(duration)) || Number(duration) <= 0) {
-      Alert.alert('Error', 'Please select a workout type and enter a valid duration');
+      showAlert({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please select a workout type and enter a valid duration',
+      });
       return;
     }
 
@@ -146,14 +453,25 @@ export default function WorkoutsScreen() {
         setDuration('');
         setShowAddForm(false);
         fetchWorkouts();
-        Alert.alert('Success', 'Workout logged successfully!');
+        showToast({
+          type: 'success',
+          message: 'Workout logged successfully!',
+        });
       } else {
         const errorData = await response.text();
-        Alert.alert('Error', errorData || 'Failed to log workout');
+        showAlert({
+          type: 'error',
+          title: 'Failed to Log Workout',
+          message: errorData || 'Failed to log workout',
+        });
       }
     } catch (error) {
       console.error('Error adding workout:', error);
-      Alert.alert('Error', 'Failed to log workout');
+      showAlert({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Failed to log workout. Please check your connection.',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -170,6 +488,7 @@ export default function WorkoutsScreen() {
 
   const WorkoutCard = ({ workout }: { workout: Workout }) => {
     const workoutInfo = getWorkoutTypeInfo(workout.type);
+    const [showActions, setShowActions] = useState(false);
     
     return (
       <View style={[styles.workoutCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
@@ -193,7 +512,40 @@ export default function WorkoutsScreen() {
                 </Text>
               </View>
             </View>
+            <View style={styles.workoutActions}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: `${theme.colors.textSecondary}10` }]}
+                onPress={() => setShowActions(!showActions)}
+              >
+                <MoreVertical size={16} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
           </View>
+          
+          {showActions && (
+            <View style={[styles.actionsMenu, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+              <TouchableOpacity
+                style={styles.actionMenuItem}
+                onPress={() => {
+                  setShowActions(false);
+                  handleEditWorkout(workout);
+                }}
+              >
+                <Edit3 size={16} color={theme.colors.secondary} />
+                <Text style={[styles.actionMenuText, { color: theme.colors.text }]}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionMenuItem}
+                onPress={() => {
+                  setShowActions(false);
+                  handleDeleteWorkout(workout.id, workout.type);
+                }}
+              >
+                <Trash2 size={16} color={theme.colors.error} />
+                <Text style={[styles.actionMenuText, { color: theme.colors.error }]}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           
           <View style={styles.workoutStats}>
             <View style={styles.statItem}>
@@ -385,6 +737,19 @@ export default function WorkoutsScreen() {
             )}
             <View style={styles.bottomSpacing} />
           </ScrollView>
+          {/* Edit Modal */}
+          <EditWorkoutModal
+            isVisible={showEditModal}
+            workout={editingWorkout}
+            onClose={() => {
+              setShowEditModal(false);
+              setEditingWorkout(null);
+            }}
+            onSave={handleSaveEditedWorkout}
+          />
+          {/* Global Alert and Toast Components */}
+          {AlertComponent}
+          {ToastComponent}
         </ScrollView>
       </SafeAreaView>
     </KeyboardAvoidingView>
@@ -613,6 +978,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  workoutActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionsMenu: {
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  actionMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 12,
+  },
+  actionMenuText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   workoutStats: {
     flexDirection: 'row',
     gap: 16,
@@ -659,5 +1051,80 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 32,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    paddingBottom: 0,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    flex: 1,
+    marginLeft: 12,
+  },
+  modalBody: {
+    padding: 20,
+    maxHeight: 400,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    paddingTop: 0,
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+  },
+  saveButton: {
+    // backgroundColor handled by theme
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
