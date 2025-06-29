@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Chrome as Home, Utensils, Dumbbell, Leaf, Trophy, Camera, User, Settings, Bell, Menu, Sparkles, LogOut } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -37,7 +37,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   const { theme, isDark } = useTheme();
   const [user, setUser] = useState<any>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
+  const pathname = usePathname();
   const isDesktop = Platform.OS === 'web' && screenWidth >= DESKTOP_BREAKPOINT;
   const isTablet = Platform.OS === 'web' && screenWidth >= TABLET_BREAKPOINT && screenWidth < DESKTOP_BREAKPOINT;
 
@@ -73,30 +73,33 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   const headerHeight = 80;
   const contentPadding = isDesktop ? 32 : isTablet ? 24 : 16;
 
-  const handleNavigation = async (item: any) => {
-    // Prevent double clicks
-    if (isNavigating) return;
-    
-    setIsNavigating(true);
-    console.log('Navigating to:', item.route);
+  // Get current active tab from pathname
+  const getCurrentActiveTab = () => {
+    if (pathname === '/(tabs)' || pathname === '/(tabs)/') return 'index';
+    const pathParts = pathname.split('/');
+    const lastPart = pathParts[pathParts.length - 1];
+    return lastPart || 'index';
+  };
+
+  const currentActiveTab = getCurrentActiveTab();
+
+  const handleNavigation = (item: any) => {
+    console.log('🚀 Desktop navigation clicked:', item.label, 'Route:', item.route);
     
     try {
-      // Update active tab immediately for visual feedback
+      // Update active tab for visual feedback
       onTabChange?.(item.id);
       
-      // Use router.push with the correct route
+      // Navigate using router.push
       if (item.id === 'index') {
         router.push('/(tabs)/');
       } else {
         router.push(item.route);
       }
+      
+      console.log('✅ Navigation completed for:', item.label);
     } catch (error) {
-      console.error('Navigation error:', error);
-    } finally {
-      // Reset navigation state after a short delay
-      setTimeout(() => {
-        setIsNavigating(false);
-      }, 300);
+      console.error('❌ Navigation error:', error);
     }
   };
 
@@ -107,11 +110,9 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
         {
           backgroundColor: isActive ? `${item.color}15` : 'transparent',
           borderColor: isActive ? item.color : 'transparent',
-          opacity: isNavigating ? 0.7 : 1,
         }
       ]}
       onPress={() => handleNavigation(item)}
-      disabled={isNavigating}
       activeOpacity={0.7}
     >
       <View style={[
@@ -172,7 +173,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
             <NavItem
               key={item.id}
               item={item}
-              isActive={activeTab === item.id}
+              isActive={currentActiveTab === item.id}
             />
           ))}
           
@@ -183,7 +184,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
             <NavItem
               key={item.id}
               item={item}
-              isActive={activeTab === item.id}
+              isActive={currentActiveTab === item.id}
             />
           ))}
           
@@ -194,7 +195,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
             <NavItem
               key={item.id}
               item={item}
-              isActive={activeTab === item.id}
+              isActive={currentActiveTab === item.id}
             />
           ))}
         </View>
