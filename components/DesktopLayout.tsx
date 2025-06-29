@@ -37,6 +37,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   const { theme, isDark } = useTheme();
   const [user, setUser] = useState<any>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const isDesktop = Platform.OS === 'web' && screenWidth >= DESKTOP_BREAKPOINT;
   const isTablet = Platform.OS === 'web' && screenWidth >= TABLET_BREAKPOINT && screenWidth < DESKTOP_BREAKPOINT;
 
@@ -59,32 +60,39 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   };
 
   const navigationItems = [
-    { id: 'index', label: 'Dashboard', icon: Home, color: theme.colors.primary },
-    { id: 'meals', label: 'Meals', icon: Utensils, color: theme.colors.success },
-    { id: 'workouts', label: 'Workouts', icon: Dumbbell, color: theme.colors.secondary },
-    { id: 'camera', label: 'AI Scanner', icon: Camera, color: theme.colors.accent },
-    { id: 'eco', label: 'KaliAI', icon: Leaf, color: theme.colors.success },
-    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, color: theme.colors.warning },
-    { id: 'profile', label: 'Profile', icon: User, color: theme.colors.info },
+    { id: 'index', label: 'Dashboard', icon: Home, color: theme.colors.primary, route: '/' },
+    { id: 'meals', label: 'Meals', icon: Utensils, color: theme.colors.success, route: '/meals' },
+    { id: 'workouts', label: 'Workouts', icon: Dumbbell, color: theme.colors.secondary, route: '/workouts' },
+    { id: 'camera', label: 'AI Scanner', icon: Camera, color: theme.colors.accent, route: '/camera' },
+    { id: 'eco', label: 'KaliAI', icon: Leaf, color: theme.colors.success, route: '/eco' },
+    { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, color: theme.colors.warning, route: '/leaderboard' },
+    { id: 'profile', label: 'Profile', icon: User, color: theme.colors.info, route: '/profile' },
   ];
 
   const sidebarWidth = isDesktop ? 280 : isTablet ? 240 : 200;
   const headerHeight = 80;
   const contentPadding = isDesktop ? 32 : isTablet ? 24 : 16;
 
-  const handleNavigation = (item: any) => {
-    console.log('Navigating to tab:', item.id);
-    onTabChange?.(item.id);
+  const handleNavigation = async (item: any) => {
+    // Prevent double clicks
+    if (isNavigating) return;
+    
+    setIsNavigating(true);
+    console.log('Navigating to:', item.route);
     
     try {
-      // Use simple route paths that match the file structure
-      if (item.id === 'index') {
-        router.push('/');
-      } else {
-        router.push(`/${item.id}`);
-      }
+      // Update active tab immediately for visual feedback
+      onTabChange?.(item.id);
+      
+      // Navigate to the route
+      await router.push(item.route);
     } catch (error) {
       console.error('Navigation error:', error);
+    } finally {
+      // Reset navigation state after a short delay
+      setTimeout(() => {
+        setIsNavigating(false);
+      }, 300);
     }
   };
 
@@ -95,9 +103,12 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
         {
           backgroundColor: isActive ? `${item.color}15` : 'transparent',
           borderColor: isActive ? item.color : 'transparent',
+          opacity: isNavigating ? 0.7 : 1,
         }
       ]}
       onPress={() => handleNavigation(item)}
+      disabled={isNavigating}
+      activeOpacity={0.7}
     >
       <View style={[
         styles.navIconContainer,
@@ -189,6 +200,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
           <TouchableOpacity 
             style={[styles.settingsButton, { backgroundColor: theme.colors.surface }]}
             onPress={() => router.push('/profile')}
+            activeOpacity={0.7}
           >
             <Settings size={18} color={theme.colors.textSecondary} />
             <Text style={[styles.settingsText, { color: theme.colors.textSecondary }]}>
@@ -217,12 +229,13 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
             <TouchableOpacity
               style={[styles.menuButton, { backgroundColor: theme.colors.surface }]}
               onPress={onToggleSidebar}
+              activeOpacity={0.7}
             >
               <Menu size={20} color={theme.colors.text} />
             </TouchableOpacity>
           )}
           
-          {/* Welcome Text instead of Search */}
+          {/* Welcome Text */}
           <View style={styles.welcomeSection}>
             <Text style={[styles.welcomeText, { color: theme.colors.text }]}>
               Welcome back, {user?.user_metadata?.name || 'there'}!
@@ -235,7 +248,10 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
 
         {/* Right Section */}
         <View style={styles.headerRight}>
-          <TouchableOpacity style={[styles.headerButton, { backgroundColor: theme.colors.surface }]}>
+          <TouchableOpacity 
+            style={[styles.headerButton, { backgroundColor: theme.colors.surface }]}
+            activeOpacity={0.7}
+          >
             <Bell size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
           
@@ -243,6 +259,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
             <TouchableOpacity 
               style={[styles.userProfile, { backgroundColor: theme.colors.surface }]}
               onPress={() => setShowProfileMenu(!showProfileMenu)}
+              activeOpacity={0.7}
             >
               <View style={[styles.userAvatar, { backgroundColor: theme.colors.primary }]}>
                 <User size={16} color="#FFFFFF" />
@@ -261,6 +278,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
                     setShowProfileMenu(false);
                     router.push('/profile');
                   }}
+                  activeOpacity={0.7}
                 >
                   <User size={16} color={theme.colors.textSecondary} />
                   <Text style={[styles.profileMenuText, { color: theme.colors.text }]}>Profile</Text>
@@ -272,6 +290,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
                     setShowProfileMenu(false);
                     router.push('/profile');
                   }}
+                  activeOpacity={0.7}
                 >
                   <Settings size={16} color={theme.colors.textSecondary} />
                   <Text style={[styles.profileMenuText, { color: theme.colors.text }]}>Settings</Text>
@@ -285,6 +304,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
                     setShowProfileMenu(false);
                     handleSignOut();
                   }}
+                  activeOpacity={0.7}
                 >
                   <LogOut size={16} color={theme.colors.error} />
                   <Text style={[styles.profileMenuText, { color: theme.colors.error }]}>Sign Out</Text>
@@ -334,6 +354,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
         <TouchableOpacity 
           style={styles.overlay}
           onPress={() => setShowProfileMenu(false)}
+          activeOpacity={1}
         />
       )}
     </View>
