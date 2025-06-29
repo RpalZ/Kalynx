@@ -79,6 +79,11 @@ export default function HomeScreen() {
     fetchDashboardData();
   };
 
+  const getSupabaseUrl = () => {
+    // Use the appropriate environment variable based on platform
+    return process.env.VITE_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+  };
+
   const fetchDashboardData = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -90,10 +95,15 @@ export default function HomeScreen() {
       }
 
       const token = session.session.access_token;
+      const supabaseUrl = getSupabaseUrl();
+
+      if (!supabaseUrl) {
+        throw new Error('Supabase URL not configured');
+      }
 
       // Fetch daily summary
       const summaryResponse = await fetch(
-        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-daily-summary?date=${today}`,
+        `${supabaseUrl}/functions/v1/get-daily-summary?date=${today}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -105,11 +115,13 @@ export default function HomeScreen() {
       if (summaryResponse.ok) {
         const summaryData = await summaryResponse.json();
         setSummary(summaryData);
+      } else {
+        console.error('Failed to fetch summary:', summaryResponse.status, summaryResponse.statusText);
       }
 
       // Calculate and fetch daily score
       const scoreResponse = await fetch(
-        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/calculate-score`,
+        `${supabaseUrl}/functions/v1/calculate-score`,
         {
           method: 'POST',
           headers: {
@@ -123,10 +135,12 @@ export default function HomeScreen() {
       if (scoreResponse.ok) {
         const scoreData = await scoreResponse.json();
         setScore(scoreData);
+      } else {
+        console.error('Failed to fetch score:', scoreResponse.status, scoreResponse.statusText);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      Alert.alert('Error', 'Failed to load dashboard data');
+      Alert.alert('Error', 'Failed to load dashboard data. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
       setRefreshing(false);
