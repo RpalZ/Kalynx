@@ -8,7 +8,6 @@ import {
   Alert,
   RefreshControl,
   Dimensions,
-  Image,
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -258,33 +257,6 @@ export default function LeaderboardScreen() {
     }
   };
 
-  const getFoodEmoji = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return '🍕'; // Pizza for #1
-      case 2:
-        return '🍔'; // Burger for #2
-      case 3:
-        return '🌮'; // Taco for #3
-      case 4:
-        return '🍜'; // Ramen
-      case 5:
-        return '🥗'; // Salad
-      case 6:
-        return '🍝'; // Pasta
-      case 7:
-        return '🥙'; // Wrap
-      case 8:
-        return '🍲'; // Stew
-      case 9:
-        return '🥘'; // Paella
-      case 10:
-        return '🍛'; // Curry
-      default:
-        return '🍽️'; // Plate
-    }
-  };
-
   const getNextTarget = () => {
     if (!userRank || !leaderboardData) return null;
     
@@ -318,7 +290,7 @@ export default function LeaderboardScreen() {
       return (
         <View style={styles.arenaContainer}>
           <LinearGradient
-            colors={['#FF6B35', '#F7931E', '#FFD23F']}
+            colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
             style={styles.noRankArena}
           >
             <Animated.View style={[
@@ -332,13 +304,12 @@ export default function LeaderboardScreen() {
                 }]
               }
             ]}>
-              <ChefHat size={40} color="#FFFFFF" />
+              <Trophy size={40} color="#FFFFFF" />
             </Animated.View>
             <View style={styles.arenaInfo}>
-              <Text style={styles.arenaTitle}>🍳 Join the Kitchen Battle!</Text>
-              <Text style={styles.arenaSubtitle}>Start cooking up some points! 🔥</Text>
+              <Text style={styles.arenaTitle}>Join the Competition!</Text>
+              <Text style={styles.arenaSubtitle}>Start tracking to see your ranking</Text>
             </View>
-            <Text style={styles.foodEmoji}>🍽️</Text>
           </LinearGradient>
         </View>
       );
@@ -349,12 +320,11 @@ export default function LeaderboardScreen() {
         {/* Battle Visualization */}
         {battleOpponent && (
           <LinearGradient
-            colors={['#FF6B35', '#F7931E', '#FFD23F']}
+            colors={[theme.colors.gradient.secondary[0], theme.colors.gradient.secondary[1]]}
             style={styles.battleSection}
           >
             <View style={styles.battleHeader}>
-              <Text style={styles.battleTitle}>🔥 Kitchen Showdown! 🔥</Text>
-              <Text style={styles.foodEmoji}>🍳</Text>
+              <Text style={styles.battleTitle}>Competition Zone</Text>
             </View>
             <View style={styles.battleArena}>
               {/* User Side */}
@@ -374,9 +344,8 @@ export default function LeaderboardScreen() {
                     {userRank.name.charAt(0).toUpperCase()}
                   </Text>
                 </Animated.View>
-                <Text style={styles.battleUserName}>You 👨‍🍳</Text>
+                <Text style={styles.battleUserName}>You</Text>
                 <Text style={styles.battleUserScore}>{userRank.avg_combined_score}</Text>
-                <Text style={styles.foodEmoji}>{getFoodEmoji(userRank.rank)}</Text>
               </View>
 
               {/* VS Indicator */}
@@ -392,7 +361,7 @@ export default function LeaderboardScreen() {
                     }]
                   }
                 ]}>
-                  <Utensils size={24} color="#FFFFFF" />
+                  <Swords size={24} color="#FFFFFF" />
                 </Animated.View>
                 <Text style={styles.vsText}>VS</Text>
               </View>
@@ -415,9 +384,8 @@ export default function LeaderboardScreen() {
                     {battleOpponent.name.charAt(0).toUpperCase()}
                   </Text>
                 </Animated.View>
-                <Text style={styles.battleUserName}>{battleOpponent.name} 👩‍🍳</Text>
+                <Text style={styles.battleUserName}>{battleOpponent.name}</Text>
                 <Text style={styles.battleUserScore}>{battleOpponent.avg_combined_score}</Text>
-                <Text style={styles.foodEmoji}>{getFoodEmoji(battleOpponent.rank)}</Text>
               </View>
             </View>
           </LinearGradient>
@@ -426,13 +394,12 @@ export default function LeaderboardScreen() {
         {/* Next Target Section */}
         {nextTarget && (
           <LinearGradient
-            colors={['#8B5CF6', '#A855F7', '#C084FC']}
+            colors={[theme.colors.gradient.accent[0], theme.colors.gradient.accent[1]]}
             style={styles.targetSection}
           >
             <View style={styles.targetHeader}>
               <Target size={20} color="#FFFFFF" />
-              <Text style={styles.targetTitle}>🎯 Next Delicious Target</Text>
-              <Text style={styles.foodEmoji}>🍰</Text>
+              <Text style={styles.targetTitle}>Next Target</Text>
             </View>
             
             <View style={styles.targetCard}>
@@ -443,15 +410,15 @@ export default function LeaderboardScreen() {
                   </Text>
                 </View>
                 <View style={styles.targetInfo}>
-                  <Text style={styles.targetName}>{nextTarget.name} 🏆</Text>
-                  <Text style={styles.targetRank}>Rank #{nextTarget.rank} • {getFoodEmoji(nextTarget.rank)}</Text>
+                  <Text style={styles.targetName}>{nextTarget.name}</Text>
+                  <Text style={styles.targetRank}>Rank #{nextTarget.rank}</Text>
                 </View>
               </View>
               
               <View style={styles.targetProgress}>
                 <View style={styles.progressHeader}>
-                  <Text style={styles.progressLabel}>🔥 Points to cook up</Text>
-                  <Text style={styles.progressValue}>+{pointsToNext} 🌟</Text>
+                  <Text style={styles.progressLabel}>Points needed</Text>
+                  <Text style={styles.progressValue}>+{pointsToNext}</Text>
                 </View>
                 
                 <View style={styles.progressBarContainer}>
@@ -483,8 +450,8 @@ export default function LeaderboardScreen() {
                 </View>
                 
                 <View style={styles.progressStats}>
-                  <Text style={styles.progressStat}>You: {userRank.avg_combined_score} 🍽️</Text>
-                  <Text style={styles.progressStat}>Target: {nextTarget.avg_combined_score} 🎯</Text>
+                  <Text style={styles.progressStat}>You: {userRank.avg_combined_score}</Text>
+                  <Text style={styles.progressStat}>Target: {nextTarget.avg_combined_score}</Text>
                 </View>
               </View>
             </View>
@@ -540,9 +507,8 @@ export default function LeaderboardScreen() {
               isCurrentUser && { fontWeight: '800' }
             ]}>
               {entry.name}
-              {isCurrentUser && ' (You) 🎉'}
+              {isCurrentUser && ' (You)'}
             </Text>
-            <Text style={styles.foodEmoji}>{getFoodEmoji(entry.rank)}</Text>
             {entry.rank <= 3 && (
               <Animated.View style={[
                 styles.topBadge, 
@@ -556,7 +522,7 @@ export default function LeaderboardScreen() {
                   }]
                 }
               ]}>
-                <Text style={styles.topBadgeText}>TOP {entry.rank} 🏆</Text>
+                <Text style={styles.topBadgeText}>TOP {entry.rank}</Text>
               </Animated.View>
             )}
           </View>
@@ -565,7 +531,7 @@ export default function LeaderboardScreen() {
               ? 'rgba(255,255,255,0.9)'
               : isDark ? '#D1D5DB' : '#6B7280'
           }]}>
-            {entry.days_active} days cooking • Avg: {entry.avg_combined_score} 🔥
+            {entry.days_active} days active • Avg: {entry.avg_combined_score}
           </Text>
         </View>
         
@@ -626,7 +592,7 @@ export default function LeaderboardScreen() {
       >
         {/* Header with Competition Arena */}
         <LinearGradient
-          colors={['#FF6B35', '#F7931E', '#FFD23F']}
+          colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
           style={styles.header}
         >
           <View style={styles.headerContent}>
@@ -642,10 +608,10 @@ export default function LeaderboardScreen() {
                 }}>
                   <Trophy size={36} color="#FFFFFF" />
                 </Animated.View>
-                <Text style={styles.headerTitle}>🏆 Flavor Champions</Text>
+                <Text style={styles.headerTitle}>Leaderboard</Text>
               </View>
               <Text style={styles.headerSubtitle}>
-                {leaderboardData ? `🔥 ${leaderboardData.period.days} days of delicious competition! 🍽️` : 'Who\'s cooking up the best scores? 👨‍🍳'}
+                {leaderboardData ? `${leaderboardData.period.days} days of competition` : 'See how you rank against others'}
               </Text>
             </View>
             <TouchableOpacity 
@@ -663,14 +629,6 @@ export default function LeaderboardScreen() {
             </TouchableOpacity>
           </View>
           
-          {/* Hero Image */}
-          <View style={styles.heroImageContainer}>
-            <Image 
-              source={{ uri: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=800' }}
-              style={styles.heroImage}
-            />
-          </View>
-          
           {/* Competition Arena Content */}
           <CompetitionArena />
         </LinearGradient>
@@ -680,8 +638,7 @@ export default function LeaderboardScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Crown size={24} color="#FFD700" />
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>🍕 Master Chefs Leaderboard</Text>
-              <Text style={styles.foodEmoji}>🏆</Text>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Top Performers</Text>
             </View>
             <View style={styles.leaderboardContainer}>
               {leaderboardData.leaderboard.map((entry) => (
@@ -699,8 +656,7 @@ export default function LeaderboardScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Target size={20} color="#8B5CF6" />
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>🚀 Recipe for Success</Text>
-            <Text style={styles.foodEmoji}>📈</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Tips for Success</Text>
           </View>
           <View style={styles.tipsContainer}>
             <LinearGradient
@@ -711,12 +667,11 @@ export default function LeaderboardScreen() {
                 <TrendingUp size={24} color="#FFFFFF" />
               </View>
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>🔥 Stay Cooking Daily!</Text>
+                <Text style={styles.tipTitle}>Stay Consistent</Text>
                 <Text style={styles.tipText}>
-                  Keep the kitchen fires burning! Log meals and workouts every day 🍳
+                  Log meals and workouts daily for better scores
                 </Text>
               </View>
-              <Text style={styles.tipEmoji}>📅</Text>
             </LinearGradient>
             
             <LinearGradient
@@ -727,12 +682,11 @@ export default function LeaderboardScreen() {
                 <Trophy size={24} color="#FFFFFF" />
               </View>
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>⚖️ Perfect Recipe Balance</Text>
+                <Text style={styles.tipTitle}>Balance is Key</Text>
                 <Text style={styles.tipText}>
-                  Mix fitness gains with eco-friendly choices for the ultimate flavor! 🌱💪
+                  Mix fitness goals with eco-friendly choices
                 </Text>
               </View>
-              <Text style={styles.tipEmoji}>🥗</Text>
             </LinearGradient>
             
             <LinearGradient
@@ -743,12 +697,11 @@ export default function LeaderboardScreen() {
                 <Flame size={24} color="#FFFFFF" />
               </View>
               <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>🎯 Consistency is the Secret Sauce</Text>
+                <Text style={styles.tipTitle}>Quality Over Quantity</Text>
                 <Text style={styles.tipText}>
-                  Small daily portions beat one giant feast! Keep it steady 🍽️
+                  Focus on sustainable habits for long-term success
                 </Text>
               </View>
-              <Text style={styles.tipEmoji}>⭐</Text>
             </LinearGradient>
           </View>
         </View>
@@ -757,7 +710,7 @@ export default function LeaderboardScreen() {
         {(!leaderboardData || leaderboardData.leaderboard.length === 0) && (
           <View style={styles.emptyState}>
             <LinearGradient
-              colors={['#FF6B35', '#F7931E', '#FFD23F']}
+              colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
               style={styles.emptyCard}
             >
               <Animated.View style={{
@@ -768,13 +721,12 @@ export default function LeaderboardScreen() {
                   })
                 }]
               }}>
-                <ChefHat size={80} color="#FFFFFF" />
+                <Trophy size={80} color="#FFFFFF" />
               </Animated.View>
-              <Text style={styles.emptyTitle}>🍳 Kitchen's Empty!</Text>
+              <Text style={styles.emptyTitle}>No Rankings Yet</Text>
               <Text style={styles.emptySubtitle}>
-                Time to start cooking! Log some meals and workouts to join the flavor competition! 🔥👨‍🍳
+                Start tracking your meals and workouts to join the competition!
               </Text>
-              <Text style={styles.foodEmoji}>🍽️✨</Text>
             </LinearGradient>
           </View>
         )}
@@ -850,17 +802,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  heroImageContainer: {
-    height: 100,
-    borderRadius: 16,
-    overflow: 'hidden',
-    opacity: 0.8,
-    marginBottom: 20,
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
   
   // Competition Arena Styles
   arenaContainer: {
@@ -914,7 +855,7 @@ const styles = StyleSheet.create({
   battleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginBottom: 20,
   },
   battleTitle: {
@@ -965,7 +906,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     color: '#FFFFFF',
-    marginBottom: 4,
   },
   vsIndicator: {
     alignItems: 'center',
@@ -999,7 +939,7 @@ const styles = StyleSheet.create({
   targetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
     marginBottom: 16,
   },
   targetTitle: {
@@ -1007,7 +947,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     flex: 1,
-    marginLeft: 8,
   },
   targetCard: {
     gap: 16,
@@ -1250,9 +1189,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'rgba(255,255,255,0.9)',
   },
-  tipEmoji: {
-    fontSize: 24,
-  },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1282,10 +1218,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontWeight: '600',
     color: 'rgba(255,255,255,0.9)',
-    marginBottom: 16,
-  },
-  foodEmoji: {
-    fontSize: 28,
   },
   bottomSpacing: {
     height: 32,
