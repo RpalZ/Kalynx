@@ -120,6 +120,63 @@ export default function ProfileScreen() {
     }
   };
 
+  const calculateCurrentStreak = async (userId: string): Promise<number> => {
+    try {
+      // Get the last 30 days of meals to calculate streak
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const { data: meals, error } = await supabase
+        .from('meals')
+        .select('created_at')
+        .eq('user_id', userId)
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error || !meals) {
+        console.error('Error fetching meals for streak:', error);
+        return 0;
+      }
+
+      // Group meals by date
+      const mealsByDate = new Map<string, number>();
+      meals.forEach(meal => {
+        const date = new Date(meal.created_at).toISOString().split('T')[0];
+        mealsByDate.set(date, (mealsByDate.get(date) || 0) + 1);
+      });
+
+      // Calculate current streak starting from today
+      let streak = 0;
+      const today = new Date();
+      
+      for (let i = 0; i < 30; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(today.getDate() - i);
+        const dateStr = checkDate.toISOString().split('T')[0];
+        
+        if (mealsByDate.has(dateStr) && mealsByDate.get(dateStr)! > 0) {
+          streak++;
+        } else {
+          // If we haven't logged anything today, check if we're still early in the day
+          if (i === 0) {
+            const now = new Date();
+            const hour = now.getHours();
+            // If it's before 6 PM, don't break the streak yet
+            if (hour < 18) {
+              continue;
+            }
+          }
+          break;
+        }
+      }
+
+      return streak;
+    } catch (error) {
+      console.error('Error calculating streak:', error);
+      return 0;
+    }
+  };
+
   const fetchUserStats = async (userId: string) => {
     try {
       // Fetch basic data
@@ -191,8 +248,8 @@ export default function ProfileScreen() {
       const avgEcoScore = scores?.length ? 
         scores.reduce((sum, score) => sum + (score.eco_score || 0), 0) / scores.length : 0;
       
-      // Calculate current streak (simplified - could be enhanced with actual streak logic)
-      const currentStreak = Math.min(totalMeals, 7); // Simple approximation
+      // Calculate actual current streak
+      const currentStreak = await calculateCurrentStreak(userId);
 
       setUserStats({
         totalMeals,
