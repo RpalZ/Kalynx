@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Trophy, Medal, Award, TrendingUp, RefreshCw, Crown, Star, Target, Zap, Flame, Sparkles, Shield, Users, Calendar, ChartBar as BarChart3, Swords, ArrowUp, ArrowDown } from 'lucide-react-native';
+import { Trophy, Medal, Award, TrendingUp, RefreshCw, Crown, Star, Target, Zap, Flame, Sparkles, Shield, Users, Calendar, ChartBar as BarChart3, Swords, ArrowUp, ArrowDown, ChefHat, Utensils } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -49,6 +49,8 @@ export default function LeaderboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [battleAnimation] = useState(new Animated.Value(0));
   const [progressAnimation] = useState(new Animated.Value(0));
+  const [sparkleAnimation] = useState(new Animated.Value(0));
+  const [bounceAnimation] = useState(new Animated.Value(0));
 
   useEffect(() => {
     checkAuth();
@@ -65,6 +67,38 @@ export default function LeaderboardScreen() {
 
   useEffect(() => {
     if (userRank && leaderboardData) {
+      // Start sparkle animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(sparkleAnimation, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(sparkleAnimation, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // Start bounce animation for top 3
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(bounceAnimation, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bounceAnimation, {
+            toValue: 0,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
       // Start battle animation
       Animated.loop(
         Animated.sequence([
@@ -145,11 +179,44 @@ export default function LeaderboardScreen() {
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1:
-        return <Crown size={32} color="#FFD700" />;
+        return (
+          <Animated.View style={{
+            transform: [{
+              scale: bounceAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 1.2],
+              })
+            }]
+          }}>
+            <Crown size={36} color="#FFD700" />
+          </Animated.View>
+        );
       case 2:
-        return <Medal size={32} color="#E5E7EB" />;
+        return (
+          <Animated.View style={{
+            transform: [{
+              scale: bounceAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 1.1],
+              })
+            }]
+          }}>
+            <Medal size={34} color="#E5E7EB" />
+          </Animated.View>
+        );
       case 3:
-        return <Award size={32} color="#D97706" />;
+        return (
+          <Animated.View style={{
+            transform: [{
+              scale: bounceAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 1.05],
+              })
+            }]
+          }}>
+            <Award size={32} color="#D97706" />
+          </Animated.View>
+        );
       default:
         return (
           <View style={[styles.rankNumberContainer, { 
@@ -168,11 +235,11 @@ export default function LeaderboardScreen() {
   const getRankGradient = (rank: number) => {
     switch (rank) {
       case 1:
-        return ['#FFD700', '#FFA500'] as const;
+        return ['#FFD700', '#FF6B35', '#FF8E53'] as const; // Golden orange gradient
       case 2:
-        return ['#E5E7EB', '#D1D5DB'] as const;
+        return ['#E5E7EB', '#A78BFA', '#8B5CF6'] as const; // Silver purple gradient
       case 3:
-        return ['#D97706', '#B45309'] as const;
+        return ['#D97706', '#F59E0B', '#FCD34D'] as const; // Bronze yellow gradient
       default:
         return isDark ? ['#374151', '#4B5563'] as const : ['#F9FAFB', '#F3F4F6'] as const;
     }
@@ -181,13 +248,40 @@ export default function LeaderboardScreen() {
   const getScoreColor = (rank: number) => {
     switch (rank) {
       case 1:
-        return '#B8860B';
+        return '#FF6B35';
       case 2:
-        return '#6B7280';
+        return '#8B5CF6';
       case 3:
-        return '#B45309';
+        return '#F59E0B';
       default:
         return isDark ? '#F9FAFB' : '#111827';
+    }
+  };
+
+  const getFoodEmoji = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return '🍕'; // Pizza for #1
+      case 2:
+        return '🍔'; // Burger for #2
+      case 3:
+        return '🌮'; // Taco for #3
+      case 4:
+        return '🍜'; // Ramen
+      case 5:
+        return '🥗'; // Salad
+      case 6:
+        return '🍝'; // Pasta
+      case 7:
+        return '🥙'; // Wrap
+      case 8:
+        return '🍲'; // Stew
+      case 9:
+        return '🥘'; // Paella
+      case 10:
+        return '🍛'; // Curry
+      default:
+        return '🍽️'; // Plate
     }
   };
 
@@ -223,20 +317,29 @@ export default function LeaderboardScreen() {
     if (!userRank) {
       return (
         <View style={styles.arenaContainer}>
-          <View style={[styles.noRankArena, { 
-            backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-            borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'
-          }]}>
-            <View style={[styles.arenaIcon, { 
-              backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'
-            }]}>
-              <Swords size={40} color="#FFFFFF" />
-            </View>
+          <LinearGradient
+            colors={['#FF6B35', '#F7931E', '#FFD23F']}
+            style={styles.noRankArena}
+          >
+            <Animated.View style={[
+              styles.arenaIcon,
+              {
+                transform: [{
+                  rotate: sparkleAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '360deg'],
+                  })
+                }]
+              }
+            ]}>
+              <ChefHat size={40} color="#FFFFFF" />
+            </Animated.View>
             <View style={styles.arenaInfo}>
-              <Text style={styles.arenaTitle}>Enter the Arena</Text>
-              <Text style={styles.arenaSubtitle}>Log meals and workouts to start competing</Text>
+              <Text style={styles.arenaTitle}>🍳 Join the Kitchen Battle!</Text>
+              <Text style={styles.arenaSubtitle}>Start cooking up some points! 🔥</Text>
             </View>
-          </View>
+            <Text style={styles.foodEmoji}>🍽️</Text>
+          </LinearGradient>
         </View>
       );
     }
@@ -245,11 +348,14 @@ export default function LeaderboardScreen() {
       <View style={styles.arenaContainer}>
         {/* Battle Visualization */}
         {battleOpponent && (
-          <View style={[styles.battleSection, { 
-            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-            borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'
-          }]}>
-            <Text style={[styles.battleTitle, { color: '#FFFFFF' }]}>Live Battle</Text>
+          <LinearGradient
+            colors={['#FF6B35', '#F7931E', '#FFD23F']}
+            style={styles.battleSection}
+          >
+            <View style={styles.battleHeader}>
+              <Text style={styles.battleTitle}>🔥 Kitchen Showdown! 🔥</Text>
+              <Text style={styles.foodEmoji}>🍳</Text>
+            </View>
             <View style={styles.battleArena}>
               {/* User Side */}
               <View style={styles.battleUser}>
@@ -268,8 +374,9 @@ export default function LeaderboardScreen() {
                     {userRank.name.charAt(0).toUpperCase()}
                   </Text>
                 </Animated.View>
-                <Text style={[styles.battleUserName, { color: '#FFFFFF' }]}>You</Text>
-                <Text style={[styles.battleUserScore, { color: '#FFD700' }]}>{userRank.avg_combined_score}</Text>
+                <Text style={styles.battleUserName}>You 👨‍🍳</Text>
+                <Text style={styles.battleUserScore}>{userRank.avg_combined_score}</Text>
+                <Text style={styles.foodEmoji}>{getFoodEmoji(userRank.rank)}</Text>
               </View>
 
               {/* VS Indicator */}
@@ -285,9 +392,9 @@ export default function LeaderboardScreen() {
                     }]
                   }
                 ]}>
-                  <Swords size={24} color="#FFD700" />
+                  <Utensils size={24} color="#FFFFFF" />
                 </Animated.View>
-                <Text style={[styles.vsText, { color: '#FFD700' }]}>VS</Text>
+                <Text style={styles.vsText}>VS</Text>
               </View>
 
               {/* Opponent Side */}
@@ -308,22 +415,24 @@ export default function LeaderboardScreen() {
                     {battleOpponent.name.charAt(0).toUpperCase()}
                   </Text>
                 </Animated.View>
-                <Text style={[styles.battleUserName, { color: '#FFFFFF' }]}>{battleOpponent.name}</Text>
-                <Text style={[styles.battleUserScore, { color: '#FFD700' }]}>{battleOpponent.avg_combined_score}</Text>
+                <Text style={styles.battleUserName}>{battleOpponent.name} 👩‍🍳</Text>
+                <Text style={styles.battleUserScore}>{battleOpponent.avg_combined_score}</Text>
+                <Text style={styles.foodEmoji}>{getFoodEmoji(battleOpponent.rank)}</Text>
               </View>
             </View>
-          </View>
+          </LinearGradient>
         )}
 
         {/* Next Target Section */}
         {nextTarget && (
-          <View style={[styles.targetSection, { 
-            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-            borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'
-          }]}>
+          <LinearGradient
+            colors={['#8B5CF6', '#A855F7', '#C084FC']}
+            style={styles.targetSection}
+          >
             <View style={styles.targetHeader}>
-              <Target size={20} color="#FFD700" />
-              <Text style={[styles.targetTitle, { color: '#FFFFFF' }]}>Next Target</Text>
+              <Target size={20} color="#FFFFFF" />
+              <Text style={styles.targetTitle}>🎯 Next Delicious Target</Text>
+              <Text style={styles.foodEmoji}>🍰</Text>
             </View>
             
             <View style={styles.targetCard}>
@@ -334,20 +443,18 @@ export default function LeaderboardScreen() {
                   </Text>
                 </View>
                 <View style={styles.targetInfo}>
-                  <Text style={[styles.targetName, { color: '#FFFFFF' }]}>{nextTarget.name}</Text>
-                  <Text style={[styles.targetRank, { color: '#FEF3C7' }]}>Rank #{nextTarget.rank}</Text>
+                  <Text style={styles.targetName}>{nextTarget.name} 🏆</Text>
+                  <Text style={styles.targetRank}>Rank #{nextTarget.rank} • {getFoodEmoji(nextTarget.rank)}</Text>
                 </View>
               </View>
               
               <View style={styles.targetProgress}>
                 <View style={styles.progressHeader}>
-                  <Text style={[styles.progressLabel, { color: '#FEF3C7' }]}>Points needed</Text>
-                  <Text style={[styles.progressValue, { color: '#FFD700' }]}>+{pointsToNext}</Text>
+                  <Text style={styles.progressLabel}>🔥 Points to cook up</Text>
+                  <Text style={styles.progressValue}>+{pointsToNext} 🌟</Text>
                 </View>
                 
-                <View style={[styles.progressBarContainer, { 
-                  backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'
-                }]}>
+                <View style={styles.progressBarContainer}>
                   <Animated.View 
                     style={[
                       styles.progressBar,
@@ -359,54 +466,30 @@ export default function LeaderboardScreen() {
                       }
                     ]}
                   />
+                  <Animated.View style={[
+                    styles.progressSparkle,
+                    {
+                      opacity: sparkleAnimation,
+                      transform: [{
+                        translateX: sparkleAnimation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 200],
+                        })
+                      }]
+                    }
+                  ]}>
+                    <Sparkles size={12} color="#FFD700" />
+                  </Animated.View>
                 </View>
                 
                 <View style={styles.progressStats}>
-                  <Text style={[styles.progressStat, { color: '#FEF3C7' }]}>You: {userRank.avg_combined_score}</Text>
-                  <Text style={[styles.progressStat, { color: '#FEF3C7' }]}>Target: {nextTarget.avg_combined_score}</Text>
+                  <Text style={styles.progressStat}>You: {userRank.avg_combined_score} 🍽️</Text>
+                  <Text style={styles.progressStat}>Target: {nextTarget.avg_combined_score} 🎯</Text>
                 </View>
               </View>
             </View>
-          </View>
+          </LinearGradient>
         )}
-
-        {/* Rank Progression */}
-        <View style={[styles.progressionSection, { 
-          backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-          borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'
-        }]}>
-          <Text style={[styles.progressionTitle, { color: '#FFFFFF' }]}>Rank Progression</Text>
-          <View style={styles.progressionTrack}>
-            {[userRank.rank + 1, userRank.rank, userRank.rank - 1].filter(rank => rank > 0).map((rank, index) => {
-              const isCurrentRank = rank === userRank.rank;
-              const user = leaderboardData?.leaderboard.find(entry => entry.rank === rank);
-              
-              return (
-                <View key={rank} style={styles.progressionNode}>
-                  <View style={[
-                    styles.progressionRank,
-                    isCurrentRank && styles.currentProgressionRank,
-                    { backgroundColor: isCurrentRank ? '#FFD700' : isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)' }
-                  ]}>
-                    {isCurrentRank ? (
-                      <Crown size={16} color="#000000" />
-                    ) : (
-                      <Text style={[styles.progressionRankText, { color: '#FFFFFF' }]}>#{rank}</Text>
-                    )}
-                  </View>
-                  {user && (
-                    <Text style={[styles.progressionUserName, { color: '#FEF3C7' }]}>
-                      {user.user_id === userRank.user_id ? 'You' : user.name}
-                    </Text>
-                  )}
-                  {index < 2 && rank > 1 && (
-                    <ArrowUp size={12} color="#10B981" style={styles.progressionArrow} />
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        </View>
       </View>
     );
   };
@@ -426,13 +509,13 @@ export default function LeaderboardScreen() {
       }],
       entry.rank <= 3 && [styles.topThreeItem, { 
         backgroundColor: isDark ? '#1E1B4B' : '#FEF3C7',
-        borderColor: entry.rank === 1 ? '#FFD700' : entry.rank === 2 ? '#E5E7EB' : '#D97706'
+        borderColor: entry.rank === 1 ? '#FF6B35' : entry.rank === 2 ? '#8B5CF6' : '#F59E0B'
       }]
     ]}>
       <LinearGradient
         colors={
           isCurrentUser 
-            ? isDark ? ['#064E3B', '#065F46'] as const : ['#ECFDF5', '#D1FAE5'] as const
+            ? ['#10B981', '#059669', '#047857'] as const
             : entry.rank <= 3 
               ? getRankGradient(entry.rank)
               : isDark 
@@ -450,59 +533,66 @@ export default function LeaderboardScreen() {
             <Text style={[
               styles.userName, 
               { 
-                color: entry.rank <= 3 
-                  ? isDark ? '#FFFFFF' : '#111827'
+                color: entry.rank <= 3 || isCurrentUser
+                  ? '#FFFFFF'
                   : isDark ? '#FFFFFF' : '#111827'
               }, 
-              isCurrentUser && { fontWeight: '800', color: '#10B981' }
+              isCurrentUser && { fontWeight: '800' }
             ]}>
               {entry.name}
-              {isCurrentUser && ' (You)'}
+              {isCurrentUser && ' (You) 🎉'}
             </Text>
+            <Text style={styles.foodEmoji}>{getFoodEmoji(entry.rank)}</Text>
             {entry.rank <= 3 && (
-              <View style={[styles.topBadge, { backgroundColor: getScoreColor(entry.rank) }]}>
-                <Text style={[styles.topBadgeText, { 
-                  color: '#FFFFFF', 
-                  textShadowColor: 'rgba(0,0,0,0.3)', 
-                  textShadowOffset: {width: 0, height: 1}, 
-                  textShadowRadius: 2 
-                }]}>TOP {entry.rank}</Text>
-              </View>
+              <Animated.View style={[
+                styles.topBadge, 
+                { 
+                  backgroundColor: getScoreColor(entry.rank),
+                  transform: [{
+                    scale: sparkleAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 1.1],
+                    })
+                  }]
+                }
+              ]}>
+                <Text style={styles.topBadgeText}>TOP {entry.rank} 🏆</Text>
+              </Animated.View>
             )}
           </View>
           <Text style={[styles.userStats, { 
-            color: entry.rank <= 3 
-              ? isDark ? '#E5E7EB' : '#4B5563'
+            color: entry.rank <= 3 || isCurrentUser
+              ? 'rgba(255,255,255,0.9)'
               : isDark ? '#D1D5DB' : '#6B7280'
           }]}>
-            {entry.days_active} days active • Avg: {entry.avg_combined_score}
+            {entry.days_active} days cooking • Avg: {entry.avg_combined_score} 🔥
           </Text>
         </View>
         
         <View style={styles.scoreContainer}>
           <Text style={[styles.combinedScore, { 
-            color: getScoreColor(entry.rank),
-            fontSize: entry.rank <= 3 ? 28 : 24,
+            color: entry.rank <= 3 || isCurrentUser ? '#FFFFFF' : getScoreColor(entry.rank),
+            fontSize: entry.rank <= 3 ? 32 : 28,
             fontWeight: '900'
           }]}>
             {entry.avg_combined_score}
           </Text>
           <View style={styles.subScores}>
             <View style={styles.subScore}>
-              <View style={[styles.subScoreIcon, { backgroundColor: '#3B82F630' }]}>
-                <Zap size={12} color="#3B82F6" />
+              <View style={[styles.subScoreIcon, { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
+                <Zap size={12} color="#FFFFFF" />
               </View>
               <Text style={[styles.subScoreValue, { 
-                color: isDark ? '#E5E7EB' : '#374151',
+                color: entry.rank <= 3 || isCurrentUser ? '#FFFFFF' : isDark ? '#E5E7EB' : '#374151',
                 fontWeight: '700'
               }]}>{entry.avg_fitness_score}</Text>
             </View>
             <View style={styles.subScore}>
-              <View style={[styles.subScoreIcon, { backgroundColor: '#10B98130' }]}>
-                <Star size={12} color="#10B981" />
+              <View style={[styles.subScoreIcon, { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
+                <Star size={12} color="#FFFFFF" />
               </View>
               <Text style={[styles.subScoreValue, { 
-                color: isDark ? '#E5E7EB' : '#374151',
+                color: entry.rank <= 3 || isCurrentUser ? '#FFFFFF' : isDark ? '#E5E7EB' : '#374151',
                 fontWeight: '700'
               }]}>{entry.avg_eco_score}</Text>
             </View>
@@ -517,15 +607,22 @@ export default function LeaderboardScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
           <LinearGradient
-            colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
-            style={[styles.loadingCard, { borderColor: theme.colors.border }]}
+            colors={['#FF6B35', '#F7931E', '#FFD23F']}
+            style={styles.loadingCard}
           >
-            <View style={[styles.loadingIcon, { backgroundColor: '#F59E0B30' }]}>
-              <Trophy size={48} color="#F59E0B" />
-            </View>
-            <Text style={[styles.loadingText, { color: isDark ? '#FFFFFF' : '#111827' }]}>Loading leaderboard...</Text>
-            <Text style={[styles.loadingSubtext, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
-              Calculating rankings and scores
+            <Animated.View style={{
+              transform: [{
+                rotate: sparkleAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '360deg'],
+                })
+              }]
+            }}>
+              <ChefHat size={64} color="#FFFFFF" />
+            </Animated.View>
+            <Text style={styles.loadingText}>🍳 Cooking up the leaderboard...</Text>
+            <Text style={styles.loadingSubtext}>
+              Mixing ingredients and calculating delicious scores! 🔥
             </Text>
           </LinearGradient>
         </View>
@@ -544,17 +641,26 @@ export default function LeaderboardScreen() {
       >
         {/* Header with Competition Arena */}
         <LinearGradient
-          colors={['#F59E0B', '#D97706'] as const}
+          colors={['#FF6B35', '#F7931E', '#FFD23F']}
           style={styles.header}
         >
           <View style={styles.headerContent}>
             <View style={styles.headerLeft}>
               <View style={styles.headerTitleContainer}>
-                <Trophy size={32} color="#FFFFFF" />
-                <Text style={styles.headerTitle}>Competition Arena</Text>
+                <Animated.View style={{
+                  transform: [{
+                    rotate: sparkleAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '15deg'],
+                    })
+                  }]
+                }}>
+                  <Trophy size={36} color="#FFFFFF" />
+                </Animated.View>
+                <Text style={styles.headerTitle}>🏆 Flavor Champions</Text>
               </View>
               <Text style={styles.headerSubtitle}>
-                {leaderboardData ? `Battle for the top • ${leaderboardData.period.days} days` : 'Community rankings'}
+                {leaderboardData ? `🔥 ${leaderboardData.period.days} days of delicious competition! 🍽️` : 'Who\'s cooking up the best scores? 👨‍🍳'}
               </Text>
             </View>
             <TouchableOpacity 
@@ -562,7 +668,13 @@ export default function LeaderboardScreen() {
               onPress={onRefresh}
               disabled={refreshing}
             >
-              <RefreshCw size={24} color="#FFFFFF" />
+              <Animated.View style={{
+                transform: [{
+                  rotate: refreshing ? '360deg' : '0deg'
+                }]
+              }}>
+                <RefreshCw size={24} color="#FFFFFF" />
+              </Animated.View>
             </TouchableOpacity>
           </View>
           
@@ -574,8 +686,9 @@ export default function LeaderboardScreen() {
         {leaderboardData && leaderboardData.leaderboard.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Crown size={20} color="#FFD700" />
-              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Top Performers</Text>
+              <Crown size={24} color="#FFD700" />
+              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>🍕 Master Chefs Leaderboard</Text>
+              <Text style={styles.foodEmoji}>🏆</Text>
             </View>
             <View style={styles.leaderboardContainer}>
               {leaderboardData.leaderboard.map((entry) => (
@@ -593,68 +706,57 @@ export default function LeaderboardScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Target size={20} color="#8B5CF6" />
-            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>How to Climb the Ranks</Text>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>🚀 Recipe for Success</Text>
+            <Text style={styles.foodEmoji}>📈</Text>
           </View>
           <View style={styles.tipsContainer}>
-            <View style={[styles.tipCard, { 
-              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: isDark ? '#4B5563' : '#D1D5DB'
-            }]}>
-              <LinearGradient
-                colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
-                style={styles.tipCardGradient}
-              >
-                <View style={[styles.tipIcon, { backgroundColor: '#10B98130' }]}>
-                  <TrendingUp size={24} color="#10B981" />
-                </View>
-                <View style={styles.tipContent}>
-                  <Text style={[styles.tipTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Stay Active Daily</Text>
-                  <Text style={[styles.tipText, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
-                    Log workouts and meals consistently to maintain your score
-                  </Text>
-                </View>
-              </LinearGradient>
-            </View>
+            <LinearGradient
+              colors={['#10B981', '#059669', '#047857']}
+              style={styles.tipCard}
+            >
+              <View style={styles.tipIcon}>
+                <TrendingUp size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.tipContent}>
+                <Text style={styles.tipTitle}>🔥 Stay Cooking Daily!</Text>
+                <Text style={styles.tipText}>
+                  Keep the kitchen fires burning! Log meals and workouts every day 🍳
+                </Text>
+              </View>
+              <Text style={styles.tipEmoji}>📅</Text>
+            </LinearGradient>
             
-            <View style={[styles.tipCard, { 
-              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: isDark ? '#4B5563' : '#D1D5DB'
-            }]}>
-              <LinearGradient
-                colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
-                style={styles.tipCardGradient}
-              >
-                <View style={[styles.tipIcon, { backgroundColor: '#F59E0B30' }]}>
-                  <Trophy size={24} color="#F59E0B" />
-                </View>
-                <View style={styles.tipContent}>
-                  <Text style={[styles.tipTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Balance Fitness & Eco</Text>
-                  <Text style={[styles.tipText, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
-                    High scores come from both burning calories and making sustainable choices
-                  </Text>
-                </View>
-              </LinearGradient>
-            </View>
+            <LinearGradient
+              colors={['#F59E0B', '#D97706', '#B45309']}
+              style={styles.tipCard}
+            >
+              <View style={styles.tipIcon}>
+                <Trophy size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.tipContent}>
+                <Text style={styles.tipTitle}>⚖️ Perfect Recipe Balance</Text>
+                <Text style={styles.tipText}>
+                  Mix fitness gains with eco-friendly choices for the ultimate flavor! 🌱💪
+                </Text>
+              </View>
+              <Text style={styles.tipEmoji}>🥗</Text>
+            </LinearGradient>
             
-            <View style={[styles.tipCard, { 
-              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: isDark ? '#4B5563' : '#D1D5DB'
-            }]}>
-              <LinearGradient
-                colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
-                style={styles.tipCardGradient}
-              >
-                <View style={[styles.tipIcon, { backgroundColor: '#8B5CF630' }]}>
-                  <Flame size={24} color="#8B5CF6" />
-                </View>
-                <View style={styles.tipContent}>
-                  <Text style={[styles.tipTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Consistency is Key</Text>
-                  <Text style={[styles.tipText, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
-                    Regular activity over 7 days counts more than one perfect day
-                  </Text>
-                </View>
-              </LinearGradient>
-            </View>
+            <LinearGradient
+              colors={['#8B5CF6', '#7C3AED', '#6D28D9']}
+              style={styles.tipCard}
+            >
+              <View style={styles.tipIcon}>
+                <Flame size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.tipContent}>
+                <Text style={styles.tipTitle}>🎯 Consistency is the Secret Sauce</Text>
+                <Text style={styles.tipText}>
+                  Small daily portions beat one giant feast! Keep it steady 🍽️
+                </Text>
+              </View>
+              <Text style={styles.tipEmoji}>⭐</Text>
+            </LinearGradient>
           </View>
         </View>
 
@@ -662,16 +764,24 @@ export default function LeaderboardScreen() {
         {(!leaderboardData || leaderboardData.leaderboard.length === 0) && (
           <View style={styles.emptyState}>
             <LinearGradient
-              colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
-              style={[styles.emptyCard, { borderColor: theme.colors.border }]}
+              colors={['#FF6B35', '#F7931E', '#FFD23F']}
+              style={styles.emptyCard}
             >
-              <View style={[styles.emptyIcon, { backgroundColor: '#F59E0B30' }]}>
-                <Trophy size={64} color="#F59E0B" />
-              </View>
-              <Text style={[styles.emptyTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>No Rankings Yet</Text>
-              <Text style={[styles.emptySubtitle, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
-                Start logging meals and workouts to see community rankings
+              <Animated.View style={{
+                transform: [{
+                  scale: bounceAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 1.2],
+                  })
+                }]
+              }}>
+                <ChefHat size={80} color="#FFFFFF" />
+              </Animated.View>
+              <Text style={styles.emptyTitle}>🍳 Kitchen's Empty!</Text>
+              <Text style={styles.emptySubtitle}>
+                Time to start cooking! Log some meals and workouts to join the flavor competition! 🔥👨‍🍳
               </Text>
+              <Text style={styles.foodEmoji}>🍽️✨</Text>
             </LinearGradient>
           </View>
         )}
@@ -694,32 +804,28 @@ const styles = StyleSheet.create({
   },
   loadingCard: {
     padding: 40,
-    borderRadius: 24,
+    borderRadius: 32,
     alignItems: 'center',
-    borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
     shadowRadius: 24,
-    elevation: 12,
+    elevation: 16,
     maxWidth: 320,
   },
-  loadingIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
   loadingText: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
+    marginTop: 20,
     marginBottom: 8,
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   loadingSubtext: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: 'center',
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '600',
   },
   header: {
     paddingHorizontal: 24,
@@ -745,13 +851,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#FFFFFF',
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#FEF3C7',
-    fontWeight: '500',
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '600',
   },
   refreshButton: {
     width: 48,
@@ -767,17 +873,22 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   noRankArena: {
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 24,
+    padding: 24,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
   },
   arenaIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -785,28 +896,37 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   arenaTitle: {
-    fontSize: 18,
+    fontSize: 20,
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 4,
   },
   arenaSubtitle: {
-    fontSize: 14,
-    color: '#FEF3C7',
-    fontWeight: '500',
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '600',
   },
   
   // Battle Section
   battleSection: {
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  battleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
   battleTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 16,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   battleArena: {
     flexDirection: 'row',
@@ -818,66 +938,82 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   battleAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#10B981',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   opponentAvatar: {
     backgroundColor: '#EF4444',
   },
   battleUserInitial: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '900',
     color: '#FFFFFF',
   },
   battleUserName: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     marginBottom: 4,
+    color: '#FFFFFF',
   },
   battleUserScore: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    marginBottom: 4,
   },
   vsIndicator: {
     alignItems: 'center',
     paddingHorizontal: 20,
   },
   vsIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,215,0,0.2)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
   vsText: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#FFFFFF',
   },
   
   // Target Section
   targetSection: {
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
   },
   targetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
     marginBottom: 16,
   },
   targetTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    flex: 1,
+    marginLeft: 8,
   },
   targetCard: {
     gap: 16,
@@ -888,32 +1024,36 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   targetAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#8B5CF6',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   targetInitial: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '900',
     color: '#FFFFFF',
   },
   targetInfo: {
     flex: 1,
   },
   targetName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     marginBottom: 2,
+    color: '#FFFFFF',
   },
   targetRank: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
   },
   targetProgress: {
-    gap: 8,
+    gap: 12,
   },
   progressHeader: {
     flexDirection: 'row',
@@ -921,76 +1061,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   progressLabel: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
   },
   progressValue: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   progressBarContainer: {
-    height: 8,
-    borderRadius: 4,
+    height: 12,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 6,
     overflow: 'hidden',
+    position: 'relative',
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#10B981',
-    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+  },
+  progressSparkle: {
+    position: 'absolute',
+    top: -2,
+    left: 0,
   },
   progressStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   progressStat: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  
-  // Progression Section
-  progressionSection: {
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-  },
-  progressionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  progressionTrack: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-  },
-  progressionNode: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  progressionRank: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  currentProgressionRank: {
-    backgroundColor: '#FFD700',
-  },
-  progressionRankText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  progressionUserName: {
-    fontSize: 10,
-    fontWeight: '500',
-    textAlign: 'center',
-    maxWidth: 60,
-  },
-  progressionArrow: {
-    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
   },
   
   scrollView: {
@@ -1003,23 +1107,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
+    flex: 1,
   },
   leaderboardContainer: {
     gap: 16,
   },
   leaderboardItem: {
-    borderRadius: 20,
-    borderWidth: 2,
+    borderRadius: 24,
+    borderWidth: 3,
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
   leaderboardItemGradient: {
     flexDirection: 'row',
@@ -1027,30 +1132,30 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   currentUserItem: {
-    borderWidth: 3,
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
+    borderWidth: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
   },
   topThreeItem: {
-    borderWidth: 3,
-    shadowOpacity: 0.15,
+    borderWidth: 4,
+    shadowOpacity: 0.25,
   },
   rankContainer: {
-    width: 56,
+    width: 64,
     alignItems: 'center',
     marginRight: 16,
   },
   rankNumberContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
   },
   rankNumber: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '900',
   },
   userInfo: {
     flex: 1,
@@ -1060,31 +1165,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
+    marginBottom: 6,
+    flexWrap: 'wrap',
   },
   userName: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   topBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   topBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#FFFFFF',
   },
   userStats: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
   },
   scoreContainer: {
     alignItems: 'flex-end',
   },
   combinedScore: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '900',
     marginBottom: 8,
   },
@@ -1097,38 +1208,36 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   subScoreIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   subScoreValue: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   tipsContainer: {
     gap: 16,
   },
   tipCard: {
     borderRadius: 20,
-    borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  tipCardGradient: {
-    flexDirection: 'row',
     padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
   tipIcon: {
     width: 48,
     height: 48,
     borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1136,14 +1245,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tipTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     marginBottom: 6,
+    color: '#FFFFFF',
   },
   tipText: {
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+  },
+  tipEmoji: {
+    fontSize: 24,
   },
   emptyState: {
     alignItems: 'center',
@@ -1152,29 +1266,32 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     padding: 40,
-    borderRadius: 24,
+    borderRadius: 32,
     alignItems: 'center',
-    borderWidth: 1,
     maxWidth: 320,
-  },
-  emptyIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 16,
   },
   emptyTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '900',
+    marginTop: 20,
     marginBottom: 12,
+    color: '#FFFFFF',
   },
   emptySubtitle: {
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+    marginBottom: 16,
+  },
+  foodEmoji: {
+    fontSize: 28,
   },
   bottomSpacing: {
     height: 32,
