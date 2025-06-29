@@ -11,11 +11,10 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, Search, Dumbbell, Clock, Flame, Timer, Zap, Target, TrendingUp, CreditCard as Edit3, Trash2, Save, X, MoveVertical as MoreVertical } from 'lucide-react-native';
+import { Plus, Search, Dumbbell, Clock, Flame, Timer, Zap, Target, TrendingUp, Trash2, MoveVertical as MoreVertical } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -45,212 +44,6 @@ const WORKOUT_TYPES = [
   { name: 'Dancing', icon: '💃', color: '#EC4899' },
 ];
 
-interface EditWorkoutModalProps {
-  isVisible: boolean;
-  workout: Workout | null;
-  onClose: () => void;
-  onSave: (updatedWorkout: Workout) => void;
-}
-
-const EditWorkoutModal = ({ isVisible, workout, onClose, onSave }: EditWorkoutModalProps) => {
-  const { theme, isDark } = useTheme();
-  const { showAlert, AlertComponent } = useCustomAlert();
-  const { showToast, ToastComponent } = useToast();
-  const [editedWorkout, setEditedWorkout] = useState<Workout | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (workout) {
-      setEditedWorkout({ ...workout });
-    }
-  }, [workout]);
-
-  const handleSave = async () => {
-    if (!editedWorkout) return;
-
-    // Validate inputs
-    if (!editedWorkout.type.trim()) {
-      showAlert({
-        type: 'error',
-        title: 'Invalid Input',
-        message: 'Workout type cannot be empty',
-      });
-      return;
-    }
-
-    if (editedWorkout.duration <= 0 || editedWorkout.calories_burned < 0) {
-      showAlert({
-        type: 'error',
-        title: 'Invalid Values',
-        message: 'Duration must be positive and calories cannot be negative',
-      });
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        router.replace('/auth');
-        return;
-      }
-
-      console.log('🔄 Updating workout with ID:', editedWorkout.id);
-      console.log('📊 Update data:', {
-        type: editedWorkout.type.trim(),
-        duration: Number(editedWorkout.duration),
-        calories_burned: Number(editedWorkout.calories_burned),
-      });
-
-      const token = session.session.access_token;
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/update-workout`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            workoutId: editedWorkout.id,
-            type: editedWorkout.type.trim(),
-            duration: Number(editedWorkout.duration),
-            calories_burned: Number(editedWorkout.calories_burned),
-          }),
-        }
-      );
-
-      console.log('📡 Update response status:', response.status);
-      
-      if (response.ok) {
-        const updatedWorkout = await response.json();
-        console.log('✅ Workout updated successfully:', updatedWorkout);
-        onSave(updatedWorkout);
-        onClose();
-        showToast({
-          type: 'success',
-          message: 'Workout updated successfully!',
-        });
-      } else {
-        const errorText = await response.text();
-        console.error('❌ Error updating workout:', response.status, errorText);
-        showAlert({
-          type: 'error',
-          title: 'Update Failed',
-          message: errorText || 'Failed to update workout',
-        });
-      }
-    } catch (error) {
-      console.error('💥 Error updating workout:', error);
-      showAlert({
-        type: 'error',
-        title: 'Network Error',
-        message: 'Failed to update workout. Please check your connection.',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  if (!editedWorkout) return null;
-
-  return (
-    <>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isVisible}
-        onRequestClose={onClose}
-      >
-        <View style={[styles.modalOverlay, { backgroundColor: theme.colors.overlay }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
-            <View style={styles.modalHeader}>
-              <Edit3 size={24} color={theme.colors.secondary} />
-              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Edit Workout</Text>
-              <TouchableOpacity onPress={onClose}>
-                <X size={24} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Workout Type</Text>
-                <TextInput
-                  style={[styles.modalInput, { 
-                    borderColor: theme.colors.border, 
-                    color: theme.colors.text, 
-                    backgroundColor: theme.colors.surface 
-                  }]}
-                  value={editedWorkout.type}
-                  onChangeText={(text) => setEditedWorkout({ ...editedWorkout, type: text })}
-                  placeholder="Enter workout type"
-                  placeholderTextColor={theme.colors.placeholder}
-                />
-              </View>
-
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Duration (minutes)</Text>
-                  <TextInput
-                    style={[styles.modalInput, { 
-                      borderColor: theme.colors.border, 
-                      color: theme.colors.text, 
-                      backgroundColor: theme.colors.surface 
-                    }]}
-                    value={editedWorkout.duration.toString()}
-                    onChangeText={(text) => setEditedWorkout({ ...editedWorkout, duration: Number(text) || 0 })}
-                    placeholder="0"
-                    placeholderTextColor={theme.colors.placeholder}
-                    keyboardType="numeric"
-                  />
-                </View>
-
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Calories Burned</Text>
-                  <TextInput
-                    style={[styles.modalInput, { 
-                      borderColor: theme.colors.border, 
-                      color: theme.colors.text, 
-                      backgroundColor: theme.colors.surface 
-                    }]}
-                    value={editedWorkout.calories_burned.toString()}
-                    onChangeText={(text) => setEditedWorkout({ ...editedWorkout, calories_burned: Number(text) || 0 })}
-                    placeholder="0"
-                    placeholderTextColor={theme.colors.placeholder}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.colors.surface }]}
-                onPress={onClose}
-              >
-                <Text style={[styles.modalButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.colors.secondary }]}
-                onPress={handleSave}
-                disabled={isSaving}
-              >
-                <Save size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-      {AlertComponent}
-      {ToastComponent}
-    </>
-  );
-};
-
 export default function WorkoutsScreen() {
   const { theme, isDark } = useTheme();
   const { showAlert, AlertComponent } = useCustomAlert();
@@ -263,8 +56,6 @@ export default function WorkoutsScreen() {
   const [selectedWorkoutType, setSelectedWorkoutType] = useState('');
   const [duration, setDuration] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -400,19 +191,6 @@ export default function WorkoutsScreen() {
     });
   };
 
-  const handleEditWorkout = (workout: Workout) => {
-    console.log('✏️ Editing workout:', workout);
-    setEditingWorkout(workout);
-    setShowEditModal(true);
-  };
-
-  const handleSaveEditedWorkout = (updatedWorkout: Workout) => {
-    console.log('💾 Saving edited workout:', updatedWorkout);
-    setWorkouts(workouts.map(workout => workout.id === updatedWorkout.id ? updatedWorkout : workout));
-    setShowEditModal(false);
-    setEditingWorkout(null);
-  };
-
   const handleAddWorkout = async () => {
     if (!selectedWorkoutType || !duration || isNaN(Number(duration)) || Number(duration) <= 0) {
       showAlert({
@@ -524,16 +302,6 @@ export default function WorkoutsScreen() {
           
           {showActions && (
             <View style={[styles.actionsMenu, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-              <TouchableOpacity
-                style={styles.actionMenuItem}
-                onPress={() => {
-                  setShowActions(false);
-                  handleEditWorkout(workout);
-                }}
-              >
-                <Edit3 size={16} color={theme.colors.secondary} />
-                <Text style={[styles.actionMenuText, { color: theme.colors.text }]}>Edit</Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.actionMenuItem}
                 onPress={() => {
@@ -737,16 +505,6 @@ export default function WorkoutsScreen() {
             )}
             <View style={styles.bottomSpacing} />
           </ScrollView>
-          {/* Edit Modal */}
-          <EditWorkoutModal
-            isVisible={showEditModal}
-            workout={editingWorkout}
-            onClose={() => {
-              setShowEditModal(false);
-              setEditingWorkout(null);
-            }}
-            onSave={handleSaveEditedWorkout}
-          />
           {/* Global Alert and Toast Components */}
           {AlertComponent}
           {ToastComponent}
@@ -1051,80 +809,5 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 32,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    borderRadius: 20,
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    paddingBottom: 0,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    flex: 1,
-    marginLeft: 12,
-  },
-  modalBody: {
-    padding: 20,
-    maxHeight: 400,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  inputRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    padding: 20,
-    paddingTop: 0,
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-  },
-  saveButton: {
-    // backgroundColor handled by theme
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
