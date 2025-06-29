@@ -147,17 +147,17 @@ export default function LeaderboardScreen() {
       case 1:
         return <Crown size={32} color="#FFD700" />;
       case 2:
-        return <Medal size={32} color="#C0C0C0" />;
+        return <Medal size={32} color="#E5E7EB" />;
       case 3:
-        return <Award size={32} color="#CD7F32" />;
+        return <Award size={32} color="#D97706" />;
       default:
         return (
           <View style={[styles.rankNumberContainer, { 
-            backgroundColor: isDark ? '#374151' : '#F3F4F6',
-            borderColor: isDark ? '#6B7280' : '#D1D5DB'
+            backgroundColor: isDark ? '#4B5563' : '#E5E7EB',
+            borderColor: isDark ? '#6B7280' : '#9CA3AF'
           }]}>
             <Text style={[styles.rankNumber, { 
-              color: isDark ? '#F9FAFB' : '#111827',
+              color: isDark ? '#FFFFFF' : '#111827',
               fontWeight: '800'
             }]}>{rank}</Text>
           </View>
@@ -170,9 +170,9 @@ export default function LeaderboardScreen() {
       case 1:
         return ['#FFD700', '#FFA500'] as const;
       case 2:
-        return ['#C0C0C0', '#A8A8A8'] as const;
+        return ['#E5E7EB', '#D1D5DB'] as const;
       case 3:
-        return ['#CD7F32', '#B8860B'] as const;
+        return ['#D97706', '#B45309'] as const;
       default:
         return isDark ? ['#374151', '#4B5563'] as const : ['#F9FAFB', '#F3F4F6'] as const;
     }
@@ -185,9 +185,9 @@ export default function LeaderboardScreen() {
       case 2:
         return '#6B7280';
       case 3:
-        return '#8B5C2B';
+        return '#B45309';
       default:
-        return isDark ? '#F3F4F6' : '#111827';
+        return isDark ? '#F9FAFB' : '#111827';
     }
   };
 
@@ -223,8 +223,13 @@ export default function LeaderboardScreen() {
     if (!userRank) {
       return (
         <View style={styles.arenaContainer}>
-          <View style={styles.noRankArena}>
-            <View style={styles.arenaIcon}>
+          <View style={[styles.noRankArena, { 
+            backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+            borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'
+          }]}>
+            <View style={[styles.arenaIcon, { 
+              backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'
+            }]}>
               <Swords size={40} color="#FFFFFF" />
             </View>
             <View style={styles.arenaInfo}>
@@ -240,8 +245,11 @@ export default function LeaderboardScreen() {
       <View style={styles.arenaContainer}>
         {/* Battle Visualization */}
         {battleOpponent && (
-          <View style={styles.battleSection}>
-            <Text style={styles.battleTitle}>Live Battle</Text>
+          <View style={[styles.battleSection, { 
+            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+            borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'
+          }]}>
+            <Text style={[styles.battleTitle, { color: '#FFFFFF' }]}>Live Battle</Text>
             <View style={styles.battleArena}>
               {/* User Side */}
               <View style={styles.battleUser}>
@@ -260,8 +268,8 @@ export default function LeaderboardScreen() {
                     {userRank.name.charAt(0).toUpperCase()}
                   </Text>
                 </Animated.View>
-                <Text style={styles.battleUserName}>You</Text>
-                <Text style={styles.battleUserScore}>{userRank.avg_combined_score}</Text>
+                <Text style={[styles.battleUserName, { color: '#FFFFFF' }]}>You</Text>
+                <Text style={[styles.battleUserScore, { color: '#FFD700' }]}>{userRank.avg_combined_score}</Text>
               </View>
 
               {/* VS Indicator */}
@@ -279,7 +287,7 @@ export default function LeaderboardScreen() {
                 ]}>
                   <Swords size={24} color="#FFD700" />
                 </Animated.View>
-                <Text style={styles.vsText}>VS</Text>
+                <Text style={[styles.vsText, { color: '#FFD700' }]}>VS</Text>
               </View>
 
               {/* Opponent Side */}
@@ -300,8 +308,8 @@ export default function LeaderboardScreen() {
                     {battleOpponent.name.charAt(0).toUpperCase()}
                   </Text>
                 </Animated.View>
-                <Text style={styles.battleUserName}>{battleOpponent.name}</Text>
-                <Text style={styles.battleUserScore}>{battleOpponent.avg_combined_score}</Text>
+                <Text style={[styles.battleUserName, { color: '#FFFFFF' }]}>{battleOpponent.name}</Text>
+                <Text style={[styles.battleUserScore, { color: '#FFD700' }]}>{battleOpponent.avg_combined_score}</Text>
               </View>
             </View>
           </View>
@@ -309,10 +317,13 @@ export default function LeaderboardScreen() {
 
         {/* Next Target Section */}
         {nextTarget && (
-          <View style={styles.targetSection}>
+          <View style={[styles.targetSection, { 
+            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+            borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'
+          }]}>
             <View style={styles.targetHeader}>
               <Target size={20} color="#FFD700" />
-              <Text style={styles.targetTitle}>Next Target</Text>
+              <Text style={[styles.targetTitle, { color: '#FFFFFF' }]}>Next Target</Text>
             </View>
             
             <View style={styles.targetCard}>
@@ -323,18 +334,20 @@ export default function LeaderboardScreen() {
                   </Text>
                 </View>
                 <View style={styles.targetInfo}>
-                  <Text style={styles.targetName}>{nextTarget.name}</Text>
-                  <Text style={styles.targetRank}>Rank #{nextTarget.rank}</Text>
+                  <Text style={[styles.targetName, { color: '#FFFFFF' }]}>{nextTarget.name}</Text>
+                  <Text style={[styles.targetRank, { color: '#FEF3C7' }]}>Rank #{nextTarget.rank}</Text>
                 </View>
               </View>
               
               <View style={styles.targetProgress}>
                 <View style={styles.progressHeader}>
-                  <Text style={styles.progressLabel}>Points needed</Text>
-                  <Text style={styles.progressValue}>+{pointsToNext}</Text>
+                  <Text style={[styles.progressLabel, { color: '#FEF3C7' }]}>Points needed</Text>
+                  <Text style={[styles.progressValue, { color: '#FFD700' }]}>+{pointsToNext}</Text>
                 </View>
                 
-                <View style={styles.progressBarContainer}>
+                <View style={[styles.progressBarContainer, { 
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'
+                }]}>
                   <Animated.View 
                     style={[
                       styles.progressBar,
@@ -349,8 +362,8 @@ export default function LeaderboardScreen() {
                 </View>
                 
                 <View style={styles.progressStats}>
-                  <Text style={styles.progressStat}>You: {userRank.avg_combined_score}</Text>
-                  <Text style={styles.progressStat}>Target: {nextTarget.avg_combined_score}</Text>
+                  <Text style={[styles.progressStat, { color: '#FEF3C7' }]}>You: {userRank.avg_combined_score}</Text>
+                  <Text style={[styles.progressStat, { color: '#FEF3C7' }]}>Target: {nextTarget.avg_combined_score}</Text>
                 </View>
               </View>
             </View>
@@ -358,8 +371,11 @@ export default function LeaderboardScreen() {
         )}
 
         {/* Rank Progression */}
-        <View style={styles.progressionSection}>
-          <Text style={styles.progressionTitle}>Rank Progression</Text>
+        <View style={[styles.progressionSection, { 
+          backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+          borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'
+        }]}>
+          <Text style={[styles.progressionTitle, { color: '#FFFFFF' }]}>Rank Progression</Text>
           <View style={styles.progressionTrack}>
             {[userRank.rank + 1, userRank.rank, userRank.rank - 1].filter(rank => rank > 0).map((rank, index) => {
               const isCurrentRank = rank === userRank.rank;
@@ -369,16 +385,17 @@ export default function LeaderboardScreen() {
                 <View key={rank} style={styles.progressionNode}>
                   <View style={[
                     styles.progressionRank,
-                    isCurrentRank && styles.currentProgressionRank
+                    isCurrentRank && styles.currentProgressionRank,
+                    { backgroundColor: isCurrentRank ? '#FFD700' : isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)' }
                   ]}>
                     {isCurrentRank ? (
-                      <Crown size={16} color="#FFD700" />
+                      <Crown size={16} color="#000000" />
                     ) : (
-                      <Text style={styles.progressionRankText}>#{rank}</Text>
+                      <Text style={[styles.progressionRankText, { color: '#FFFFFF' }]}>#{rank}</Text>
                     )}
                   </View>
                   {user && (
-                    <Text style={styles.progressionUserName}>
+                    <Text style={[styles.progressionUserName, { color: '#FEF3C7' }]}>
                       {user.user_id === userRank.user_id ? 'You' : user.name}
                     </Text>
                   )}
@@ -399,7 +416,7 @@ export default function LeaderboardScreen() {
       styles.leaderboardItem,
       { 
         backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-        borderColor: isDark ? '#374151' : '#E5E7EB',
+        borderColor: isDark ? '#4B5563' : '#D1D5DB',
         shadowColor: isDark ? '#000000' : '#000000',
       },
       isCurrentUser && [styles.currentUserItem, { 
@@ -409,7 +426,7 @@ export default function LeaderboardScreen() {
       }],
       entry.rank <= 3 && [styles.topThreeItem, { 
         backgroundColor: isDark ? '#1E1B4B' : '#FEF3C7',
-        borderColor: entry.rank === 1 ? '#FFD700' : entry.rank === 2 ? '#C0C0C0' : '#CD7F32'
+        borderColor: entry.rank === 1 ? '#FFD700' : entry.rank === 2 ? '#E5E7EB' : '#D97706'
       }]
     ]}>
       <LinearGradient
@@ -435,7 +452,7 @@ export default function LeaderboardScreen() {
               { 
                 color: entry.rank <= 3 
                   ? isDark ? '#FFFFFF' : '#111827'
-                  : isDark ? '#F9FAFB' : '#111827'
+                  : isDark ? '#FFFFFF' : '#111827'
               }, 
               isCurrentUser && { fontWeight: '800', color: '#10B981' }
             ]}>
@@ -455,8 +472,8 @@ export default function LeaderboardScreen() {
           </View>
           <Text style={[styles.userStats, { 
             color: entry.rank <= 3 
-              ? isDark ? '#E5E7EB' : '#374151'
-              : isDark ? '#9CA3AF' : '#6B7280'
+              ? isDark ? '#E5E7EB' : '#4B5563'
+              : isDark ? '#D1D5DB' : '#6B7280'
           }]}>
             {entry.days_active} days active • Avg: {entry.avg_combined_score}
           </Text>
@@ -472,20 +489,20 @@ export default function LeaderboardScreen() {
           </Text>
           <View style={styles.subScores}>
             <View style={styles.subScore}>
-              <View style={[styles.subScoreIcon, { backgroundColor: '#3B82F620' }]}>
+              <View style={[styles.subScoreIcon, { backgroundColor: '#3B82F630' }]}>
                 <Zap size={12} color="#3B82F6" />
               </View>
               <Text style={[styles.subScoreValue, { 
-                color: isDark ? '#CBD5E1' : '#6B7280',
+                color: isDark ? '#E5E7EB' : '#374151',
                 fontWeight: '700'
               }]}>{entry.avg_fitness_score}</Text>
             </View>
             <View style={styles.subScore}>
-              <View style={[styles.subScoreIcon, { backgroundColor: '#10B98120' }]}>
+              <View style={[styles.subScoreIcon, { backgroundColor: '#10B98130' }]}>
                 <Star size={12} color="#10B981" />
               </View>
               <Text style={[styles.subScoreValue, { 
-                color: isDark ? '#CBD5E1' : '#6B7280',
+                color: isDark ? '#E5E7EB' : '#374151',
                 fontWeight: '700'
               }]}>{entry.avg_eco_score}</Text>
             </View>
@@ -503,11 +520,11 @@ export default function LeaderboardScreen() {
             colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
             style={[styles.loadingCard, { borderColor: theme.colors.border }]}
           >
-            <View style={[styles.loadingIcon, { backgroundColor: '#F59E0B20' }]}>
+            <View style={[styles.loadingIcon, { backgroundColor: '#F59E0B30' }]}>
               <Trophy size={48} color="#F59E0B" />
             </View>
-            <Text style={[styles.loadingText, { color: theme.colors.text }]}>Loading leaderboard...</Text>
-            <Text style={[styles.loadingSubtext, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.loadingText, { color: isDark ? '#FFFFFF' : '#111827' }]}>Loading leaderboard...</Text>
+            <Text style={[styles.loadingSubtext, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
               Calculating rankings and scores
             </Text>
           </LinearGradient>
@@ -558,7 +575,7 @@ export default function LeaderboardScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Crown size={20} color="#FFD700" />
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Top Performers</Text>
+              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Top Performers</Text>
             </View>
             <View style={styles.leaderboardContainer}>
               {leaderboardData.leaderboard.map((entry) => (
@@ -576,23 +593,23 @@ export default function LeaderboardScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Target size={20} color="#8B5CF6" />
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>How to Climb the Ranks</Text>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>How to Climb the Ranks</Text>
           </View>
           <View style={styles.tipsContainer}>
             <View style={[styles.tipCard, { 
               backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: isDark ? '#374151' : '#E5E7EB'
+              borderColor: isDark ? '#4B5563' : '#D1D5DB'
             }]}>
               <LinearGradient
                 colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
                 style={styles.tipCardGradient}
               >
-                <View style={[styles.tipIcon, { backgroundColor: '#10B98120' }]}>
+                <View style={[styles.tipIcon, { backgroundColor: '#10B98130' }]}>
                   <TrendingUp size={24} color="#10B981" />
                 </View>
                 <View style={styles.tipContent}>
-                  <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Stay Active Daily</Text>
-                  <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
+                  <Text style={[styles.tipTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Stay Active Daily</Text>
+                  <Text style={[styles.tipText, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
                     Log workouts and meals consistently to maintain your score
                   </Text>
                 </View>
@@ -601,18 +618,18 @@ export default function LeaderboardScreen() {
             
             <View style={[styles.tipCard, { 
               backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: isDark ? '#374151' : '#E5E7EB'
+              borderColor: isDark ? '#4B5563' : '#D1D5DB'
             }]}>
               <LinearGradient
                 colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
                 style={styles.tipCardGradient}
               >
-                <View style={[styles.tipIcon, { backgroundColor: '#F59E0B20' }]}>
+                <View style={[styles.tipIcon, { backgroundColor: '#F59E0B30' }]}>
                   <Trophy size={24} color="#F59E0B" />
                 </View>
                 <View style={styles.tipContent}>
-                  <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Balance Fitness & Eco</Text>
-                  <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
+                  <Text style={[styles.tipTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Balance Fitness & Eco</Text>
+                  <Text style={[styles.tipText, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
                     High scores come from both burning calories and making sustainable choices
                   </Text>
                 </View>
@@ -621,18 +638,18 @@ export default function LeaderboardScreen() {
             
             <View style={[styles.tipCard, { 
               backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              borderColor: isDark ? '#374151' : '#E5E7EB'
+              borderColor: isDark ? '#4B5563' : '#D1D5DB'
             }]}>
               <LinearGradient
                 colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
                 style={styles.tipCardGradient}
               >
-                <View style={[styles.tipIcon, { backgroundColor: '#8B5CF620' }]}>
+                <View style={[styles.tipIcon, { backgroundColor: '#8B5CF630' }]}>
                   <Flame size={24} color="#8B5CF6" />
                 </View>
                 <View style={styles.tipContent}>
-                  <Text style={[styles.tipTitle, { color: theme.colors.text }]}>Consistency is Key</Text>
-                  <Text style={[styles.tipText, { color: theme.colors.textSecondary }]}>
+                  <Text style={[styles.tipTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Consistency is Key</Text>
+                  <Text style={[styles.tipText, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
                     Regular activity over 7 days counts more than one perfect day
                   </Text>
                 </View>
@@ -648,11 +665,11 @@ export default function LeaderboardScreen() {
               colors={isDark ? ['#1F2937', '#374151'] as const : ['#FFFFFF', '#F9FAFB'] as const}
               style={[styles.emptyCard, { borderColor: theme.colors.border }]}
             >
-              <View style={[styles.emptyIcon, { backgroundColor: '#F59E0B20' }]}>
+              <View style={[styles.emptyIcon, { backgroundColor: '#F59E0B30' }]}>
                 <Trophy size={64} color="#F59E0B" />
               </View>
-              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Rankings Yet</Text>
-              <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
+              <Text style={[styles.emptyTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>No Rankings Yet</Text>
+              <Text style={[styles.emptySubtitle, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
                 Start logging meals and workouts to see community rankings
               </Text>
             </LinearGradient>
@@ -750,20 +767,17 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   noRankArena: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 20,
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
   },
   arenaIcon: {
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -784,15 +798,12 @@ const styles = StyleSheet.create({
   
   // Battle Section
   battleSection: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
   },
   battleTitle: {
     fontSize: 16,
-    color: '#FFFFFF',
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 16,
@@ -827,13 +838,11 @@ const styles = StyleSheet.create({
   },
   battleUserName: {
     fontSize: 12,
-    color: '#FFFFFF',
     fontWeight: '600',
     marginBottom: 4,
   },
   battleUserScore: {
     fontSize: 16,
-    color: '#FFD700',
     fontWeight: '800',
   },
   vsIndicator: {
@@ -851,17 +860,14 @@ const styles = StyleSheet.create({
   },
   vsText: {
     fontSize: 12,
-    color: '#FFD700',
     fontWeight: '800',
   },
   
   // Target Section
   targetSection: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
   },
   targetHeader: {
     flexDirection: 'row',
@@ -871,7 +877,6 @@ const styles = StyleSheet.create({
   },
   targetTitle: {
     fontSize: 16,
-    color: '#FFFFFF',
     fontWeight: '700',
   },
   targetCard: {
@@ -900,13 +905,11 @@ const styles = StyleSheet.create({
   },
   targetName: {
     fontSize: 16,
-    color: '#FFFFFF',
     fontWeight: '600',
     marginBottom: 2,
   },
   targetRank: {
     fontSize: 12,
-    color: '#FEF3C7',
     fontWeight: '500',
   },
   targetProgress: {
@@ -919,17 +922,14 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     fontSize: 12,
-    color: '#FEF3C7',
     fontWeight: '500',
   },
   progressValue: {
     fontSize: 14,
-    color: '#FFD700',
     fontWeight: '700',
   },
   progressBarContainer: {
     height: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -944,21 +944,17 @@ const styles = StyleSheet.create({
   },
   progressStat: {
     fontSize: 11,
-    color: '#FEF3C7',
     fontWeight: '500',
   },
   
   // Progression Section
   progressionSection: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
   },
   progressionTitle: {
     fontSize: 16,
-    color: '#FFFFFF',
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: 16,
@@ -977,7 +973,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -986,12 +981,10 @@ const styles = StyleSheet.create({
   },
   progressionRankText: {
     fontSize: 10,
-    color: '#FFFFFF',
     fontWeight: '700',
   },
   progressionUserName: {
     fontSize: 10,
-    color: '#FEF3C7',
     fontWeight: '500',
     textAlign: 'center',
     maxWidth: 60,
