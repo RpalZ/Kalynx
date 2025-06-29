@@ -18,6 +18,8 @@ import { router, Link, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/contexts/ThemeContext';
 import ChartWidget from '@/components/ChartWidget';
+import { ResponsiveGrid, GridItem } from '@/components/ResponsiveGrid';
+import { MetricCard, QuickActionCard, StatsOverview } from '@/components/DashboardCards';
 
 const { width } = Dimensions.get('window');
 
@@ -57,6 +59,9 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<any>(null);
+
+  const isDesktop = Platform.OS === 'web' && width >= 1024;
+  const isTablet = Platform.OS === 'web' && width >= 768 && width < 1024;
 
   React.useLayoutEffect(() => {
     checkAuth();
@@ -144,6 +149,25 @@ export default function HomeScreen() {
     return 'Good evening';
   };
 
+  const handleCardPress = (type: string) => {
+    switch (type) {
+      case 'meals':
+        router.push('/(tabs)/meals');
+        break;
+      case 'workouts':
+        router.push('/(tabs)/workouts');
+        break;
+      case 'leaderboard':
+        router.push('/(tabs)/leaderboard');
+        break;
+      case 'profile':
+        router.push('/(tabs)/profile');
+        break;
+      default:
+        break;
+    }
+  };
+
   const ScoreRing = ({ score, size = 80, strokeWidth = 8, color }: any) => {
     const radius = (size - strokeWidth) / 2;
     const circumference = radius * 2 * Math.PI;
@@ -179,48 +203,6 @@ export default function HomeScreen() {
     );
   };
 
-  const MetricCard = ({ title, value, unit, icon: Icon, color, trend, bgGradient }: any) => (
-    <View style={[styles.metricCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-      <LinearGradient
-        colors={bgGradient || [theme.colors.surface, theme.colors.surface]}
-        style={styles.metricGradient}
-      >
-        <View style={styles.metricHeader}>
-          <View style={[styles.metricIconContainer, { backgroundColor: `${color}20` }]}>
-            <Icon size={20} color={color} />
-          </View>
-          {trend && (
-            <View style={[styles.trendContainer, { backgroundColor: trend > 0 ? '#10B98120' : '#EF444420' }]}>
-              <TrendingUp size={12} color={trend > 0 ? '#10B981' : '#EF4444'} />
-              <Text style={[styles.trendText, { color: trend > 0 ? '#10B981' : '#EF4444' }]}>
-                {Math.abs(trend)}%
-              </Text>
-            </View>
-          )}
-        </View>
-        <Text style={[styles.metricValue, { color }]}>{value}</Text>
-        <Text style={[styles.metricTitle, { color: theme.colors.textSecondary }]}>{title}</Text>
-        <Text style={[styles.metricUnit, { color: theme.colors.placeholder }]}>{unit}</Text>
-      </LinearGradient>
-    </View>
-  );
-
-  const QuickActionCard = ({ title, subtitle, icon: Icon, color, gradient, onPress, cardSize }: any) => (
-    <TouchableOpacity style={[styles.quickActionCard, { width: cardSize, height: cardSize }]} onPress={onPress}>
-      <LinearGradient colors={gradient} style={styles.quickActionGradient}>
-        <View style={styles.quickActionContent}>
-          <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-            <Icon size={24} color="#FFFFFF" />
-          </View>
-          <View style={styles.quickActionText}>
-            <Text style={styles.quickActionTitle}>{title}</Text>
-            <Text style={styles.quickActionSubtitle}>{subtitle}</Text>
-          </View>
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
-
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -242,75 +224,180 @@ export default function HomeScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        contentContainerStyle={isDesktop ? styles.desktopContent : undefined}
       >
-        {/* Header */}
-        <LinearGradient
-          colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
-          style={styles.header}
-        >
-          <View style={styles.headerContent}>
-            <View style={styles.headerLeft}>
-              <Text style={styles.greeting}>{getGreeting()},</Text>
-              <Text style={styles.userName}>{user?.user_metadata?.name || 'there'}!</Text>
-              <Text style={styles.subtitle}>Ready to make a positive impact today?</Text>
+        {/* Header - Only show on mobile/tablet */}
+        {!isDesktop && (
+          <LinearGradient
+            colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
+            style={styles.header}
+          >
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeft}>
+                <Text style={styles.greeting}>{getGreeting()},</Text>
+                <Text style={styles.userName}>{user?.user_metadata?.name || 'there'}!</Text>
+                <Text style={styles.subtitle}>Ready to make a positive impact today?</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.refreshButton}
+                onPress={onRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw size={24} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity 
-              style={styles.refreshButton}
-              onPress={onRefresh}
-              disabled={refreshing}
-            >
-              <RefreshCw size={24} color="#FFFFFF" />
-            </TouchableOpacity>
+          </LinearGradient>
+        )}
+
+        {/* Desktop Welcome Section */}
+        {isDesktop && (
+          <View style={styles.desktopWelcome}>
+            <Text style={[styles.desktopGreeting, { color: theme.colors.text }]}>
+              {getGreeting()}, {user?.user_metadata?.name || 'there'}!
+            </Text>
+            <Text style={[styles.desktopSubtitle, { color: theme.colors.textSecondary }]}>
+              Here's your sustainability and fitness overview for today
+            </Text>
           </View>
-        </LinearGradient>
+        )}
 
         {/* Quick Actions */}
-        <View style={styles.section}>
+        <View style={[styles.section, isDesktop && styles.desktopSection]}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Actions</Text>
-          <View style={styles.quickActionsGrid}>
-            <QuickActionCard
-              title="Log Meal"
-              subtitle="Track nutrition & impact"
-              icon={Utensils}
-              gradient={['#10B981', '#059669']}
-              onPress={() => router.push('/meals')}
-              cardSize={cardSize}
-            />
-            <QuickActionCard
-              title="Log Workout"
-              subtitle="Record your activity"
-              icon={Dumbbell}
-              gradient={['#3B82F6', '#2563EB']}
-              onPress={() => router.push('/workouts')}
-              cardSize={cardSize}
-            />
-            <QuickActionCard
-              title="Scan Fridge"
-              subtitle="AI recipe suggestions"
-              icon={Camera}
-              gradient={['#8B5CF6', '#7C3AED']}
-              onPress={() => router.push('/(tabs)/camera' as any)}
-              cardSize={cardSize}
-            />
-            <QuickActionCard
-              title="View Progress"
-              subtitle="See your achievements"
-              icon={Award}
-              gradient={['#F59E0B', '#D97706']}
-              onPress={() => router.push('/(tabs)/leaderboard')}
-              cardSize={cardSize}
-            />
-          </View>
+          <ResponsiveGrid
+            columns={{ mobile: 2, tablet: 2, desktop: 4 }}
+            gap={16}
+          >
+            <GridItem>
+              <QuickActionCard
+                title="Log Meal"
+                subtitle="Track nutrition & impact"
+                icon={Utensils}
+                gradient={['#10B981', '#059669']}
+                onPress={() => router.push('/meals')}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+            </GridItem>
+            <GridItem>
+              <QuickActionCard
+                title="Log Workout"
+                subtitle="Record your activity"
+                icon={Dumbbell}
+                gradient={['#3B82F6', '#2563EB']}
+                onPress={() => router.push('/workouts')}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+            </GridItem>
+            <GridItem>
+              <QuickActionCard
+                title="Scan Fridge"
+                subtitle="AI recipe suggestions"
+                icon={Camera}
+                gradient={['#8B5CF6', '#7C3AED']}
+                onPress={() => router.push('/(tabs)/camera' as any)}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+            </GridItem>
+            <GridItem>
+              <QuickActionCard
+                title="View Progress"
+                subtitle="See your achievements"
+                icon={Award}
+                gradient={['#F59E0B', '#D97706']}
+                onPress={() => router.push('/(tabs)/leaderboard')}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+            </GridItem>
+          </ResponsiveGrid>
         </View>
 
+        {/* Stats Overview */}
+        {summary && (
+          <View style={[styles.section, isDesktop && styles.desktopSection]}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Overview</Text>
+            <ResponsiveGrid
+              columns={{ mobile: 2, tablet: 3, desktop: 6 }}
+              gap={16}
+            >
+              <GridItem>
+                <MetricCard
+                  title="Meals Logged"
+                  value={summary.mealsCount}
+                  subtitle="today"
+                  icon={Target}
+                  color={theme.colors.success}
+                  trend={5}
+                  onPress={() => handleCardPress('meals')}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+              </GridItem>
+              <GridItem>
+                <MetricCard
+                  title="Workouts"
+                  value={summary.workoutsCount}
+                  subtitle="completed"
+                  icon={Zap}
+                  color={theme.colors.secondary}
+                  trend={-2}
+                  onPress={() => handleCardPress('workouts')}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+              </GridItem>
+              <GridItem>
+                <MetricCard
+                  title="Calories"
+                  value={summary.totalCalories.toFixed(0)}
+                  subtitle="consumed"
+                  icon={Flame}
+                  color={theme.colors.error}
+                  trend={12}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+              </GridItem>
+              <GridItem>
+                <MetricCard
+                  title="CO₂ Impact"
+                  value={`${summary.totalCO2e.toFixed(1)}kg`}
+                  subtitle="saved"
+                  icon={Leaf}
+                  color={theme.colors.success}
+                  trend={8}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+              </GridItem>
+              <GridItem>
+                <MetricCard
+                  title="Water Impact"
+                  value={`${summary.totalWater.toFixed(0)}L`}
+                  subtitle="used"
+                  icon={Droplet}
+                  color={theme.colors.info}
+                  trend={15}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+              </GridItem>
+              <GridItem>
+                <MetricCard
+                  title="Net Balance"
+                  value={Math.abs(summary.netCalories).toFixed(0)}
+                  subtitle={summary.netCalories > 0 ? 'surplus' : 'deficit'}
+                  icon={Target}
+                  color={summary.netCalories > 0 ? theme.colors.error : theme.colors.success}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+              </GridItem>
+            </ResponsiveGrid>
+          </View>
+        )}
+
         {/* Chart Widget */}
-        <View style={styles.section}>
+        <View style={[styles.section, isDesktop && styles.desktopSection]}>
           <ChartWidget />
         </View>
 
         {/* Performance Scores */}
         {score && (
-          <View style={styles.section}>
+          <View style={[styles.section, isDesktop && styles.desktopSection]}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Performance</Text>
             <View style={[styles.scoresCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <LinearGradient
@@ -336,74 +423,9 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Today's Metrics */}
-        {summary && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Metrics</Text>
-            <View style={styles.metricsGrid}>
-              <MetricCard
-                title="Calories Consumed"
-                value={summary.totalCalories.toFixed(0)}
-                unit="kcal"
-                icon={Flame}
-                color={theme.colors.error}
-                trend={5}
-                bgGradient={isDark ? ['#FEF2F2', '#FEE2E2'] : ['#FEF2F2', '#FECACA']}
-              />
-              <MetricCard
-                title="Protein Intake"
-                value={Math.round(summary.totalProtein)}
-                unit="grams"
-                icon={TrendingUp}
-                color={theme.colors.secondary}
-                trend={-2}
-                bgGradient={isDark ? ['#EBF5FF', '#DBEAFE'] : ['#EBF5FF', '#BFDBFE']}
-              />
-              <MetricCard
-                title="CO₂ Impact"
-                value={summary.totalCO2e.toFixed(1)}
-                unit="kg saved"
-                icon={Leaf}
-                color={theme.colors.success}
-                trend={12}
-                bgGradient={isDark ? ['#F0FDF4', '#DCFCE7'] : ['#F0FDF4', '#BBF7D0']}
-              />
-              <MetricCard
-                title="Water Impact"
-                value={summary.totalWater.toFixed(0)}
-                unit="liters"
-                icon={Droplet}
-                color={theme.colors.info}
-                trend={8}
-                bgGradient={isDark ? ['#EFF6FF', '#DBEAFE'] : ['#EFF6FF', '#BFDBFE']}
-              />
-              <MetricCard
-                title="Calories Burned"
-                value={summary.caloriesBurned}
-                unit="kcal"
-                icon={Zap}
-                color={theme.colors.warning}
-                trend={15}
-                bgGradient={isDark ? ['#FFFBEB', '#FEF3C7'] : ['#FFFBEB', '#FDE68A']}
-              />
-              <MetricCard
-                title="Net Balance"
-                value={Math.abs(summary.netCalories).toFixed(0)}
-                unit={summary.netCalories > 0 ? 'surplus' : 'deficit'}
-                icon={Target}
-                color={summary.netCalories > 0 ? theme.colors.error : theme.colors.success}
-                bgGradient={summary.netCalories > 0 ? 
-                  (isDark ? ['#FEF2F2', '#FEE2E2'] : ['#FEF2F2', '#FECACA']) :
-                  (isDark ? ['#F0FDF4', '#DCFCE7'] : ['#F0FDF4', '#BBF7D0'])
-                }
-              />
-            </View>
-          </View>
-        )}
-
         {/* Activity Summary */}
         {summary && (
-          <View style={styles.section}>
+          <View style={[styles.section, isDesktop && styles.desktopSection]}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Activity Summary</Text>
             <View style={[styles.activityCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <LinearGradient
@@ -457,6 +479,11 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  desktopContent: {
+    maxWidth: 1400,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -521,76 +548,31 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
+  desktopWelcome: {
+    paddingHorizontal: 32,
+    paddingTop: 32,
+    paddingBottom: 16,
+  },
+  desktopGreeting: {
+    fontSize: 32,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  desktopSubtitle: {
+    fontSize: 18,
+    lineHeight: 24,
+  },
   section: {
     padding: 20,
+  },
+  desktopSection: {
+    paddingHorizontal: 32,
+    paddingVertical: 24,
   },
   sectionTitle: {
     fontSize: 22,
     fontWeight: '700',
     marginBottom: 16,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    maxWidth: 464,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  quickActionCard: {
-    aspectRatio: 1,
-    borderRadius: 24,
-    overflow: 'hidden',
-    marginBottom: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quickActionGradient: {
-    flex: 1,
-    padding: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    height: '100%',
-  },
-  quickActionContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    height: '100%',
-    gap: 12,
-  },
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  quickActionText: {
-    alignItems: 'center',
-  },
-  quickActionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
-    textAlign: 'center',
-  },
-  quickActionSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.9)',
-    lineHeight: 18,
-    textAlign: 'center',
   },
   scoresCard: {
     borderRadius: 20,
@@ -621,65 +603,6 @@ const styles = StyleSheet.create({
   scoreLabel: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  metricCard: {
-    flex: 1,
-    minWidth: (width - 64) / 2,
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  metricGradient: {
-    padding: 16,
-  },
-  metricHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  metricIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  trendContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    gap: 2,
-  },
-  trendText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  metricValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  metricTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  metricUnit: {
-    fontSize: 12,
-    fontWeight: '500',
   },
   activityCard: {
     borderRadius: 20,
