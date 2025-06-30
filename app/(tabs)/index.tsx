@@ -381,7 +381,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Stats Overview */}
-        <View style={[styles.section, styles.compactSection, isDesktop && styles.desktopSection]}>
+        <View style={[styles.section, isDesktop && styles.desktopSection]}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Overview</Text>
           {loadingStates.summary ? (
             <View style={styles.statsLoading}>
@@ -456,12 +456,12 @@ export default function HomeScreen() {
         </View>
 
         {/* Chart Widget */}
-        <View style={[styles.section, styles.compactSection, isDesktop && styles.desktopSection]}>
+        <View style={[styles.section, isDesktop && styles.desktopSection]}>
           <ChartWidget />
         </View>
 
         {/* Performance Scores */}
-        <View style={[styles.section, styles.compactSection, isDesktop && styles.desktopSection]}>
+        <View style={[styles.section, isDesktop && styles.desktopSection]}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Performance</Text>
           {loadingStates.score ? (
             <View style={styles.scoresLoading}>
@@ -516,7 +516,7 @@ export default function HomeScreen() {
 
         {/* Activity Summary */}
         {summary && (
-          <View style={[styles.section, styles.compactSection, isDesktop && styles.desktopSection]}>
+          <View style={[styles.section, isDesktop && styles.desktopSection]}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Activity Summary</Text>
             <View style={[styles.activityCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <LinearGradient
@@ -688,15 +688,11 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   section: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  compactSection: {
-    paddingVertical: 8, // Reduced from 16 to 8
+    padding: 16,
   },
   desktopSection: {
     paddingHorizontal: 32,
-    paddingVertical: 16, // Reduced from 24 to 16
+    paddingVertical: 24,
   },
   sectionTitle: {
     fontSize: 20,
@@ -781,6 +777,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   bottomSpacing: {
-    height: 20, // Reduced from 32 to 20
+    height: 32,
   },
 });
