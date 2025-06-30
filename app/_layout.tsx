@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
+import BoltBadge from '@/components/BoltBadge';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -18,6 +19,7 @@ export default function RootLayout() {
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />
+        <BoltBadge position="bottom-right" size="medium" />
       </SubscriptionProvider>
     </ThemeProvider>
   );
