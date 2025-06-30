@@ -48,14 +48,14 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
         const { data: { user }, error } = await supabase.auth.getUser();
         if (mounted) {
           if (error) {
-            console.error('DesktopLayout: Error fetching user:', error);
+            console.error('DesktopLayout: Error fetching user');
           } else {
             setUser(user);
           }
           setIsUserLoading(false);
         }
       } catch (error) {
-        console.error('DesktopLayout: Exception fetching user:', error);
+        console.error('DesktopLayout: Exception fetching user');
         if (mounted) {
           setIsUserLoading(false);
         }
@@ -75,7 +75,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
       await supabase.auth.signOut();
       router.replace('/auth');
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Error signing out');
     }
   };
 
@@ -104,14 +104,14 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   const currentActiveTab = getCurrentActiveTab();
 
   const handleNavigation = (item: any) => {
-    console.log('🚀 Desktop navigation clicked:', item.label, 'Route:', item.route);
+    console.log('🚀 Desktop navigation clicked:', item.label);
     
     try {
       // Use push instead of replace to avoid navigation conflicts
       router.push(item.route);
       console.log('✅ Navigation completed for:', item.label);
     } catch (error) {
-      console.error('❌ Navigation error:', error);
+      console.error('❌ Navigation error occurred');
     }
   };
 
