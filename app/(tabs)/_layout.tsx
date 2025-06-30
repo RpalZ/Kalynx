@@ -3,7 +3,7 @@ import { Chrome as Home, Utensils, Dumbbell, Leaf, User, Trophy, Camera } from '
 import { useTheme } from '@/contexts/ThemeContext';
 import { Platform, Dimensions } from 'react-native';
 import { DesktopLayout } from '@/components/DesktopLayout';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const { width } = Dimensions.get('window');
 
@@ -11,8 +11,17 @@ export default function TabLayout() {
   const { theme } = useTheme();
   const [showSidebar, setShowSidebar] = useState(true);
   const [activeTab, setActiveTab] = useState('index');
+  const [isDesktop, setIsDesktop] = useState(false);
   
-  const isDesktop = Platform.OS === 'web' && width >= 1024;
+  useEffect(() => {
+    // Only check desktop status once to prevent re-renders
+    const checkDesktop = () => {
+      const desktop = Platform.OS === 'web' && width >= 1024;
+      setIsDesktop(desktop);
+    };
+    
+    checkDesktop();
+  }, []); // Empty dependency array to run only once
   
   if (isDesktop) {
     return (
@@ -36,9 +45,6 @@ export default function TabLayout() {
                 <Home size={size} color={color} />
               ),
             }}
-            listeners={{
-              focus: () => setActiveTab('index'),
-            }}
           />
           <Tabs.Screen
             name="meals"
@@ -47,9 +53,6 @@ export default function TabLayout() {
               tabBarIcon: ({ size, color }) => (
                 <Utensils size={size} color={color} />
               ),
-            }}
-            listeners={{
-              focus: () => setActiveTab('meals'),
             }}
           />
           <Tabs.Screen
@@ -60,9 +63,6 @@ export default function TabLayout() {
                 <Dumbbell size={size} color={color} />
               ),
             }}
-            listeners={{
-              focus: () => setActiveTab('workouts'),
-            }}
           />
           <Tabs.Screen
             name="eco"
@@ -71,9 +71,6 @@ export default function TabLayout() {
               tabBarIcon: ({ size, color }) => (
                 <Leaf size={size} color={color} />
               ),
-            }}
-            listeners={{
-              focus: () => setActiveTab('eco'),
             }}
           />
           <Tabs.Screen
@@ -84,9 +81,6 @@ export default function TabLayout() {
                 <Trophy size={size} color={color} />
               ),
             }}
-            listeners={{
-              focus: () => setActiveTab('leaderboard'),
-            }}
           />
           <Tabs.Screen
             name="camera"
@@ -96,9 +90,6 @@ export default function TabLayout() {
                 <Camera size={size} color={color} />
               ),
             }}
-            listeners={{
-              focus: () => setActiveTab('camera'),
-            }}
           />
           <Tabs.Screen
             name="profile"
@@ -107,9 +98,6 @@ export default function TabLayout() {
               tabBarIcon: ({ size, color }) => (
                 <User size={size} color={color} />
               ),
-            }}
-            listeners={{
-              focus: () => setActiveTab('profile'),
             }}
           />
         </Tabs>
