@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform, Dimensions, Image } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Sparkles, Zap } from 'lucide-react-native';
+import { Sparkles } from 'lucide-react-native';
+import Svg, { Path, G } from 'react-native-svg';
 
 interface BoltBadgeProps {
   position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
@@ -73,7 +74,7 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
   
   const getSizeStyles = () => {
     // Larger sizes for mobile
-    const mobileFactor = IS_MOBILE ? 1.2 : 1;
+    const mobileFactor = IS_MOBILE ? 1.5 : 1;
     
     switch (responsiveSize) {
       case 'small':
@@ -83,6 +84,7 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
           iconSize: Math.round(16 * mobileFactor),
           paddingHorizontal: Math.round(10 * mobileFactor),
           borderRadius: Math.round(18 * mobileFactor),
+          logoSize: Math.round(24 * mobileFactor),
         };
       case 'large':
         return {
@@ -91,6 +93,7 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
           iconSize: Math.round(24 * mobileFactor),
           paddingHorizontal: Math.round(18 * mobileFactor),
           borderRadius: Math.round(26 * mobileFactor),
+          logoSize: Math.round(36 * mobileFactor),
         };
       case 'medium':
       default:
@@ -100,6 +103,7 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
           iconSize: Math.round(20 * mobileFactor),
           paddingHorizontal: Math.round(14 * mobileFactor),
           borderRadius: Math.round(22 * mobileFactor),
+          logoSize: Math.round(30 * mobileFactor),
         };
     }
   };
@@ -107,18 +111,25 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
   const positionStyles = getPositionStyles();
   const sizeStyles = getSizeStyles();
   
-  // Use SVG as a component
+  // Render the Bolt SVG logo
   const renderBoltLogo = () => {
+    const logoSize = sizeStyles.logoSize;
+    
     return (
       <View style={[
         styles.logoContainer, 
         { 
+          height: logoSize, 
+          width: logoSize,
           backgroundColor: theme.colors.primary,
-          height: sizeStyles.badgeHeight - 16, 
-          width: sizeStyles.badgeHeight - 16 
         }
       ]}>
-        <Zap size={sizeStyles.iconSize} color="#FFFFFF" />
+        <Svg width={logoSize * 0.6} height={logoSize * 0.6} viewBox="0 0 360 360">
+          <Path
+            fill="#FFFFFF"
+            d="M178.82 145.25L189.9 94.83a.38.38 0 00-.37-.46h-38.88a.77.77 0 00-.75.61l-37.43 170.37a.22.22 0 00.32.25l44.24-23.47a1.14 1.14 0 00.57-.76l2.15-9.77a.39.39 0 01.7-.15c5.47 7.57 15.82 12 24.81 12.85 35.53 3.35 57.47-25.95 61.44-58.03 3.43-27.67-7.87-54.04-39.77-53.88-11.28.05-20.25 4.96-27.68 13.08a.25.25 0 01-.43-.22z"
+          />
+        </Svg>
       </View>
     );
   };
