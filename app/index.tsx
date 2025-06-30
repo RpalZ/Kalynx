@@ -23,7 +23,7 @@ export default function Index() {
     }
 
     try {
-      console.log('🔍 Index: Starting auth check attempt', retryCount + 1);
+      console.log('🔍 Starting auth check, attempt:', retryCount + 1);
       setError(null);
       
       // Add shorter timeout to prevent hanging
@@ -36,27 +36,27 @@ export default function Index() {
       const { data: { user }, error } = await Promise.race([authPromise, timeoutPromise]) as any;
       
       console.log('👤 Auth check result:', { 
-        user: user ? `${user.id} (${user.email})` : 'None', 
-        error: error?.message || 'None',
+        hasUser: !!user, 
+        hasError: !!error,
         attempt: retryCount + 1
       });
       
       if (error) {
-        console.error('❌ Index: Auth error:', error);
+        console.error('❌ Auth error occurred');
         // Don't retry on auth errors, just go to auth page
         router.replace('/auth');
         return;
       }
       
       if (user) {
-        console.log('✅ Index: User authenticated, redirecting to tabs');
+        console.log('✅ User authenticated, redirecting to tabs');
         router.replace('/(tabs)');
       } else {
-        console.log('❌ Index: No user, redirecting to auth');
+        console.log('❌ No user found, redirecting to auth');
         router.replace('/auth');
       }
     } catch (error: any) {
-      console.error('💥 Index: Auth check error:', error);
+      console.error('💥 Auth check error occurred');
       setError(`Connection issue: ${error.message}`);
       
       // Retry with exponential backoff

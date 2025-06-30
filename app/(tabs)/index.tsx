@@ -77,13 +77,13 @@ export default function HomeScreen() {
   const checkAuth = async () => {
     // Prevent infinite loops
     if (retryCount > 2) {
-      console.log('❌ Home: Max retry attempts reached, redirecting to auth');
+      console.log('❌ Max retry attempts reached, redirecting to auth');
       router.replace('/auth');
       return;
     }
 
     try {
-      console.log('🔐 Home: Checking authentication... attempt', retryCount + 1);
+      console.log('🔐 Checking authentication... attempt', retryCount + 1);
       setLoadingStates(prev => ({ ...prev, user: true }));
       setError(null);
       
@@ -95,22 +95,26 @@ export default function HomeScreen() {
       const authPromise = supabase.auth.getUser();
       const { data: { user }, error } = await Promise.race([authPromise, timeoutPromise]) as any;
       
-      console.log('👤 Home: Auth check result:', { user: !!user, error: error?.message });
+      console.log('👤 Auth check result:', { 
+        hasUser: !!user, 
+        hasError: !!error,
+        attempt: retryCount + 1
+      });
       
       if (error) {
-        console.error('❌ Home: Auth error:', error);
+        console.error('❌ Auth error occurred');
         setError(`Authentication failed: ${error.message}`);
         router.replace('/auth');
         return;
       }
       
       if (!user) {
-        console.log('❌ Home: No user found, redirecting to auth');
+        console.log('❌ No user found, redirecting to auth');
         router.replace('/auth');
         return;
       }
       
-      console.log('✅ Home: User authenticated:', user.id);
+      console.log('✅ User authenticated');
       setUser(user);
       setAuthChecked(true);
       setLoadingStates(prev => ({ ...prev, user: false }));
@@ -119,7 +123,7 @@ export default function HomeScreen() {
       // Fetch dashboard data after auth is confirmed
       fetchDashboardData();
     } catch (error: any) {
-      console.error('💥 Home: Auth check error:', error);
+      console.error('💥 Auth check error occurred');
       setError(`Connection error: ${error.message}`);
       setLoadingStates(prev => ({ ...prev, user: false }));
       
@@ -134,17 +138,17 @@ export default function HomeScreen() {
 
   const fetchDashboardData = async () => {
     if (!user) {
-      console.log('⚠️ Home: No user available for dashboard data fetch');
+      console.log('⚠️ No user available for dashboard data fetch');
       return;
     }
 
     try {
-      console.log('📊 Home: Fetching dashboard data...');
+      console.log('📊 Fetching dashboard data...');
       const today = new Date().toISOString().split('T')[0];
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
-        console.log('❌ Home: No session found, redirecting to auth');
+        console.log('❌ No session found, redirecting to auth');
         router.replace('/auth');
         return;
       }
@@ -154,7 +158,7 @@ export default function HomeScreen() {
       // Fetch daily summary with timeout and error handling
       setLoadingStates(prev => ({ ...prev, summary: true }));
       try {
-        console.log('📈 Home: Fetching daily summary...');
+        console.log('📈 Fetching daily summary...');
         const summaryController = new AbortController();
         const summaryTimeout = setTimeout(() => summaryController.abort(), 8000);
 
@@ -173,10 +177,10 @@ export default function HomeScreen() {
 
         if (summaryResponse.ok) {
           const summaryData = await summaryResponse.json();
-          console.log('✅ Home: Summary data received:', summaryData);
+          console.log('✅ Summary data received');
           setSummary(summaryData);
         } else {
-          console.error('❌ Home: Summary fetch failed:', summaryResponse.status, summaryResponse.statusText);
+          console.error('❌ Summary fetch failed:', summaryResponse.status, summaryResponse.statusText);
           
           // Set default summary data for offline/error state
           setSummary({
@@ -193,9 +197,9 @@ export default function HomeScreen() {
         }
       } catch (summaryError: any) {
         if (summaryError.name === 'AbortError') {
-          console.log('📈 Home: Summary request was aborted');
+          console.log('📈 Summary request was aborted');
         } else {
-          console.error('💥 Home: Summary fetch error:', summaryError);
+          console.error('💥 Summary fetch error occurred');
         }
         // Set default summary data
         setSummary({
@@ -216,7 +220,7 @@ export default function HomeScreen() {
       // Calculate and fetch daily score with timeout and error handling
       setLoadingStates(prev => ({ ...prev, score: true }));
       try {
-        console.log('🎯 Home: Calculating daily score...');
+        console.log('🎯 Calculating daily score...');
         const scoreController = new AbortController();
         const scoreTimeout = setTimeout(() => scoreController.abort(), 8000);
 
@@ -237,10 +241,10 @@ export default function HomeScreen() {
 
         if (scoreResponse.ok) {
           const scoreData = await scoreResponse.json();
-          console.log('✅ Home: Score data received:', scoreData);
+          console.log('✅ Score data received');
           setScore(scoreData);
         } else {
-          console.error('❌ Home: Score fetch failed:', scoreResponse.status, scoreResponse.statusText);
+          console.error('❌ Score fetch failed:', scoreResponse.status, scoreResponse.statusText);
           
           // Set default score data
           setScore({
@@ -251,9 +255,9 @@ export default function HomeScreen() {
         }
       } catch (scoreError: any) {
         if (scoreError.name === 'AbortError') {
-          console.log('🎯 Home: Score request was aborted');
+          console.log('🎯 Score request was aborted');
         } else {
-          console.error('💥 Home: Score fetch error:', scoreError);
+          console.error('💥 Score fetch error occurred');
         }
         // Set default score data
         setScore({
@@ -266,7 +270,7 @@ export default function HomeScreen() {
       }
 
     } catch (error: any) {
-      console.error('💥 Home: Error fetching dashboard data:', error);
+      console.error('💥 Error fetching dashboard data');
       setError(`Failed to load dashboard: ${error.message}`);
     } finally {
       setIsLoading(false);

@@ -5,19 +5,10 @@ import { Platform } from 'react-native';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
-// Validate environment variables
+// Validate environment variables (without logging sensitive data)
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('🚨 Missing Supabase environment variables:', {
-    url: supabaseUrl ? 'Set' : 'Missing',
-    key: supabaseAnonKey ? 'Set' : 'Missing'
-  });
+  console.error('🚨 Missing Supabase environment variables');
 }
-
-console.log('🔧 Supabase client configuration:', {
-  url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'Missing',
-  key: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'Missing',
-  platform: Platform.OS
-});
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -86,7 +77,7 @@ if (Platform.OS === 'web') {
         if (response.status >= 500 && retryCount < maxRetries) {
           retryCount++;
           const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000);
-          console.log(`🔄 Retrying Supabase request in ${delay}ms (attempt ${retryCount}/${maxRetries})`);
+          console.log(`🔄 Retrying request (attempt ${retryCount}/${maxRetries})`);
           
           await new Promise(resolve => setTimeout(resolve, delay));
           return window.fetch(...args);
@@ -96,13 +87,13 @@ if (Platform.OS === 'web') {
       return response;
     } catch (error) {
       if (args[0]?.toString().includes('supabase')) {
-        console.error('🌐 Supabase network error:', error);
+        console.error('🌐 Network error occurred');
         
         // Retry network errors
         if (retryCount < maxRetries) {
           retryCount++;
           const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000);
-          console.log(`🔄 Retrying Supabase request in ${delay}ms (attempt ${retryCount}/${maxRetries})`);
+          console.log(`🔄 Retrying request (attempt ${retryCount}/${maxRetries})`);
           
           await new Promise(resolve => setTimeout(resolve, delay));
           return window.fetch(...args);
