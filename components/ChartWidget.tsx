@@ -64,10 +64,14 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
         startDate.setDate(endDate.getDate() - 30);
       }
 
-      // Fetch daily scores and meals data
+      // Fetch current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      // Fetch daily scores and meals data for the user only
       const { data: scoresData } = await supabase
         .from('daily_scores')
         .select('*')
+        .eq('user_id', user.id)
         .gte('date', startDate.toISOString().split('T')[0])
         .lte('date', endDate.toISOString().split('T')[0])
         .order('date', { ascending: true });
@@ -75,6 +79,7 @@ const ChartWidget: React.FC<ChartWidgetProps> = ({ onPress }) => {
       const { data: mealsData } = await supabase
         .from('meals')
         .select('calories, created_at')
+        .eq('user_id', user.id)
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString());
 

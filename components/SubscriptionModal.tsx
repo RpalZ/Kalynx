@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,14 @@ import {
   Modal,
   ScrollView,
   Dimensions,
+  Platform,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Crown, X, Check, Sparkles, Zap, Star, Shield } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { SUBSCRIPTION_TIERS } from '@/types/subscription';
+import { supabase } from '@/lib/supabase';
 
 const { width } = Dimensions.get('window');
 
@@ -28,11 +31,104 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 }) => {
   const { theme, isDark } = useTheme();
   const [selectedTier, setSelectedTier] = useState('pro');
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const purchasesRef = useRef<any>(null);
+  // RevenueCat API key (replace with your own)
+  const publicWebAPIKey = process.env.EXPO_PUBLIC_REVENUECAT_WEB_PUBLIC_API_KEY;
+  const REVENUECAT_API_KEY = Platform.select({
+    web: publicWebAPIKey,
+  });
 
-  const handleSubscribe = () => {
-    // This will be implemented with RevenueCat
-    onSubscribe?.(selectedTier);
-    onClose();
+  // Initialize Purchases on mount
+  useEffect(() => {
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
+      const Purchases = require('react-native-purchases').default;
+      purchasesRef.current = Purchases;
+      Purchases.configure({ apiKey: REVENUECAT_API_KEY || '' });
+    } else if (Platform.OS === 'web') {
+      (async () => {
+        console.log(REVENUECAT_API_KEY)
+        const { data: { user } } = await supabase.auth.getUser();
+        import('@revenuecat/purchases-js').then((module) => {
+          const Purchases = module.Purchases;
+          const purchases = Purchases.configure({
+            apiKey: REVENUECAT_API_KEY || '',
+            appUserId: user?.id || '',
+          });
+          purchasesRef.current = purchases;
+        });
+      })();
+    }
+  }, []);
+
+  const handleSubscribe = async () => {
+    if (selectedTier === 'free') {
+      onSubscribe?.(selectedTier);
+      onClose();
+      return;
+    }
+    setIsPurchasing(true);
+    try {
+      if (Platform.OS === 'web') {
+        if (!purchasesRef.current) {
+          Alert.alert('Error', 'Subscription system not loaded yet. Please try again.');
+          setIsPurchasing(false);
+          return;
+        }
+        console.log('PurchasesRef:', purchasesRef.current);
+        const offerings = await purchasesRef.current.getOfferings();
+        console.log('Offerings:', offerings);
+        // Always use the first available package for testing
+        const proPackage = offerings.current?.availablePackages[0];
+        console.log('Pro package:', proPackage);
+        if (!proPackage) {
+          Alert.alert('Error', 'No Pro subscription available.');
+          setIsPurchasing(false);
+          return;
+        }
+        const { customerInfo } = await purchasesRef.current.purchase({ rcPackage: proPackage });
+        console.log('Customer info:', customerInfo);
+        if (customerInfo.entitlements.active['pro']) {
+          onSubscribe?.('pro');
+          Alert.alert('Success', 'You are now a Pro subscriber!');
+          onClose();
+        } else {
+          Alert.alert('Purchase incomplete', 'Subscription not activated.');
+        }
+      } else if (Platform.OS === 'ios' || Platform.OS === 'android') {
+        if (!purchasesRef.current) {
+          Alert.alert('Error', 'Subscription system not loaded yet. Please try again.');
+          setIsPurchasing(false);
+          return;
+        }
+        const offerings = await purchasesRef.current.getOfferings();
+        const proOffering = offerings.current?.availablePackages.find(
+          (pkg: any) => pkg.identifier === 'pro' || pkg.product.identifier.includes('pro')
+        ) || offerings.current?.availablePackages[0];
+        if (!proOffering) {
+          Alert.alert('Error', 'No Pro subscription available.');
+          setIsPurchasing(false);
+          return;
+        }
+        const purchaseResult = await purchasesRef.current.purchasePackage(proOffering);
+        if (purchaseResult.customerInfo.activeSubscriptions.includes('pro')) {
+          // TODO: Update Supabase user_subscriptions table here
+          onSubscribe?.('pro');
+          Alert.alert('Success', 'You are now a Pro subscriber!');
+          onClose();
+        } else {
+          Alert.alert('Purchase incomplete', 'Subscription not activated.');
+        }
+      } else {
+        Alert.alert('Not supported', 'Purchases are only available on supported platforms.');
+      }
+    } catch (e: any) {
+      if (!e.userCancelled) {
+        Alert.alert('Purchase error', e.message || 'Something went wrong.');
+      }
+    } finally {
+      setIsPurchasing(false);
+    }
   };
 
   const TierCard = ({ tier, isSelected }: { tier: any; isSelected: boolean }) => (
@@ -183,8 +279,9 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
           {/* Subscribe Button */}
           <View style={styles.subscribeSection}>
             <TouchableOpacity
-              style={[styles.subscribeButton, { backgroundColor: theme.colors.primary }]}
+              style={[styles.subscribeButton, { backgroundColor: theme.colors.primary, opacity: isPurchasing ? 0.6 : 1 }]}
               onPress={handleSubscribe}
+              disabled={isPurchasing}
             >
               <LinearGradient
                 colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
@@ -192,7 +289,11 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               >
                 <Crown size={20} color="#FFFFFF" />
                 <Text style={styles.subscribeText}>
-                  {selectedTier === 'free' ? 'Continue with Free' : 'Start Pro Trial'}
+                  {isPurchasing
+                    ? 'Processing...'
+                    : selectedTier === 'free'
+                    ? 'Continue with Free'
+                    : 'Start Pro Trial'}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
