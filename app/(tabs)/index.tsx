@@ -21,6 +21,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import ChartWidget from '@/components/ChartWidget';
 import { ResponsiveGrid, GridItem } from '@/components/ResponsiveGrid';
 import { MetricCard, QuickActionCard, StatsOverview } from '@/components/DashboardCards';
+import AuthGuard from '@/components/AuthGuard';
 
 const { width } = Dimensions.get('window');
 
@@ -402,293 +403,295 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        contentContainerStyle={isDesktop ? styles.desktopContent : undefined}
-      >
-        {/* Header - Only show on mobile/tablet */}
-        {!isDesktop && (
-          <LinearGradient
-            colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
-            style={styles.header}
-          >
-            <View style={styles.headerContent}>
-              <View style={styles.headerLeft}>
-                <Text style={styles.greeting}>{getGreeting()},</Text>
-                <Text style={styles.userName}>{user?.user_metadata?.name || 'there'}!</Text>
-                <Text style={styles.subtitle}>Ready to make a positive impact today?</Text>
+    <AuthGuard>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          contentContainerStyle={isDesktop ? styles.desktopContent : undefined}
+        >
+          {/* Header - Only show on mobile/tablet */}
+          {!isDesktop && (
+            <LinearGradient
+              colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
+              style={styles.header}
+            >
+              <View style={styles.headerContent}>
+                <View style={styles.headerLeft}>
+                  <Text style={styles.greeting}>{getGreeting()},</Text>
+                  <Text style={styles.userName}>{user?.user_metadata?.name || 'there'}!</Text>
+                  <Text style={styles.subtitle}>Ready to make a positive impact today?</Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.refreshButton}
+                  onPress={onRefresh}
+                  disabled={refreshing}
+                >
+                  <RefreshCw size={24} color="#FFFFFF" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity 
-                style={styles.refreshButton}
-                onPress={onRefresh}
-                disabled={refreshing}
-              >
-                <RefreshCw size={24} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-          </LinearGradient>
-        )}
-
-        {/* Desktop Welcome Section */}
-        {isDesktop && (
-          <View style={styles.desktopWelcome}>
-            <Text style={[styles.desktopGreeting, { color: theme.colors.text }]}>
-              {getGreeting()}, {user?.user_metadata?.name || 'there'}!
-            </Text>
-            <Text style={[styles.desktopSubtitle, { color: theme.colors.textSecondary }]}>
-              Here's your sustainability and fitness overview for today
-            </Text>
-          </View>
-        )}
-
-        {/* Quick Actions */}
-        <View style={[styles.section, isDesktop && styles.desktopSection]}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Actions</Text>
-          {loadingStates.summary ? (
-            <View style={styles.quickActionsLoading}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
-              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading actions...</Text>
-            </View>
-          ) : (
-            <View style={[
-              styles.quickActionsGrid,
-              {
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-                gap: isMobile ? 12 : 16,
-              }
-            ]}>
-              <QuickActionCard
-                title="Log Meal"
-                subtitle="Track nutrition & impact"
-                icon={Utensils}
-                gradient={['#10B981', '#059669']}
-                onPress={() => router.push('/(tabs)/meals')}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-              <QuickActionCard
-                title="Log Workout"
-                subtitle="Record your activity"
-                icon={Dumbbell}
-                gradient={['#3B82F6', '#2563EB']}
-                onPress={() => router.push('/(tabs)/workouts')}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-              <QuickActionCard
-                title="Scan Fridge"
-                subtitle="AI recipe suggestions"
-                icon={Camera}
-                gradient={['#8B5CF6', '#7C3AED']}
-                onPress={() => router.push('/(tabs)/camera' as any)}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-              <QuickActionCard
-                title="View Progress"
-                subtitle="See your achievements"
-                icon={Award}
-                gradient={['#F59E0B', '#D97706']}
-                onPress={() => router.push('/(tabs)/leaderboard')}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-            </View>
+            </LinearGradient>
           )}
-        </View>
 
-        {/* Stats Overview */}
-        <View style={[styles.section, isDesktop && styles.desktopSection]}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Overview</Text>
-          {loadingStates.summary ? (
-            <View style={styles.statsLoading}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
-              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading stats...</Text>
-            </View>
-          ) : summary ? (
-            <View style={[
-              styles.statsGrid,
-              {
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                justifyContent: 'space-between',
-                gap: isMobile ? 12 : 16,
-              }
-            ]}>
-              <MetricCard
-                title="Meals Logged"
-                value={summary.mealsCount}
-                subtitle="today"
-                icon={Target}
-                color={theme.colors.success}
-                trend={5}
-                onPress={() => handleCardPress('meals')}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-              <MetricCard
-                title="Workouts"
-                value={summary.workoutsCount}
-                subtitle="completed"
-                icon={Zap}
-                color={theme.colors.secondary}
-                trend={-2}
-                onPress={() => handleCardPress('workouts')}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-              <MetricCard
-                title="Calories"
-                value={summary.totalCalories.toFixed(0)}
-                subtitle="consumed"
-                icon={Flame}
-                color={theme.colors.error}
-                trend={12}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-              <MetricCard
-                title="CO₂ Impact"
-                value={`${summary.totalCO2e.toFixed(1)}kg`}
-                subtitle="saved"
-                icon={Leaf}
-                color={theme.colors.success}
-                trend={8}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-              <MetricCard
-                title="Water Impact"
-                value={`${summary.totalWater.toFixed(0)}L`}
-                subtitle="used"
-                icon={Droplet}
-                color={theme.colors.info}
-                trend={15}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-              <MetricCard
-                title="Net Balance"
-                value={Math.abs(summary.netCalories).toFixed(0)}
-                subtitle={summary.netCalories > 0 ? 'surplus' : 'deficit'}
-                icon={Target}
-                color={summary.netCalories > 0 ? theme.colors.error : theme.colors.success}
-                size={isDesktop ? 'medium' : 'small'}
-              />
-            </View>
-          ) : (
-            <View style={styles.errorState}>
-              <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
-                Unable to load stats. Pull to refresh.
+          {/* Desktop Welcome Section */}
+          {isDesktop && (
+            <View style={styles.desktopWelcome}>
+              <Text style={[styles.desktopGreeting, { color: theme.colors.text }]}>
+                {getGreeting()}, {user?.user_metadata?.name || 'there'}!
+              </Text>
+              <Text style={[styles.desktopSubtitle, { color: theme.colors.textSecondary }]}>
+                Here's your sustainability and fitness overview for today
               </Text>
             </View>
           )}
-        </View>
 
-        {/* Chart Widget */}
-        <View style={[styles.section, isDesktop && styles.desktopSection]}>
-          <ChartWidget />
-        </View>
-
-        {/* Performance Scores */}
-        <View style={[styles.section, isDesktop && styles.desktopSection]}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Performance</Text>
-          {loadingStates.score ? (
-            <View style={styles.scoresLoading}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
-              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading scores...</Text>
-            </View>
-          ) : score ? (
-            <View style={[styles.scoresCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <LinearGradient
-                colors={isDark ? ['#1E293B', '#334155'] : ['#F8FAFC', '#F1F5F9']}
-                style={styles.scoresGradient}
-              >
-                <View style={styles.scoresContainer}>
-                  <View style={styles.scoreItem}>
-                    <ScoreRing 
-                      score={score.fitness_score} 
-                      color={theme.colors.secondary} 
-                      size={isMobile ? 70 : 80}
-                      strokeWidth={isMobile ? 6 : 8}
-                    />
-                    <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Fitness</Text>
-                  </View>
-                  <View style={styles.scoreItem}>
-                    <ScoreRing 
-                      score={score.eco_score} 
-                      color={theme.colors.success} 
-                      size={isMobile ? 70 : 80}
-                      strokeWidth={isMobile ? 6 : 8}
-                    />
-                    <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Eco Impact</Text>
-                  </View>
-                  <View style={styles.scoreItem}>
-                    <ScoreRing 
-                      score={score.combined_score} 
-                      color={theme.colors.accent} 
-                      size={isMobile ? 80 : 100} 
-                      strokeWidth={isMobile ? 8 : 10} 
-                    />
-                    <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Overall</Text>
-                  </View>
-                </View>
-              </LinearGradient>
-            </View>
-          ) : (
-            <View style={styles.errorState}>
-              <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
-                Unable to load performance scores. Pull to refresh.
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Activity Summary */}
-        {summary && (
+          {/* Quick Actions */}
           <View style={[styles.section, isDesktop && styles.desktopSection]}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Activity Summary</Text>
-            <View style={[styles.activityCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <LinearGradient
-                colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
-                style={styles.activityGradient}
-              >
-                <View style={styles.activityHeader}>
-                  <Calendar size={20} color={theme.colors.accent} />
-                  <Text style={[styles.activityTitle, { color: theme.colors.text }]}>Today's Progress</Text>
-                </View>
-                <View style={styles.activityStats}>
-                  <View style={styles.activityStat}>
-                    <View style={[styles.activityStatIcon, { backgroundColor: `${theme.colors.success}20` }]}>
-                      <Utensils size={16} color={theme.colors.success} />
-                    </View>
-                    <Text style={[styles.activityStatValue, { color: theme.colors.text }]}>{summary.mealsCount}</Text>
-                    <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary }]}>Meals Logged</Text>
-                  </View>
-                  <View style={styles.activityStat}>
-                    <View style={[styles.activityStatIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
-                      <Dumbbell size={16} color={theme.colors.secondary} />
-                    </View>
-                    <Text style={[styles.activityStatValue, { color: theme.colors.text }]}>{summary.workoutsCount}</Text>
-                    <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary }]}>Workouts Done</Text>
-                  </View>
-                  <View style={styles.activityStat}>
-                    <View style={[styles.activityStatIcon, { backgroundColor: `${summary.netCalories > 0 ? theme.colors.error : theme.colors.success}20` }]}>
-                      <Target size={16} color={summary.netCalories > 0 ? theme.colors.error : theme.colors.success} />
-                    </View>
-                    <Text style={[styles.activityStatValue, { color: summary.netCalories > 0 ? theme.colors.error : theme.colors.success }]}>
-                      {summary.netCalories > 0 ? '+' : ''}{summary.netCalories.toFixed(0)}
-                    </Text>
-                    <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary }]}>Net Calories</Text>
-                  </View>
-                </View>
-              </LinearGradient>
-            </View>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Actions</Text>
+            {loadingStates.summary ? (
+              <View style={styles.quickActionsLoading}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading actions...</Text>
+              </View>
+            ) : (
+              <View style={[
+                styles.quickActionsGrid,
+                {
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  justifyContent: 'space-between',
+                  gap: isMobile ? 12 : 16,
+                }
+              ]}>
+                <QuickActionCard
+                  title="Log Meal"
+                  subtitle="Track nutrition & impact"
+                  icon={Utensils}
+                  gradient={['#10B981', '#059669']}
+                  onPress={() => router.push('/(tabs)/meals')}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+                <QuickActionCard
+                  title="Log Workout"
+                  subtitle="Record your activity"
+                  icon={Dumbbell}
+                  gradient={['#3B82F6', '#2563EB']}
+                  onPress={() => router.push('/(tabs)/workouts')}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+                <QuickActionCard
+                  title="Scan Fridge"
+                  subtitle="AI recipe suggestions"
+                  icon={Camera}
+                  gradient={['#8B5CF6', '#7C3AED']}
+                  onPress={() => router.push('/(tabs)/camera' as any)}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+                <QuickActionCard
+                  title="View Progress"
+                  subtitle="See your achievements"
+                  icon={Award}
+                  gradient={['#F59E0B', '#D97706']}
+                  onPress={() => router.push('/(tabs)/leaderboard')}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+              </View>
+            )}
           </View>
-        )}
 
-        {/* Bottom Spacing */}
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
-    </SafeAreaView>
+          {/* Stats Overview */}
+          <View style={[styles.section, isDesktop && styles.desktopSection]}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Overview</Text>
+            {loadingStates.summary ? (
+              <View style={styles.statsLoading}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading stats...</Text>
+              </View>
+            ) : summary ? (
+              <View style={[
+                styles.statsGrid,
+                {
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  justifyContent: 'space-between',
+                  gap: isMobile ? 12 : 16,
+                }
+              ]}>
+                <MetricCard
+                  title="Meals Logged"
+                  value={summary.mealsCount}
+                  subtitle="today"
+                  icon={Target}
+                  color={theme.colors.success}
+                  trend={5}
+                  onPress={() => handleCardPress('meals')}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+                <MetricCard
+                  title="Workouts"
+                  value={summary.workoutsCount}
+                  subtitle="completed"
+                  icon={Zap}
+                  color={theme.colors.secondary}
+                  trend={-2}
+                  onPress={() => handleCardPress('workouts')}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+                <MetricCard
+                  title="Calories"
+                  value={summary.totalCalories.toFixed(0)}
+                  subtitle="consumed"
+                  icon={Flame}
+                  color={theme.colors.error}
+                  trend={12}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+                <MetricCard
+                  title="CO₂ Impact"
+                  value={`${summary.totalCO2e.toFixed(1)}kg`}
+                  subtitle="saved"
+                  icon={Leaf}
+                  color={theme.colors.success}
+                  trend={8}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+                <MetricCard
+                  title="Water Impact"
+                  value={`${summary.totalWater.toFixed(0)}L`}
+                  subtitle="used"
+                  icon={Droplet}
+                  color={theme.colors.info}
+                  trend={15}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+                <MetricCard
+                  title="Net Balance"
+                  value={Math.abs(summary.netCalories).toFixed(0)}
+                  subtitle={summary.netCalories > 0 ? 'surplus' : 'deficit'}
+                  icon={Target}
+                  color={summary.netCalories > 0 ? theme.colors.error : theme.colors.success}
+                  size={isDesktop ? 'medium' : 'small'}
+                />
+              </View>
+            ) : (
+              <View style={styles.errorState}>
+                <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
+                  Unable to load stats. Pull to refresh.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Chart Widget */}
+          <View style={[styles.section, isDesktop && styles.desktopSection]}>
+            <ChartWidget />
+          </View>
+
+          {/* Performance Scores */}
+          <View style={[styles.section, isDesktop && styles.desktopSection]}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Performance</Text>
+            {loadingStates.score ? (
+              <View style={styles.scoresLoading}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading scores...</Text>
+              </View>
+            ) : score ? (
+              <View style={[styles.scoresCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <LinearGradient
+                  colors={isDark ? ['#1E293B', '#334155'] : ['#F8FAFC', '#F1F5F9']}
+                  style={styles.scoresGradient}
+                >
+                  <View style={styles.scoresContainer}>
+                    <View style={styles.scoreItem}>
+                      <ScoreRing 
+                        score={score.fitness_score} 
+                        color={theme.colors.secondary} 
+                        size={isMobile ? 70 : 80}
+                        strokeWidth={isMobile ? 6 : 8}
+                      />
+                      <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Fitness</Text>
+                    </View>
+                    <View style={styles.scoreItem}>
+                      <ScoreRing 
+                        score={score.eco_score} 
+                        color={theme.colors.success} 
+                        size={isMobile ? 70 : 80}
+                        strokeWidth={isMobile ? 6 : 8}
+                      />
+                      <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Eco Impact</Text>
+                    </View>
+                    <View style={styles.scoreItem}>
+                      <ScoreRing 
+                        score={score.combined_score} 
+                        color={theme.colors.accent} 
+                        size={isMobile ? 80 : 100} 
+                        strokeWidth={isMobile ? 8 : 10} 
+                      />
+                      <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>Overall</Text>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </View>
+            ) : (
+              <View style={styles.errorState}>
+                <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
+                  Unable to load performance scores. Pull to refresh.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Activity Summary */}
+          {summary && (
+            <View style={[styles.section, isDesktop && styles.desktopSection]}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Activity Summary</Text>
+              <View style={[styles.activityCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                <LinearGradient
+                  colors={isDark ? ['#1E293B', '#334155'] : ['#FFFFFF', '#F8FAFC']}
+                  style={styles.activityGradient}
+                >
+                  <View style={styles.activityHeader}>
+                    <Calendar size={20} color={theme.colors.accent} />
+                    <Text style={[styles.activityTitle, { color: theme.colors.text }]}>Today's Progress</Text>
+                  </View>
+                  <View style={styles.activityStats}>
+                    <View style={styles.activityStat}>
+                      <View style={[styles.activityStatIcon, { backgroundColor: `${theme.colors.success}20` }]}>
+                        <Utensils size={16} color={theme.colors.success} />
+                      </View>
+                      <Text style={[styles.activityStatValue, { color: theme.colors.text }]}>{summary.mealsCount}</Text>
+                      <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary }]}>Meals Logged</Text>
+                    </View>
+                    <View style={styles.activityStat}>
+                      <View style={[styles.activityStatIcon, { backgroundColor: `${theme.colors.secondary}20` }]}>
+                        <Dumbbell size={16} color={theme.colors.secondary} />
+                      </View>
+                      <Text style={[styles.activityStatValue, { color: theme.colors.text }]}>{summary.workoutsCount}</Text>
+                      <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary }]}>Workouts Done</Text>
+                    </View>
+                    <View style={styles.activityStat}>
+                      <View style={[styles.activityStatIcon, { backgroundColor: `${summary.netCalories > 0 ? theme.colors.error : theme.colors.success}20` }]}>
+                        <Target size={16} color={summary.netCalories > 0 ? theme.colors.error : theme.colors.success} />
+                      </View>
+                      <Text style={[styles.activityStatValue, { color: summary.netCalories > 0 ? theme.colors.error : theme.colors.success }]}>
+                        {summary.netCalories > 0 ? '+' : ''}{summary.netCalories.toFixed(0)}
+                      </Text>
+                      <Text style={[styles.activityStatLabel, { color: theme.colors.textSecondary }]}>Net Calories</Text>
+                    </View>
+                  </View>
+                </LinearGradient>
+              </View>
+            </View>
+          )}
+
+          {/* Bottom Spacing */}
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
+      </SafeAreaView>
+    </AuthGuard>
   );
 }
 
