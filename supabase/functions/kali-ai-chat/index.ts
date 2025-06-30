@@ -69,17 +69,45 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Fetch user stats from DB
+    // Fetch user stats for the past week from meals and workouts tables
     let userStats = null;
     try {
-      const { data: stats, error: statsError } = await supabase
-        .from('user_stats')
-        .select('totalCO2e, totalWater, mealsCount, workoutsCount, caloriesBurned')
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - 7);
+      const startISO = startDate.toISOString();
+      const endISO = endDate.toISOString();
+
+      // Fetch meals for the week
+      const { data: meals, error: mealsError } = await supabase
+        .from('meals')
+        .select('calories, carbon_impact, water_impact, created_at')
         .eq('user_id', user.id)
-        .single();
-      if (!statsError && stats) {
-        userStats = stats;
-      }
+        .gte('created_at', startISO)
+        .lte('created_at', endISO);
+
+      // Fetch workouts for the week
+      const { data: workouts, error: workoutsError } = await supabase
+        .from('workouts')
+        .select('calories_burned, created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', startISO)
+        .lte('created_at', endISO);
+
+      // Aggregate stats
+      const totalco2e = (meals || []).reduce((sum, m) => sum + (m.carbon_impact || 0), 0);
+      const totalwater = (meals || []).reduce((sum, m) => sum + (m.water_impact || 0), 0);
+      const mealscount = (meals || []).length;
+      const workoutscount = (workouts || []).length;
+      const caloriesburned = (workouts || []).reduce((sum, w) => sum + (w.calories_burned || 0), 0);
+
+      userStats = {
+        totalco2e,
+        totalwater,
+        mealscount,
+        workoutscount,
+        caloriesburned,
+      };
     } catch (e) {
       // If stats fetch fails, just leave userStats as null
     }
@@ -112,13 +140,13 @@ Guidelines:
       systemPrompt += `
 
 Current user data this week:
-- Meals logged: ${userStats.mealsCount}
-- Workouts completed: ${userStats.workoutsCount}
-- Calories burned: ${userStats.caloriesBurned}
-- Carbon footprint: ${userStats.totalCO2e?.toFixed ? userStats.totalCO2e.toFixed(2) : userStats.totalCO2e} kg CO₂
-- Water usage: ${userStats.totalWater?.toFixed ? userStats.totalWater.toFixed(1) : userStats.totalWater} liters
+- Meals logged: ${userStats.mealscount}
+- Workouts completed: ${userStats.workoutscount}
+- Calories burned: ${userStats.caloriesburned}
+- Carbon footprint: ${userStats.totalco2e?.toFixed ? userStats.totalco2e.toFixed(2) : userStats.totalco2e} kg CO₂
+- Water usage: ${userStats.totalwater?.toFixed ? userStats.totalwater.toFixed(1) : userStats.totalwater} liters
 
-Use this data to provide personalized advice and encouragement.`;
+ALWAYS Use this data to provide personalized advice and encouragement DO NOT USE CONTEXT MESSAGES FROM "user" OR "assistant" ROLES FOR USER STATS.`;
     }
 
     // Prepare messages for AI

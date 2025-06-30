@@ -85,34 +85,49 @@ export default function KaliAIScreen() {
 
   const fetchUserStats = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      setIsLoading(true);
       const { data: session } = await supabase.auth.getSession();
-      
       if (!session.session) {
         router.replace('/auth');
         return;
       }
+      // Calculate date range for the past 7 days
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - 7);
+      const startISO = startDate.toISOString();
+      const endISO = endDate.toISOString();
 
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-daily-summary?date=${today}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      // Fetch meals for the week
+      const { data: meals, error: mealsError } = await supabase
+        .from('meals')
+        .select('calories, carbon_impact, water_impact, created_at')
+        .gte('created_at', startISO)
+        .lte('created_at', endISO)
+        .eq('user_id', session.session.user.id);
 
-      if (response.ok) {
-        const data = await response.json();
-        setUserStats({
-          totalCO2e: data.totalCO2e,
-          totalWater: data.totalWater,
-          mealsCount: data.mealsCount,
-          workoutsCount: data.workoutsCount,
-          caloriesBurned: data.caloriesBurned,
-        });
-      }
+      // Fetch workouts for the week
+      const { data: workouts, error: workoutsError } = await supabase
+        .from('workouts')
+        .select('calories_burned, created_at')
+        .gte('created_at', startISO)
+        .lte('created_at', endISO)
+        .eq('user_id', session.session.user.id);
+
+      // Aggregate stats
+      const totalCO2e = (meals || []).reduce((sum, m) => sum + (m.carbon_impact || 0), 0);
+      const totalWater = (meals || []).reduce((sum, m) => sum + (m.water_impact || 0), 0);
+      const mealsCount = (meals || []).length;
+      const workoutsCount = (workouts || []).length;
+      const caloriesBurned = (workouts || []).reduce((sum, w) => sum + (w.calories_burned || 0), 0);
+
+      setUserStats({
+        totalCO2e,
+        totalWater,
+        mealsCount,
+        workoutsCount,
+        caloriesBurned,
+      });
     } catch (error) {
       console.error('Error fetching user stats:', error);
     } finally {
@@ -142,15 +157,20 @@ export default function KaliAIScreen() {
         return;
       }
 
-      const context = messages.slice(-5).map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'assistant',
-        content: msg.content
-      }));
+      // Only include user and assistant messages in context (no system prompts or stats)
+      const context = messages
+        .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+        .slice(-5)
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
 
       const { data, error } = await supabase.functions.invoke('kali-ai-chat', {
         body: {
           userMessage: inputText.trim(),
           context: context,
+          // Always send the latest userStats from state
           userStats: userStats
         }
       });

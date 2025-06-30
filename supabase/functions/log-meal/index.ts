@@ -244,6 +244,54 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    console.log('[DEBUG] Meal inserted:', meal);
+
+    // Update user_stats table
+    // Fetch current stats
+    const { data: stats, error: statsError } = await supabase
+      .from('user_stats')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (statsError) {
+      console.error('[DEBUG] Error fetching user_stats:', statsError);
+    } else {
+      console.log('[DEBUG] Current user_stats:', stats);
+    }
+
+    let newStats = {
+      user_id: user.id,
+      totalco2e: finalCarbonImpact,
+      totalwater: finalWaterImpact,
+      mealscount: 1,
+      caloriesburned: 0,
+      workoutscount: 0,
+    };
+
+    if (stats) {
+      newStats = {
+        user_id: user.id,
+        totalco2e: (stats.totalco2e || 0) + finalCarbonImpact,
+        totalwater: (stats.totalwater || 0) + finalWaterImpact,
+        mealscount: (stats.mealscount || 0) + 1,
+        caloriesburned: stats.caloriesburned || 0,
+        workoutscount: stats.workoutscount || 0,
+      };
+    }
+
+    console.log('[DEBUG] Upserting user_stats with:', newStats);
+
+    const { error: upsertError } = await supabase
+      .from('user_stats')
+      .upsert(newStats, { onConflict: ['user_id'] });
+
+    if (upsertError) {
+      console.error('[DEBUG] Error upserting user_stats:', upsertError);
+    } else {
+      console.log('[DEBUG] user_stats upserted successfully');
+    }
+
     return new Response(JSON.stringify(meal), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
