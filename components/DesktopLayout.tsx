@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Chrome as Home, Utensils, Dumbbell, Leaf, Trophy, Camera, User, Settings, Bell, Menu, Sparkles, LogOut } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { router, usePathname } from 'expo-router';
+import { router, usePathname, Link } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -35,25 +35,47 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   const { theme, isDark } = useTheme();
   const [user, setUser] = useState<any>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isUserLoading, setIsUserLoading] = useState(true);
   const pathname = usePathname();
   const isDesktop = Platform.OS === 'web' && screenWidth >= DESKTOP_BREAKPOINT;
   const isTablet = Platform.OS === 'web' && screenWidth >= TABLET_BREAKPOINT && screenWidth < DESKTOP_BREAKPOINT;
 
   useEffect(() => {
-    fetchUser();
-  }, []);
+    let mounted = true;
+    
+    const fetchUser = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (mounted) {
+          if (error) {
+            console.error('DesktopLayout: Error fetching user');
+          } else {
+            setUser(user);
+          }
+          setIsUserLoading(false);
+        }
+      } catch (error) {
+        console.error('DesktopLayout: Exception fetching user');
+        if (mounted) {
+          setIsUserLoading(false);
+        }
+      }
+    };
 
-  const fetchUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
-  };
+    fetchUser();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleSignOut = async () => {
     try {
+      setUser(null);
       await supabase.auth.signOut();
       router.replace('/auth');
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('Error signing out');
     }
   };
 
@@ -82,51 +104,52 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   const currentActiveTab = getCurrentActiveTab();
 
   const handleNavigation = (item: any) => {
-    console.log('🚀 Desktop navigation clicked:', item.label, 'Route:', item.route);
+    console.log('🚀 Desktop navigation clicked:', item.label);
     
     try {
-      // Navigate directly without any state management
+      // Use push instead of replace to avoid navigation conflicts
       router.push(item.route);
       console.log('✅ Navigation completed for:', item.label);
     } catch (error) {
-      console.error('❌ Navigation error:', error);
+      console.error('❌ Navigation error occurred');
     }
   };
 
   const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => (
-    <TouchableOpacity
-      style={[
-        styles.navItem,
-        {
-          backgroundColor: isActive ? `${item.color}15` : 'transparent',
-          borderColor: isActive ? item.color : 'transparent',
-        }
-      ]}
-      onPress={() => handleNavigation(item)}
-      activeOpacity={0.7}
-    >
-      <View style={[
-        styles.navIconContainer,
-        { backgroundColor: isActive ? `${item.color}20` : 'transparent' }
-      ]}>
-        <item.icon 
-          size={isDesktop ? 20 : 18} 
-          color={isActive ? item.color : theme.colors.textSecondary} 
-        />
-      </View>
-      <Text style={[
-        styles.navLabel,
-        {
-          color: isActive ? item.color : theme.colors.textSecondary,
-          fontWeight: isActive ? '600' : '500',
-        }
-      ]}>
-        {item.label}
-      </Text>
-      {isActive && (
-        <View style={[styles.activeIndicator, { backgroundColor: item.color }]} />
-      )}
-    </TouchableOpacity>
+    <Link href={item.route} asChild>
+      <TouchableOpacity
+        style={[
+          styles.navItem,
+          {
+            backgroundColor: isActive ? `${item.color}15` : 'transparent',
+            borderColor: isActive ? item.color : 'transparent',
+          }
+        ]}
+        activeOpacity={0.7}
+      >
+        <View style={[
+          styles.navIconContainer,
+          { backgroundColor: isActive ? `${item.color}20` : 'transparent' }
+        ]}>
+          <item.icon 
+            size={isDesktop ? 20 : 18} 
+            color={isActive ? item.color : theme.colors.textSecondary} 
+          />
+        </View>
+        <Text style={[
+          styles.navLabel,
+          {
+            color: isActive ? item.color : theme.colors.textSecondary,
+            fontWeight: isActive ? '600' : '500',
+          }
+        ]}>
+          {item.label}
+        </Text>
+        {isActive && (
+          <View style={[styles.activeIndicator, { backgroundColor: item.color }]} />
+        )}
+      </TouchableOpacity>
+    </Link>
   );
 
   const Sidebar = () => (
@@ -194,13 +217,14 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
         <View style={styles.sidebarBottom}>
           <TouchableOpacity 
             style={[styles.settingsButton, { backgroundColor: theme.colors.surface }]}
-            onPress={() => router.push('/(tabs)/profile')}
             activeOpacity={0.7}
           >
-            <Settings size={18} color={theme.colors.textSecondary} />
-            <Text style={[styles.settingsText, { color: theme.colors.textSecondary }]}>
-              Settings
-            </Text>
+            <Link href="/(tabs)/profile" asChild>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Settings size={18} color={theme.colors.textSecondary} />
+                <Text style={[styles.settingsText, { color: theme.colors.textSecondary }]}>Settings</Text>
+              </View>
+            </Link>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -233,7 +257,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
           {/* Welcome Text */}
           <View style={styles.welcomeSection}>
             <Text style={[styles.welcomeText, { color: theme.colors.text }]}>
-              Welcome back, {user?.user_metadata?.name || 'there'}!
+              Welcome back, {isUserLoading ? '...' : (user?.user_metadata?.name || 'there')}!
             </Text>
             <Text style={[styles.welcomeSubtext, { color: theme.colors.textSecondary }]}>
               Here's your sustainability dashboard
@@ -260,7 +284,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
                 <User size={16} color="#FFFFFF" />
               </View>
               <Text style={[styles.userName, { color: theme.colors.text }]}>
-                {user?.user_metadata?.name || 'User'}
+                {isUserLoading ? '...' : (user?.user_metadata?.name || 'User')}
               </Text>
             </TouchableOpacity>
             
@@ -269,26 +293,26 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
               <View style={[styles.profileMenu, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
                 <TouchableOpacity 
                   style={styles.profileMenuItem}
-                  onPress={() => {
-                    setShowProfileMenu(false);
-                    router.push('/(tabs)/profile');
-                  }}
                   activeOpacity={0.7}
                 >
-                  <User size={16} color={theme.colors.textSecondary} />
-                  <Text style={[styles.profileMenuText, { color: theme.colors.text }]}>Profile</Text>
+                  <Link href="/(tabs)/profile" asChild>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <User size={16} color={theme.colors.textSecondary} />
+                      <Text style={[styles.profileMenuText, { color: theme.colors.text }]}>Profile</Text>
+                    </View>
+                  </Link>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
                   style={styles.profileMenuItem}
-                  onPress={() => {
-                    setShowProfileMenu(false);
-                    router.push('/(tabs)/profile');
-                  }}
                   activeOpacity={0.7}
                 >
-                  <Settings size={16} color={theme.colors.textSecondary} />
-                  <Text style={[styles.profileMenuText, { color: theme.colors.text }]}>Settings</Text>
+                  <Link href="/(tabs)/profile" asChild>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <Settings size={16} color={theme.colors.textSecondary} />
+                      <Text style={[styles.profileMenuText, { color: theme.colors.text }]}>Settings</Text>
+                    </View>
+                  </Link>
                 </TouchableOpacity>
                 
                 <View style={[styles.profileMenuDivider, { backgroundColor: theme.colors.border }]} />
@@ -312,26 +336,37 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
     </View>
   );
 
-  const MainContent = () => (
-    <View style={[
-      styles.mainContent,
-      {
-        marginLeft: showSidebar ? sidebarWidth : 0,
-        marginTop: headerHeight,
-      }
-    ]}>
-      <ScrollView
-        style={styles.contentScroll}
-        contentContainerStyle={[
-          styles.contentContainer,
-          { padding: contentPadding }
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {children}
-      </ScrollView>
-    </View>
-  );
+  const MainContent = () => {
+    console.log('MainContent render. children:', !!children);
+    if (!children) {
+      console.warn('MainContent: children is undefined or null!');
+    }
+    // Minimal style test block (uncomment to test)
+    // return (
+    //   <View>
+    //     <ScrollView>
+    //       {children}
+    //     </ScrollView>
+    //   </View>
+    // );
+    return (
+      <View style={StyleSheet.flatten([
+        styles.mainContent,
+        { marginLeft: showSidebar ? sidebarWidth : 0, marginTop: headerHeight }
+      ])}>
+        <ScrollView
+          style={StyleSheet.flatten([styles.contentScroll])}
+          contentContainerStyle={StyleSheet.flatten([
+            styles.contentContainer,
+            { padding: contentPadding }
+          ])}
+          showsVerticalScrollIndicator={false}
+        >
+          {children}
+        </ScrollView>
+      </View>
+    );
+  };
 
   if (!isDesktop && !isTablet) {
     // Return mobile layout (existing tab layout)
@@ -339,20 +374,20 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {showSidebar && <Sidebar />}
-      <Header />
+    // <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    //   {showSidebar && <Sidebar />}
+    //   <Header />
       <MainContent />
-      
-      {/* Overlay to close profile menu */}
-      {showProfileMenu && (
-        <TouchableOpacity 
-          style={styles.overlay}
-          onPress={() => setShowProfileMenu(false)}
-          activeOpacity={1}
-        />
-      )}
-    </View>
+      // <>{children}</> this is test
+      // {/* Overlay to close profile menu */}
+      // {showProfileMenu && (
+      //   <TouchableOpacity 
+      //     style={styles.overlay}
+      //     onPress={() => setShowProfileMenu(false)}
+      //     activeOpacity={1}
+      //   />
+      // )}
+    // </View>
   );
 };
 

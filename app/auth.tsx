@@ -152,6 +152,7 @@ export default function AuthScreen() {
     setIsLoading(true);
     try {
       if (isSignUp) {
+        console.log('🔐 Starting sign up process...');
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -163,7 +164,7 @@ export default function AuthScreen() {
         });
 
         if (error) {
-          console.error('Supabase signUp error details:', error);
+          console.error('❌ Supabase signUp error:', error);
           let errorMessage = 'An error occurred during sign up.';
           
           if (error.message.includes('already registered')) {
@@ -180,39 +181,53 @@ export default function AuthScreen() {
             message: errorMessage,
           });
         } else if (data.user) {
+          console.log('✅ Sign up successful, user:', data.user.id);
           showToast({
             type: 'success',
-            message: 'Account created! Please check your email for verification.',
-            duration: 4000,
+            message: 'Account created successfully!',
+            duration: 2000,
           });
           
-          const { error: profileError } = await supabase.functions.invoke('create-user-profile', {
-            body: { 
-              name, 
-              userId: data.user.id, 
-              email: data.user.email
-            },
-          });
-
-          if (profileError) {
-            console.error('Error creating user profile:', profileError);
-            showAlert({
-              type: 'warning',
-              title: 'Profile Setup Issue',
-              message: 'Your account was created, but there was an error setting up your profile. Please try logging in.',
+          // Create user profile
+          try {
+            console.log('👤 Creating user profile...');
+            const { error: profileError } = await supabase.functions.invoke('create-user-profile', {
+              body: { 
+                name, 
+                userId: data.user.id, 
+                email: data.user.email
+              },
             });
-          } else {
-            router.replace('/(tabs)');
+
+            if (profileError) {
+              console.error('⚠️ Profile creation error:', profileError);
+              showAlert({
+                type: 'warning',
+                title: 'Profile Setup Issue',
+                message: 'Your account was created, but there was an error setting up your profile. You can update it later in settings.',
+              });
+            } else {
+              console.log('✅ Profile created successfully');
+            }
+          } catch (profileErr) {
+            console.error('💥 Profile creation exception:', profileErr);
           }
+          
+          // Navigate to main app
+          console.log('🚀 Navigating to main app...');
+          setTimeout(() => {
+            router.replace('/(tabs)');
+          }, 100);
         }
       } else {
+        console.log('🔐 Starting sign in process...');
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (error) {
-          console.error('Supabase signIn error details:', error);
+          console.error('❌ Supabase signIn error:', error);
           let errorMessage = 'An error occurred during sign in.';
           
           if (error.message.includes('Invalid login credentials')) {
@@ -229,15 +244,22 @@ export default function AuthScreen() {
             message: errorMessage,
           });
         } else if (data.user) {
+          console.log('✅ Sign in successful, user:', data.user.id);
           showToast({
             type: 'success',
-            message: `Welcome back, ${data.user.user_metadata.name || email}!`,
+            message: `Welcome back!`,
+            duration: 2000,
           });
-          router.replace('/(tabs)');
+          
+          // Navigate to main app with a small delay to ensure state is updated
+          console.log('🚀 Navigating to main app...');
+          setTimeout(() => {
+            router.replace('/(tabs)');
+          }, 100);
         }
       }
     } catch (error) {
-      console.error('Unexpected error during auth:', error);
+      console.error('💥 Unexpected error during auth:', error);
       showAlert({
         type: 'error',
         title: 'Connection Error',
