@@ -343,7 +343,12 @@ export default function HomeScreen() {
               <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading actions...</Text>
             </View>
           ) : (
-            <View style={styles.quickActionsContainer}>
+            <View style={[
+              styles.quickActionsGrid,
+              {
+                gap: isMobile ? 12 : 16,
+              }
+            ]}>
               <QuickActionCard
                 title="Log Meal"
                 subtitle="Track nutrition & impact"
@@ -389,7 +394,12 @@ export default function HomeScreen() {
               <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading stats...</Text>
             </View>
           ) : summary ? (
-            <View style={styles.statsContainer}>
+            <View style={[
+              styles.statsGrid,
+              {
+                gap: isMobile ? 12 : 16,
+              }
+            ]}>
               <MetricCard
                 title="Meals Logged"
                 value={summary.mealsCount}
@@ -604,23 +614,11 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     gap: 12,
   },
-  quickActionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'space-between',
-  },
   statsLoading: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 40,
     gap: 12,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'space-between',
   },
   scoresLoading: {
     alignItems: 'center',
@@ -698,6 +696,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 16,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   scoresCard: {
     borderRadius: 20,
