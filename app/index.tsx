@@ -8,24 +8,27 @@ export default function Index() {
   const { theme } = useTheme();
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     checkAuthAndRedirect();
   }, []);
 
   const checkAuthAndRedirect = async () => {
-    try {
-      console.log('🔍 Index: Starting auth check...');
-      console.log('🌐 Environment check:', {
-        supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing',
-        supabaseKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing',
-        platform: Platform.OS,
-        userAgent: Platform.OS === 'web' ? navigator.userAgent : 'N/A'
-      });
+    // Prevent infinite loops
+    if (retryCount > 3) {
+      console.log('❌ Max retry attempts reached, redirecting to auth');
+      router.replace('/auth');
+      return;
+    }
 
-      // Add timeout to prevent infinite loading
+    try {
+      console.log('🔍 Index: Starting auth check attempt', retryCount + 1);
+      setError(null);
+      
+      // Add shorter timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Auth check timeout')), 10000);
+        setTimeout(() => reject(new Error('Auth check timeout after 5 seconds')), 5000);
       });
 
       const authPromise = supabase.auth.getUser();
@@ -34,14 +37,14 @@ export default function Index() {
       
       console.log('👤 Auth check result:', { 
         user: user ? `${user.id} (${user.email})` : 'None', 
-        error: error?.message || 'None' 
+        error: error?.message || 'None',
+        attempt: retryCount + 1
       });
       
       if (error) {
         console.error('❌ Index: Auth error:', error);
-        setError(`Auth error: ${error.message}`);
-        // Still redirect to auth page even with error
-        setTimeout(() => router.replace('/auth'), 2000);
+        // Don't retry on auth errors, just go to auth page
+        router.replace('/auth');
         return;
       }
       
@@ -53,17 +56,22 @@ export default function Index() {
         router.replace('/auth');
       }
     } catch (error: any) {
-      console.error('💥 Index: Unexpected error:', error);
-      setError(`Unexpected error: ${error.message}`);
-      // Fallback to auth page after showing error
-      setTimeout(() => router.replace('/auth'), 3000);
+      console.error('💥 Index: Auth check error:', error);
+      setError(`Connection issue: ${error.message}`);
+      
+      // Retry with exponential backoff
+      const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        checkAuthAndRedirect();
+      }, retryDelay);
     } finally {
       setIsChecking(false);
     }
   };
 
   // Show error state if there's an issue
-  if (error) {
+  if (error && retryCount > 3) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={[styles.errorContainer, { backgroundColor: theme.colors.card }]}>
@@ -90,8 +98,13 @@ export default function Index() {
           Loading Kalyx...
         </Text>
         <Text style={[styles.loadingSubtext, { color: theme.colors.textSecondary }]}>
-          Checking authentication
+          {retryCount > 0 ? `Retrying... (${retryCount}/3)` : 'Checking authentication'}
         </Text>
+        {error && retryCount <= 3 && (
+          <Text style={[styles.retryText, { color: theme.colors.warning }]}>
+            Connection issue, retrying...
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -124,6 +137,11 @@ const styles = StyleSheet.create({
   loadingSubtext: {
     fontSize: 14,
     textAlign: 'center',
+  },
+  retryText: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
   },
   errorContainer: {
     padding: 32,

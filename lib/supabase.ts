@@ -26,6 +26,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
     // Add storage key for web to avoid conflicts
     storageKey: Platform.OS === 'web' ? 'kalyx-auth-token' : undefined,
+    // Disable flow type to prevent auth loops
+    flowType: 'implicit',
   },
   // Add global headers for better debugging
   global: {
@@ -43,23 +45,68 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Add connection monitoring for web
 if (Platform.OS === 'web') {
-  // Monitor connection status
+  // Monitor connection status with debouncing
+  let authStateChangeTimeout: NodeJS.Timeout;
+  
   supabase.auth.onAuthStateChange((event, session) => {
-    console.log('🔐 Auth state change:', event, session ? 'Session exists' : 'No session');
+    // Clear previous timeout to debounce rapid auth state changes
+    if (authStateChangeTimeout) {
+      clearTimeout(authStateChangeTimeout);
+    }
+    
+    // Debounce auth state changes to prevent loops
+    authStateChangeTimeout = setTimeout(() => {
+      console.log('🔐 Auth state change:', event, session ? 'Session exists' : 'No session');
+    }, 100);
   });
 
-  // Add error handling for network issues
+  // Add error handling for network issues with retry logic
   const originalFetch = window.fetch;
+  let retryCount = 0;
+  const maxRetries = 3;
+  
   window.fetch = async (...args) => {
     try {
       const response = await originalFetch(...args);
+      
+      // Reset retry count on successful request
+      if (response.ok) {
+        retryCount = 0;
+      }
+      
       if (!response.ok && args[0]?.toString().includes('supabase')) {
         console.error('🌐 Supabase API error:', response.status, response.statusText);
+        
+        // Don't retry auth errors or client errors
+        if (response.status >= 400 && response.status < 500) {
+          return response;
+        }
+        
+        // Retry server errors with exponential backoff
+        if (response.status >= 500 && retryCount < maxRetries) {
+          retryCount++;
+          const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000);
+          console.log(`🔄 Retrying Supabase request in ${delay}ms (attempt ${retryCount}/${maxRetries})`);
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return window.fetch(...args);
+        }
       }
+      
       return response;
     } catch (error) {
       if (args[0]?.toString().includes('supabase')) {
         console.error('🌐 Supabase network error:', error);
+        
+        // Retry network errors
+        if (retryCount < maxRetries) {
+          retryCount++;
+          const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000);
+          console.log(`🔄 Retrying Supabase request in ${delay}ms (attempt ${retryCount}/${maxRetries})`);
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return window.fetch(...args);
+        }
       }
       throw error;
     }

@@ -56,6 +56,7 @@ export default function HomeScreen() {
   });
   const [authChecked, setAuthChecked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const isDesktop = Platform.OS === 'web' && width >= 1024;
   const isTablet = Platform.OS === 'web' && width >= 768 && width < 1024;
@@ -74,14 +75,21 @@ export default function HomeScreen() {
   );
 
   const checkAuth = async () => {
+    // Prevent infinite loops
+    if (retryCount > 2) {
+      console.log('❌ Home: Max retry attempts reached, redirecting to auth');
+      router.replace('/auth');
+      return;
+    }
+
     try {
-      console.log('🔐 Home: Checking authentication...');
+      console.log('🔐 Home: Checking authentication... attempt', retryCount + 1);
       setLoadingStates(prev => ({ ...prev, user: true }));
       setError(null);
       
       // Add timeout for auth check
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Auth timeout')), 8000);
+        setTimeout(() => reject(new Error('Auth timeout after 5 seconds')), 5000);
       });
 
       const authPromise = supabase.auth.getUser();
@@ -92,7 +100,7 @@ export default function HomeScreen() {
       if (error) {
         console.error('❌ Home: Auth error:', error);
         setError(`Authentication failed: ${error.message}`);
-        setTimeout(() => router.replace('/auth'), 3000);
+        router.replace('/auth');
         return;
       }
       
@@ -106,6 +114,7 @@ export default function HomeScreen() {
       setUser(user);
       setAuthChecked(true);
       setLoadingStates(prev => ({ ...prev, user: false }));
+      setRetryCount(0); // Reset retry count on success
       
       // Fetch dashboard data after auth is confirmed
       fetchDashboardData();
@@ -113,7 +122,13 @@ export default function HomeScreen() {
       console.error('💥 Home: Auth check error:', error);
       setError(`Connection error: ${error.message}`);
       setLoadingStates(prev => ({ ...prev, user: false }));
-      setTimeout(() => router.replace('/auth'), 3000);
+      
+      // Retry with exponential backoff
+      const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 3000);
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        checkAuth();
+      }, retryDelay);
     }
   };
 
@@ -162,8 +177,6 @@ export default function HomeScreen() {
           setSummary(summaryData);
         } else {
           console.error('❌ Home: Summary fetch failed:', summaryResponse.status, summaryResponse.statusText);
-          const errorText = await summaryResponse.text();
-          console.error('❌ Home: Summary error details:', errorText);
           
           // Set default summary data for offline/error state
           setSummary({
@@ -179,7 +192,11 @@ export default function HomeScreen() {
           });
         }
       } catch (summaryError: any) {
-        console.error('💥 Home: Summary fetch error:', summaryError);
+        if (summaryError.name === 'AbortError') {
+          console.log('📈 Home: Summary request was aborted');
+        } else {
+          console.error('💥 Home: Summary fetch error:', summaryError);
+        }
         // Set default summary data
         setSummary({
           date: today,
@@ -224,8 +241,6 @@ export default function HomeScreen() {
           setScore(scoreData);
         } else {
           console.error('❌ Home: Score fetch failed:', scoreResponse.status, scoreResponse.statusText);
-          const errorText = await scoreResponse.text();
-          console.error('❌ Home: Score error details:', errorText);
           
           // Set default score data
           setScore({
@@ -235,7 +250,11 @@ export default function HomeScreen() {
           });
         }
       } catch (scoreError: any) {
-        console.error('💥 Home: Score fetch error:', scoreError);
+        if (scoreError.name === 'AbortError') {
+          console.log('🎯 Home: Score request was aborted');
+        } else {
+          console.error('💥 Home: Score fetch error:', scoreError);
+        }
         // Set default score data
         setScore({
           fitness_score: 0,
@@ -258,6 +277,7 @@ export default function HomeScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     setError(null);
+    setRetryCount(0); // Reset retry count on manual refresh
     fetchDashboardData();
   };
 
@@ -323,7 +343,7 @@ export default function HomeScreen() {
   };
 
   // Show error state if there's a critical error
-  if (error && !user) {
+  if (error && retryCount > 2 && !user) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.errorContainer}>
@@ -341,6 +361,7 @@ export default function HomeScreen() {
               style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => {
                 setError(null);
+                setRetryCount(0);
                 checkAuth();
               }}
             >
@@ -360,7 +381,12 @@ export default function HomeScreen() {
           <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your dashboard...</Text>
-            {error && (
+            {retryCount > 0 && (
+              <Text style={[styles.retryText, { color: theme.colors.warning }]}>
+                Retrying... ({retryCount}/3)
+              </Text>
+            )}
+            {error && retryCount <= 2 && (
               <Text style={[styles.errorText, { color: theme.colors.error, marginTop: 8 }]}>
                 {error}
               </Text>
@@ -694,6 +720,12 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     marginTop: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  retryText: {
+    fontSize: 12,
+    marginTop: 8,
     fontWeight: '500',
     textAlign: 'center',
   },
