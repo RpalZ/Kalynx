@@ -336,26 +336,37 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
     </View>
   );
 
-  const MainContent = () => (
-    <View style={[
-      styles.mainContent,
-      {
-        marginLeft: showSidebar ? sidebarWidth : 0,
-        marginTop: headerHeight,
-      }
-    ]}>
-      <ScrollView
-        style={styles.contentScroll}
-        contentContainerStyle={[
-          styles.contentContainer,
-          { padding: contentPadding }
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {children}
-      </ScrollView>
-    </View>
-  );
+  const MainContent = () => {
+    console.log('MainContent render. children:', !!children);
+    if (!children) {
+      console.warn('MainContent: children is undefined or null!');
+    }
+    // Minimal style test block (uncomment to test)
+    // return (
+    //   <View>
+    //     <ScrollView>
+    //       {children}
+    //     </ScrollView>
+    //   </View>
+    // );
+    return (
+      <View style={StyleSheet.flatten([
+        styles.mainContent,
+        { marginLeft: showSidebar ? sidebarWidth : 0, marginTop: headerHeight }
+      ])}>
+        <ScrollView
+          style={StyleSheet.flatten([styles.contentScroll])}
+          contentContainerStyle={StyleSheet.flatten([
+            styles.contentContainer,
+            { padding: contentPadding }
+          ])}
+          showsVerticalScrollIndicator={false}
+        >
+          {children}
+        </ScrollView>
+      </View>
+    );
+  };
 
   if (!isDesktop && !isTablet) {
     // Return mobile layout (existing tab layout)
@@ -366,8 +377,8 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
     // <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
     //   {showSidebar && <Sidebar />}
     //   <Header />
-      // <MainContent />
-      <>{children}</>
+      <MainContent />
+      // <>{children}</> this is test
       // {/* Overlay to close profile menu */}
       // {showProfileMenu && (
       //   <TouchableOpacity 
