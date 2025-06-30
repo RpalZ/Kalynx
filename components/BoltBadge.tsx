@@ -117,7 +117,8 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
         style={[
           styles.badge,
           {
-            backgroundColor: '#000000',
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
             height: sizeStyles.badgeHeight,
             paddingHorizontal: sizeStyles.paddingHorizontal,
             borderRadius: sizeStyles.borderRadius,
@@ -135,7 +136,7 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
         ]}>
           <Svg width={sizeStyles.logoSize} height={sizeStyles.logoSize} viewBox="0 0 360 360">
             <Path
-              fill="#FFFFFF"
+              fill="#000000"
               d="M185.47 0.00Q186.22 0.33 186.77 0.00Q186.85 0.01 186.93 0.00Q254.56 3.48 302.60 48.15Q347.77 90.14 357.94 152.33Q358.56 156.13 359.08 161.91Q359.51 166.72 360.00 171.51L360.00 171.88Q359.68 173.21 360.00 174.49L360.00 185.40Q358.14 236.68 331.13 277.88Q307.38 314.11 271.23 335.24Q239.27 353.92 202.45 358.47Q195.38 359.34 188.25 360.00Q188.18 359.99 188.12 360.00Q186.79 359.68 185.52 360.00L174.53 360.00Q173.82 359.70 173.28 360.00L172.86 360.00Q161.01 359.10 157.75 358.68Q107.13 352.11 67.79 320.70C29.54 290.16 5.96 246.46 0.84 197.92C0.56 195.26 0.47 191.33 0.00 188.06Q0.00 187.97 0.00 187.88Q0.33 186.65 0.00 185.51L0.00 174.57Q0.32 173.74 0.00 172.99L0.00 172.62Q0.23 172.50 0.15 172.25Q2.47 122.74 28.97 81.98C61.07 32.62 114.97 2.17 174.43 0.00L185.47 0.00Z"
             />
             <Path
@@ -148,14 +149,14 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
           style={[
             styles.badgeText,
             {
-              color: '#FFFFFF',
+              color: theme.colors.text,
               fontSize: sizeStyles.fontSize,
             },
           ]}
         >
           Built with Bolt
         </Text>
-        <Sparkles size={sizeStyles.iconSize} color="#FFFFFF" style={styles.sparkle} />
+        <Sparkles size={sizeStyles.iconSize} color={theme.colors.accent} style={styles.sparkle} />
       </TouchableOpacity>
     </View>
   );
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 0,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
