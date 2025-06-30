@@ -363,20 +363,20 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {showSidebar && <Sidebar />}
-      <Header />
+    // <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    //   {showSidebar && <Sidebar />}
+    //   <Header />
       <MainContent />
       
-      {/* Overlay to close profile menu */}
-      {showProfileMenu && (
-        <TouchableOpacity 
-          style={styles.overlay}
-          onPress={() => setShowProfileMenu(false)}
-          activeOpacity={1}
-        />
-      )}
-    </View>
+      // {/* Overlay to close profile menu */}
+      // {showProfileMenu && (
+      //   <TouchableOpacity 
+      //     style={styles.overlay}
+      //     onPress={() => setShowProfileMenu(false)}
+      //     activeOpacity={1}
+      //   />
+      // )}
+    // </View>
   );
 };
 
