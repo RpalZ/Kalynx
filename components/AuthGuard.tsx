@@ -9,6 +9,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     supabase.auth.getUser().then(({ data: { user } }) => {
+      console.log("authguard user: ", user)
       if (!mounted) return;
       setUser(user);
       setLoading(false);
