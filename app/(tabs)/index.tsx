@@ -21,6 +21,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import ChartWidget from '@/components/ChartWidget';
 import { ResponsiveGrid, GridItem } from '@/components/ResponsiveGrid';
 import { MetricCard, QuickActionCard, StatsOverview } from '@/components/DashboardCards';
+import { DesktopLayout } from '@/components/DesktopLayout';
 
 const { width } = Dimensions.get('window');
 
@@ -289,7 +290,7 @@ export default function HomeScreen() {
     );
   }
 
-  return (
+  const content = (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView
         style={styles.scrollView}
@@ -578,6 +579,8 @@ export default function HomeScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+
+  return isDesktop ? <DesktopLayout>{content}</DesktopLayout> : content;
 }
 
 const styles = StyleSheet.create({
