@@ -43,7 +43,7 @@ export const BoltBadge: React.FC<Omit<BoltBadgeProps, 'position'>> = ({
   const { theme } = useTheme();
   // Always use bottom-right position
   const positionStyles = IS_MOBILE
-    ? { bottom: 24, right: 16 } // mobile: 16px from right, 24px from bottom
+    ? { bottom: 96, right: 16 } // 96px above bottom to clear tab bar
     : { bottom: 40, right: 40 }; // desktop: 40px from right and bottom
   const sizeStyles = getSizeStyles(size);
 
