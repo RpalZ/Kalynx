@@ -69,7 +69,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
 
   const sidebarWidth = isDesktop ? 280 : isTablet ? 240 : 200;
   const headerHeight = 80;
-  const contentPadding = isDesktop ? 32 : isTablet ? 24 : 16;
+  const contentPadding = isDesktop ? 0 : isTablet ? 24 : 16;
 
   // Get current active tab from pathname
   const getCurrentActiveTab = () => {
@@ -592,7 +592,6 @@ const styles = StyleSheet.create({
   // Main Content Styles
   mainContent: {
     flex: 1,
-    transition: 'margin-left 0.3s ease',
   },
   contentScroll: {
     flex: 1,

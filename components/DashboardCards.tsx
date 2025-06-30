@@ -67,7 +67,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           borderColor: theme.colors.border,
           minHeight: currentSize.minHeight,
           width: isMobile ? '48%' : undefined,
-          flex: isMobile ? 0 : 1,
+          ...(Platform.OS === 'web' && isMobile ? { minWidth: 160 } : { flex: 1}),
         }
       ]}
       onPress={onPress}
@@ -194,13 +194,13 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
         { 
           minHeight: currentSize.minHeight,
           width: isMobile ? '48%' : undefined,
-          flex: isMobile ? 0 : 1,
+          ...(Platform.OS === 'web' && isMobile ? { minWidth: 160 } : { flex: 1 }),
         }
       ]}
       onPress={onPress}
     >
       <LinearGradient
-        colors={gradient}
+        colors={[gradient[0], gradient[1]]}
         style={[styles.quickActionGradient, { padding: currentSize.padding }]}
       >
         <View style={styles.quickActionContent}>

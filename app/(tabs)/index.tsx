@@ -346,6 +346,9 @@ export default function HomeScreen() {
             <View style={[
               styles.quickActionsGrid,
               {
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
                 gap: isMobile ? 12 : 16,
               }
             ]}>
@@ -397,6 +400,9 @@ export default function HomeScreen() {
             <View style={[
               styles.statsGrid,
               {
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
                 gap: isMobile ? 12 : 16,
               }
             ]}>

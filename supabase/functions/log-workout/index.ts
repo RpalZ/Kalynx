@@ -93,6 +93,38 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Update user_stats table
+    // Fetch current stats
+    const { data: stats, error: statsError } = await supabase
+      .from('user_stats')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    let newStats = {
+      user_id: user.id,
+      totalco2e: 0,
+      totalwater: 0,
+      mealscount: 0,
+      caloriesburned: caloriesBurned,
+      workoutscount: 1,
+    };
+
+    if (stats) {
+      newStats = {
+        user_id: user.id,
+        totalco2e: stats.totalco2e || 0,
+        totalwater: stats.totalwater || 0,
+        mealscount: stats.mealscount || 0,
+        caloriesburned: (stats.caloriesburned || 0) + caloriesBurned,
+        workoutscount: (stats.workoutscount || 0) + 1,
+      };
+    }
+
+    await supabase
+      .from('user_stats')
+      .upsert(newStats, { onConflict: ['user_id'] });
+
     return new Response(JSON.stringify(workout), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
