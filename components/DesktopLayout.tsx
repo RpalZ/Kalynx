@@ -312,27 +312,6 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
     </View>
   );
 
-  const MainContent = () => (
-    <View style={[
-      styles.mainContent,
-      {
-        marginLeft: showSidebar ? sidebarWidth : 0,
-        marginTop: headerHeight,
-      }
-    ]}>
-      <ScrollView
-        style={styles.contentScroll}
-        contentContainerStyle={[
-          styles.contentContainer,
-          { padding: contentPadding }
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {children}
-      </ScrollView>
-    </View>
-  );
-
   if (!isDesktop && !isTablet) {
     // Return mobile layout (existing tab layout)
     return <>{children}</>;
@@ -342,16 +321,15 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {showSidebar && <Sidebar />}
       <Header />
-      <MainContent />
-      
-      {/* Overlay to close profile menu */}
-      {showProfileMenu && (
-        <TouchableOpacity 
-          style={styles.overlay}
-          onPress={() => setShowProfileMenu(false)}
-          activeOpacity={1}
-        />
-      )}
+      <View style={[
+        styles.mainContent,
+        {
+          marginLeft: showSidebar ? sidebarWidth : 0,
+          marginTop: headerHeight,
+        }
+      ]}>
+        {children}
+      </View>
     </View>
   );
 };
@@ -579,14 +557,6 @@ const styles = StyleSheet.create({
   profileMenuDivider: {
     height: 1,
     marginVertical: 4,
-  },
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 999,
   },
   
   // Main Content Styles
