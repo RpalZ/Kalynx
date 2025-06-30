@@ -21,7 +21,9 @@ import { useTheme } from '@/contexts/ThemeContext';
 import ChartWidget from '@/components/ChartWidget';
 import { ResponsiveGrid, GridItem } from '@/components/ResponsiveGrid';
 import { MetricCard, QuickActionCard, StatsOverview } from '@/components/DashboardCards';
-import AuthGuard from '@/components/AuthGuard';
+
+import { DesktopLayout } from '@/components/DesktopLayout';
+
 
 const { width } = Dimensions.get('window');
 
@@ -402,36 +404,29 @@ export default function HomeScreen() {
     );
   }
 
-  return (
-    <AuthGuard>
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          contentContainerStyle={isDesktop ? styles.desktopContent : undefined}
-        >
-          {/* Header - Only show on mobile/tablet */}
-          {!isDesktop && (
-            <LinearGradient
-              colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
-              style={styles.header}
-            >
-              <View style={styles.headerContent}>
-                <View style={styles.headerLeft}>
-                  <Text style={styles.greeting}>{getGreeting()},</Text>
-                  <Text style={styles.userName}>{user?.user_metadata?.name || 'there'}!</Text>
-                  <Text style={styles.subtitle}>Ready to make a positive impact today?</Text>
-                </View>
-                <TouchableOpacity 
-                  style={styles.refreshButton}
-                  onPress={onRefresh}
-                  disabled={refreshing}
-                >
-                  <RefreshCw size={24} color="#FFFFFF" />
-                </TouchableOpacity>
+
+  const content = (
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        contentContainerStyle={isDesktop ? styles.desktopContent : undefined}
+      >
+        {/* Header - Only show on mobile/tablet */}
+        {!isDesktop && (
+          <LinearGradient
+            colors={[theme.colors.gradient.primary[0], theme.colors.gradient.primary[1]]}
+            style={styles.header}
+          >
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeft}>
+                <Text style={styles.greeting}>{getGreeting()},</Text>
+                <Text style={styles.userName}>{user?.user_metadata?.name || 'there'}!</Text>
+                <Text style={styles.subtitle}>Ready to make a positive impact today?</Text>
+
               </View>
             </LinearGradient>
           )}
@@ -693,6 +688,8 @@ export default function HomeScreen() {
       </SafeAreaView>
     </AuthGuard>
   );
+
+  return isDesktop ? <DesktopLayout>{content}</DesktopLayout> : content;
 }
 
 const styles = StyleSheet.create({

@@ -19,8 +19,10 @@ import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCustomAlert } from '@/components/CustomAlert';
 import { useToast } from '@/components/Toast';
+import { DesktopLayout } from '@/components/DesktopLayout';
 
 const { width } = Dimensions.get('window');
+const isDesktop = Platform.OS === 'web' && width >= 1024;
 
 interface Meal {
   id: string;
@@ -388,20 +390,7 @@ export default function MealsScreen() {
     );
   };
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
-            <ChefHat size={48} color={theme.colors.success} />
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your meals...</Text>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
+  const content = (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -576,6 +565,21 @@ export default function MealsScreen() {
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.loadingContainer}>
+          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
+            <ChefHat size={48} color={theme.colors.success} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your meals...</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return isDesktop ? <DesktopLayout>{content}</DesktopLayout> : content;
 }
 
 const styles = StyleSheet.create({

@@ -23,8 +23,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { SubscriptionGate } from '@/components/SubscriptionGate';
+import { DesktopLayout } from '@/components/DesktopLayout';
 
 const { width } = Dimensions.get('window');
+const isDesktop = Platform.OS === 'web' && width >= 1024;
 
 interface Recipe {
   id: string;
@@ -605,7 +607,7 @@ export default function CameraScreen() {
     </View>
   );
 
-  return (
+  const content = (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
@@ -892,6 +894,8 @@ export default function CameraScreen() {
       />
     </SafeAreaView>
   );
+
+  return isDesktop ? <DesktopLayout>{content}</DesktopLayout> : content;
 }
 
 const styles = StyleSheet.create({
