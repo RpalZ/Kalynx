@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform, Dimensions, Image } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Sparkles, Zap } from 'lucide-react-native';
 
@@ -13,8 +13,8 @@ const IS_MOBILE = SCREEN_WIDTH < 768 || Platform.OS !== 'web';
 const IS_ANDROID = Platform.OS === 'android';
 
 export const BoltBadge: React.FC<BoltBadgeProps> = ({
-  position = 'bottom-right',
-  size = 'medium',
+  position = 'bottom-left',
+  size = 'large',
 }) => {
   const { theme, isDark } = useTheme();
   
@@ -27,6 +27,7 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
     if (IS_MOBILE) {
       // On mobile, we'll use larger sizes for better visibility
       if (size === 'small') return 'medium';
+      if (size === 'medium') return 'large';
       return 'large';
     }
     return size;
@@ -38,13 +39,14 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
     // For mobile, adjust position to avoid tab navigation
     if (IS_MOBILE) {
       const tabHeight = 80; // Height of the tab bar
-      const mobileOffset = responsiveSize === 'small' ? 12 : 16;
+      const safeAreaOffset = Platform.OS === 'ios' ? 50 : 30; // Extra space for status bar
+      const mobileOffset = responsiveSize === 'small' ? 16 : 20;
       
       switch (position) {
         case 'top-left':
-          return { top: mobileOffset + 40, left: mobileOffset }; // Add extra space for status bar
+          return { top: mobileOffset + safeAreaOffset, left: mobileOffset };
         case 'top-right':
-          return { top: mobileOffset + 40, right: mobileOffset }; // Add extra space for status bar
+          return { top: mobileOffset + safeAreaOffset, right: mobileOffset };
         case 'bottom-left':
           return { bottom: tabHeight + mobileOffset, left: mobileOffset };
         case 'bottom-right':
@@ -70,34 +72,56 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
   };
   
   const getSizeStyles = () => {
+    // Larger sizes for mobile
+    const mobileFactor = IS_MOBILE ? 1.2 : 1;
+    
     switch (responsiveSize) {
       case 'small':
         return {
-          badgeHeight: IS_MOBILE ? 36 : 32,
-          fontSize: IS_MOBILE ? 12 : 11,
-          iconSize: IS_MOBILE ? 16 : 14,
-          paddingHorizontal: IS_MOBILE ? 10 : 8,
+          badgeHeight: Math.round(36 * mobileFactor),
+          fontSize: Math.round(12 * mobileFactor),
+          iconSize: Math.round(16 * mobileFactor),
+          paddingHorizontal: Math.round(10 * mobileFactor),
+          borderRadius: Math.round(18 * mobileFactor),
         };
       case 'large':
         return {
-          badgeHeight: IS_MOBILE ? 48 : 44,
-          fontSize: IS_MOBILE ? 16 : 15,
-          iconSize: IS_MOBILE ? 22 : 20,
-          paddingHorizontal: IS_MOBILE ? 18 : 16,
+          badgeHeight: Math.round(52 * mobileFactor),
+          fontSize: Math.round(16 * mobileFactor),
+          iconSize: Math.round(24 * mobileFactor),
+          paddingHorizontal: Math.round(18 * mobileFactor),
+          borderRadius: Math.round(26 * mobileFactor),
         };
       case 'medium':
       default:
         return {
-          badgeHeight: IS_MOBILE ? 42 : 38,
-          fontSize: IS_MOBILE ? 14 : 13,
-          iconSize: IS_MOBILE ? 18 : 16,
-          paddingHorizontal: IS_MOBILE ? 14 : 12,
+          badgeHeight: Math.round(44 * mobileFactor),
+          fontSize: Math.round(14 * mobileFactor),
+          iconSize: Math.round(20 * mobileFactor),
+          paddingHorizontal: Math.round(14 * mobileFactor),
+          borderRadius: Math.round(22 * mobileFactor),
         };
     }
   };
   
   const positionStyles = getPositionStyles();
   const sizeStyles = getSizeStyles();
+  
+  // Use SVG as a component
+  const renderBoltLogo = () => {
+    return (
+      <View style={[
+        styles.logoContainer, 
+        { 
+          backgroundColor: theme.colors.primary,
+          height: sizeStyles.badgeHeight - 16, 
+          width: sizeStyles.badgeHeight - 16 
+        }
+      ]}>
+        <Zap size={sizeStyles.iconSize} color="#FFFFFF" />
+      </View>
+    );
+  };
   
   return (
     <View style={[styles.badgeContainer, positionStyles]}>
@@ -109,21 +133,13 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
             borderColor: theme.colors.border,
             height: sizeStyles.badgeHeight,
             paddingHorizontal: sizeStyles.paddingHorizontal,
+            borderRadius: sizeStyles.borderRadius,
           },
         ]}
         onPress={handlePress}
         activeOpacity={0.8}
       >
-        <View style={[
-          styles.logoContainer, 
-          { 
-            backgroundColor: theme.colors.primary,
-            height: sizeStyles.badgeHeight - 16, 
-            width: sizeStyles.badgeHeight - 16 
-          }
-        ]}>
-          <Zap size={sizeStyles.iconSize} color="#FFFFFF" />
-        </View>
+        {renderBoltLogo()}
         <Text
           style={[
             styles.badgeText,
@@ -149,13 +165,12 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 24,
     borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
   logoContainer: {
     borderRadius: 50,
@@ -165,7 +180,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontWeight: '700',
-    letterSpacing: 0.2,
+    letterSpacing: 0.5,
   },
   sparkle: {
     marginLeft: 6,
