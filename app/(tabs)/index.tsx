@@ -10,6 +10,7 @@ import {
   Alert,
   Dimensions,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -48,6 +49,11 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [loadingStates, setLoadingStates] = useState({
+    summary: true,
+    score: true,
+    user: true,
+  });
 
   const isDesktop = Platform.OS === 'web' && width >= 1024;
   const isTablet = Platform.OS === 'web' && width >= 768 && width < 1024;
@@ -59,18 +65,27 @@ export default function HomeScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchDashboardData();
-    }, [])
+      if (user) {
+        fetchDashboardData();
+      }
+    }, [user])
   );
 
   const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      router.replace('/auth');
-      return;
+    try {
+      setLoadingStates(prev => ({ ...prev, user: true }));
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace('/auth');
+        return;
+      }
+      setUser(user);
+      setLoadingStates(prev => ({ ...prev, user: false }));
+      fetchDashboardData();
+    } catch (error) {
+      console.error('Auth check error:', error);
+      setLoadingStates(prev => ({ ...prev, user: false }));
     }
-    setUser(user);
-    fetchDashboardData();
   };
 
   const fetchDashboardData = async () => {
@@ -85,39 +100,106 @@ export default function HomeScreen() {
 
       const token = session.session.access_token;
 
-      // Fetch daily summary
-      const summaryResponse = await fetch(
-        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-daily-summary?date=${today}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      // Fetch daily summary with timeout
+      setLoadingStates(prev => ({ ...prev, summary: true }));
+      const summaryController = new AbortController();
+      const summaryTimeout = setTimeout(() => summaryController.abort(), 10000); // 10 second timeout
 
-      if (summaryResponse.ok) {
-        const summaryData = await summaryResponse.json();
-        setSummary(summaryData);
+      try {
+        const summaryResponse = await fetch(
+          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-daily-summary?date=${today}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            signal: summaryController.signal,
+          }
+        );
+
+        clearTimeout(summaryTimeout);
+
+        if (summaryResponse.ok) {
+          const summaryData = await summaryResponse.json();
+          setSummary(summaryData);
+        } else {
+          console.error('Summary fetch failed:', summaryResponse.status);
+          // Set default summary data for offline/error state
+          setSummary({
+            date: today,
+            totalCalories: 0,
+            totalProtein: 0,
+            totalCO2e: 0,
+            totalWater: 0,
+            caloriesBurned: 0,
+            netCalories: 0,
+            mealsCount: 0,
+            workoutsCount: 0,
+          });
+        }
+      } catch (summaryError) {
+        console.error('Summary fetch error:', summaryError);
+        // Set default summary data
+        setSummary({
+          date: today,
+          totalCalories: 0,
+          totalProtein: 0,
+          totalCO2e: 0,
+          totalWater: 0,
+          caloriesBurned: 0,
+          netCalories: 0,
+          mealsCount: 0,
+          workoutsCount: 0,
+        });
+      } finally {
+        setLoadingStates(prev => ({ ...prev, summary: false }));
       }
 
-      // Calculate and fetch daily score
-      const scoreResponse = await fetch(
-        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/calculate-score`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ date: today }),
-        }
-      );
+      // Calculate and fetch daily score with timeout
+      setLoadingStates(prev => ({ ...prev, score: true }));
+      const scoreController = new AbortController();
+      const scoreTimeout = setTimeout(() => scoreController.abort(), 10000); // 10 second timeout
 
-      if (scoreResponse.ok) {
-        const scoreData = await scoreResponse.json();
-        setScore(scoreData);
+      try {
+        const scoreResponse = await fetch(
+          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/calculate-score`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ date: today }),
+            signal: scoreController.signal,
+          }
+        );
+
+        clearTimeout(scoreTimeout);
+
+        if (scoreResponse.ok) {
+          const scoreData = await scoreResponse.json();
+          setScore(scoreData);
+        } else {
+          console.error('Score fetch failed:', scoreResponse.status);
+          // Set default score data
+          setScore({
+            fitness_score: 0,
+            eco_score: 0,
+            combined_score: 0,
+          });
+        }
+      } catch (scoreError) {
+        console.error('Score fetch error:', scoreError);
+        // Set default score data
+        setScore({
+          fitness_score: 0,
+          eco_score: 0,
+          combined_score: 0,
+        });
+      } finally {
+        setLoadingStates(prev => ({ ...prev, score: false }));
       }
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       Alert.alert('Error', 'Failed to load dashboard data');
@@ -193,12 +275,13 @@ export default function HomeScreen() {
     );
   };
 
-  if (isLoading) {
+  // Show loading state while checking auth or initial load
+  if (loadingStates.user || (isLoading && !summary && !score)) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
           <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
-            <View style={[styles.loadingSpinner, { borderColor: theme.colors.border, borderTopColor: theme.colors.primary }]} />
+            <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your dashboard...</Text>
           </View>
         </View>
@@ -254,51 +337,63 @@ export default function HomeScreen() {
         {/* Quick Actions */}
         <View style={[styles.section, isDesktop && styles.desktopSection]}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Actions</Text>
-          <View style={[
-            styles.quickActionsGrid,
-            {
-              gap: isMobile ? 12 : 16,
-            }
-          ]}>
-            <QuickActionCard
-              title="Log Meal"
-              subtitle="Track nutrition & impact"
-              icon={Utensils}
-              gradient={['#10B981', '#059669']}
-              onPress={() => router.push('/meals')}
-              size={isDesktop ? 'medium' : 'small'}
-            />
-            <QuickActionCard
-              title="Log Workout"
-              subtitle="Record your activity"
-              icon={Dumbbell}
-              gradient={['#3B82F6', '#2563EB']}
-              onPress={() => router.push('/workouts')}
-              size={isDesktop ? 'medium' : 'small'}
-            />
-            <QuickActionCard
-              title="Scan Fridge"
-              subtitle="AI recipe suggestions"
-              icon={Camera}
-              gradient={['#8B5CF6', '#7C3AED']}
-              onPress={() => router.push('/(tabs)/camera' as any)}
-              size={isDesktop ? 'medium' : 'small'}
-            />
-            <QuickActionCard
-              title="View Progress"
-              subtitle="See your achievements"
-              icon={Award}
-              gradient={['#F59E0B', '#D97706']}
-              onPress={() => router.push('/(tabs)/leaderboard')}
-              size={isDesktop ? 'medium' : 'small'}
-            />
-          </View>
+          {loadingStates.summary ? (
+            <View style={styles.quickActionsLoading}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading actions...</Text>
+            </View>
+          ) : (
+            <View style={[
+              styles.quickActionsGrid,
+              {
+                gap: isMobile ? 12 : 16,
+              }
+            ]}>
+              <QuickActionCard
+                title="Log Meal"
+                subtitle="Track nutrition & impact"
+                icon={Utensils}
+                gradient={['#10B981', '#059669']}
+                onPress={() => router.push('/(tabs)/meals')}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+              <QuickActionCard
+                title="Log Workout"
+                subtitle="Record your activity"
+                icon={Dumbbell}
+                gradient={['#3B82F6', '#2563EB']}
+                onPress={() => router.push('/(tabs)/workouts')}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+              <QuickActionCard
+                title="Scan Fridge"
+                subtitle="AI recipe suggestions"
+                icon={Camera}
+                gradient={['#8B5CF6', '#7C3AED']}
+                onPress={() => router.push('/(tabs)/camera' as any)}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+              <QuickActionCard
+                title="View Progress"
+                subtitle="See your achievements"
+                icon={Award}
+                gradient={['#F59E0B', '#D97706']}
+                onPress={() => router.push('/(tabs)/leaderboard')}
+                size={isDesktop ? 'medium' : 'small'}
+              />
+            </View>
+          )}
         </View>
 
         {/* Stats Overview */}
-        {summary && (
-          <View style={[styles.section, isDesktop && styles.desktopSection]}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Overview</Text>
+        <View style={[styles.section, isDesktop && styles.desktopSection]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Overview</Text>
+          {loadingStates.summary ? (
+            <View style={styles.statsLoading}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading stats...</Text>
+            </View>
+          ) : summary ? (
             <View style={[
               styles.statsGrid,
               {
@@ -361,8 +456,14 @@ export default function HomeScreen() {
                 size={isDesktop ? 'medium' : 'small'}
               />
             </View>
-          </View>
-        )}
+          ) : (
+            <View style={styles.errorState}>
+              <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
+                Unable to load stats. Pull to refresh.
+              </Text>
+            </View>
+          )}
+        </View>
 
         {/* Chart Widget */}
         <View style={[styles.section, isDesktop && styles.desktopSection]}>
@@ -370,9 +471,14 @@ export default function HomeScreen() {
         </View>
 
         {/* Performance Scores */}
-        {score && (
-          <View style={[styles.section, isDesktop && styles.desktopSection]}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Performance</Text>
+        <View style={[styles.section, isDesktop && styles.desktopSection]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Today's Performance</Text>
+          {loadingStates.score ? (
+            <View style={styles.scoresLoading}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading scores...</Text>
+            </View>
+          ) : score ? (
             <View style={[styles.scoresCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <LinearGradient
                 colors={isDark ? ['#1E293B', '#334155'] : ['#F8FAFC', '#F1F5F9']}
@@ -409,8 +515,14 @@ export default function HomeScreen() {
                 </View>
               </LinearGradient>
             </View>
-          </View>
-        )}
+          ) : (
+            <View style={styles.errorState}>
+              <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
+                Unable to load performance scores. Pull to refresh.
+              </Text>
+            </View>
+          )}
+        </View>
 
         {/* Activity Summary */}
         {summary && (
@@ -490,16 +602,38 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  loadingSpinner: {
-    width: 40,
-    height: 40,
-    borderWidth: 4,
-    borderRadius: 20,
-    marginBottom: 16,
-  },
   loadingText: {
-    fontSize: 16,
+    fontSize: 14,
+    marginTop: 12,
     fontWeight: '500',
+    textAlign: 'center',
+  },
+  quickActionsLoading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  statsLoading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  scoresLoading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  errorState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  errorText: {
+    fontSize: 14,
+    textAlign: 'center',
   },
   header: {
     paddingHorizontal: 20,
