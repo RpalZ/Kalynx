@@ -55,6 +55,18 @@ export default function RootLayout() {
           document.head.appendChild(meta);
         }
       });
+
+      // Add error handling for unhandled promise rejections
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('🚨 Unhandled promise rejection:', event.reason);
+        // Prevent the default behavior that would cause the app to crash
+        event.preventDefault();
+      });
+
+      // Add error handling for general errors
+      window.addEventListener('error', (event) => {
+        console.error('🚨 Global error:', event.error);
+      });
     }
   }, []);
 
@@ -62,6 +74,7 @@ export default function RootLayout() {
     <ThemeProvider>
       <SubscriptionProvider>
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="auth" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
