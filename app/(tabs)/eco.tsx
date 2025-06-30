@@ -19,8 +19,10 @@ import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import Markdown from 'react-native-markdown-display';
+import { DesktopLayout } from '@/components/DesktopLayout';
 
 const { width } = Dimensions.get('window');
+const isDesktop = Platform.OS === 'web' && width >= 1024;
 
 interface Message {
   id: string;
@@ -471,7 +473,7 @@ export default function KaliAIScreen() {
     );
   }
 
-  return (
+  const content = (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Header */}
       <LinearGradient
@@ -569,6 +571,8 @@ export default function KaliAIScreen() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+
+  return isDesktop ? <DesktopLayout>{content}</DesktopLayout> : content;
 }
 
 const styles = StyleSheet.create({

@@ -10,6 +10,7 @@ import {
   Dimensions,
   Animated,
   Image,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,8 +18,10 @@ import { Trophy, Medal, Award, TrendingUp, RefreshCw, Crown, Star, Target, Zap, 
 import { supabase } from '@/lib/supabase';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+import { DesktopLayout } from '@/components/DesktopLayout';
 
 const { width } = Dimensions.get('window');
+const isDesktop = Platform.OS === 'web' && width >= 1024;
 
 interface LeaderboardEntry {
   rank: number;
@@ -368,20 +371,7 @@ export default function LeaderboardScreen() {
     </Animated.View>
   );
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
-            <Trophy size={48} color={theme.colors.primary} />
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading leaderboard...</Text>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
+  const content = (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView
         style={styles.scrollView}
@@ -516,6 +506,8 @@ export default function LeaderboardScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+
+  return isDesktop ? <DesktopLayout>{content}</DesktopLayout> : content;
 }
 
 const styles = StyleSheet.create({

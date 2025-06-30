@@ -19,8 +19,10 @@ import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCustomAlert } from '@/components/CustomAlert';
 import { useToast } from '@/components/Toast';
+import { DesktopLayout } from '@/components/DesktopLayout';
 
 const { width } = Dimensions.get('window');
+const isDesktop = Platform.OS === 'web' && width >= 1024;
 
 interface Workout {
   id: string;
@@ -358,20 +360,7 @@ export default function WorkoutsScreen() {
     </TouchableOpacity>
   );
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
-            <Dumbbell size={48} color={theme.colors.secondary} />
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your workouts...</Text>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
+  const content = (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -504,6 +493,8 @@ export default function WorkoutsScreen() {
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
+
+  return isDesktop ? <DesktopLayout>{content}</DesktopLayout> : content;
 }
 
 const styles = StyleSheet.create({

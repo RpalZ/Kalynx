@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,8 +19,10 @@ import { router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { SubscriptionModal } from '@/components/SubscriptionModal';
+import { DesktopLayout } from '@/components/DesktopLayout';
 
 const { width } = Dimensions.get('window');
+const isDesktop = Platform.OS === 'web' && width >= 1024;
 
 interface UserProfile {
   id: string;
@@ -408,20 +411,7 @@ export default function ProfileScreen() {
     </View>
   );
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
-            <User size={48} color={theme.colors.accent} />
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading profile...</Text>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
+  const content = (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <ScrollView 
         style={styles.scrollView} 
@@ -810,6 +800,8 @@ export default function ProfileScreen() {
       />
     </SafeAreaView>
   );
+
+  return isDesktop ? <DesktopLayout>{content}</DesktopLayout> : content;
 }
 
 const styles = StyleSheet.create({
