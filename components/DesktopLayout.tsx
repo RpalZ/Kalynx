@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Chrome as Home, Utensils, Dumbbell, Leaf, Trophy, Camera, User, Settings, Bell, Menu, Sparkles, LogOut } from 'lucide-react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { router, usePathname } from 'expo-router';
+import { router, usePathname, Link } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -116,39 +116,40 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   };
 
   const NavItem = ({ item, isActive }: { item: any; isActive: boolean }) => (
-    <TouchableOpacity
-      style={[
-        styles.navItem,
-        {
-          backgroundColor: isActive ? `${item.color}15` : 'transparent',
-          borderColor: isActive ? item.color : 'transparent',
-        }
-      ]}
-      onPress={() => handleNavigation(item)}
-      activeOpacity={0.7}
-    >
-      <View style={[
-        styles.navIconContainer,
-        { backgroundColor: isActive ? `${item.color}20` : 'transparent' }
-      ]}>
-        <item.icon 
-          size={isDesktop ? 20 : 18} 
-          color={isActive ? item.color : theme.colors.textSecondary} 
-        />
-      </View>
-      <Text style={[
-        styles.navLabel,
-        {
-          color: isActive ? item.color : theme.colors.textSecondary,
-          fontWeight: isActive ? '600' : '500',
-        }
-      ]}>
-        {item.label}
-      </Text>
-      {isActive && (
-        <View style={[styles.activeIndicator, { backgroundColor: item.color }]} />
-      )}
-    </TouchableOpacity>
+    <Link href={item.route} asChild>
+      <TouchableOpacity
+        style={[
+          styles.navItem,
+          {
+            backgroundColor: isActive ? `${item.color}15` : 'transparent',
+            borderColor: isActive ? item.color : 'transparent',
+          }
+        ]}
+        activeOpacity={0.7}
+      >
+        <View style={[
+          styles.navIconContainer,
+          { backgroundColor: isActive ? `${item.color}20` : 'transparent' }
+        ]}>
+          <item.icon 
+            size={isDesktop ? 20 : 18} 
+            color={isActive ? item.color : theme.colors.textSecondary} 
+          />
+        </View>
+        <Text style={[
+          styles.navLabel,
+          {
+            color: isActive ? item.color : theme.colors.textSecondary,
+            fontWeight: isActive ? '600' : '500',
+          }
+        ]}>
+          {item.label}
+        </Text>
+        {isActive && (
+          <View style={[styles.activeIndicator, { backgroundColor: item.color }]} />
+        )}
+      </TouchableOpacity>
+    </Link>
   );
 
   const Sidebar = () => (
@@ -216,13 +217,14 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
         <View style={styles.sidebarBottom}>
           <TouchableOpacity 
             style={[styles.settingsButton, { backgroundColor: theme.colors.surface }]}
-            onPress={() => router.push('/(tabs)/profile')}
             activeOpacity={0.7}
           >
-            <Settings size={18} color={theme.colors.textSecondary} />
-            <Text style={[styles.settingsText, { color: theme.colors.textSecondary }]}>
-              Settings
-            </Text>
+            <Link href="/(tabs)/profile" asChild>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Settings size={18} color={theme.colors.textSecondary} />
+                <Text style={[styles.settingsText, { color: theme.colors.textSecondary }]}>Settings</Text>
+              </View>
+            </Link>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -291,26 +293,26 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
               <View style={[styles.profileMenu, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
                 <TouchableOpacity 
                   style={styles.profileMenuItem}
-                  onPress={() => {
-                    setShowProfileMenu(false);
-                    router.push('/(tabs)/profile');
-                  }}
                   activeOpacity={0.7}
                 >
-                  <User size={16} color={theme.colors.textSecondary} />
-                  <Text style={[styles.profileMenuText, { color: theme.colors.text }]}>Profile</Text>
+                  <Link href="/(tabs)/profile" asChild>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <User size={16} color={theme.colors.textSecondary} />
+                      <Text style={[styles.profileMenuText, { color: theme.colors.text }]}>Profile</Text>
+                    </View>
+                  </Link>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
                   style={styles.profileMenuItem}
-                  onPress={() => {
-                    setShowProfileMenu(false);
-                    router.push('/(tabs)/profile');
-                  }}
                   activeOpacity={0.7}
                 >
-                  <Settings size={16} color={theme.colors.textSecondary} />
-                  <Text style={[styles.profileMenuText, { color: theme.colors.text }]}>Settings</Text>
+                  <Link href="/(tabs)/profile" asChild>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <Settings size={16} color={theme.colors.textSecondary} />
+                      <Text style={[styles.profileMenuText, { color: theme.colors.text }]}>Settings</Text>
+                    </View>
+                  </Link>
                 </TouchableOpacity>
                 
                 <View style={[styles.profileMenuDivider, { backgroundColor: theme.colors.border }]} />
