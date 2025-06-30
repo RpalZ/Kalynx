@@ -366,8 +366,8 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
     // <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
     //   {showSidebar && <Sidebar />}
     //   <Header />
-      <MainContent />
-      
+      // <MainContent />
+      <>{children}</>
       // {/* Overlay to close profile menu */}
       // {showProfileMenu && (
       //   <TouchableOpacity 
