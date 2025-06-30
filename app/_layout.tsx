@@ -19,7 +19,7 @@ export default function RootLayout() {
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />
-        <BoltBadge position="bottom-right" size="medium" />
+        <BoltBadge position="bottom-left" size="large" />
       </SubscriptionProvider>
     </ThemeProvider>
   );

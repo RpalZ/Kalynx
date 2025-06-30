@@ -8,8 +8,9 @@ interface BoltBadgeProps {
   size?: 'small' | 'medium' | 'large';
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const IS_MOBILE = SCREEN_WIDTH < 768 || Platform.OS !== 'web';
+const IS_ANDROID = Platform.OS === 'android';
 
 export const BoltBadge: React.FC<BoltBadgeProps> = ({
   position = 'bottom-right',
@@ -24,7 +25,9 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
   // Adjust size based on screen width for mobile
   const getResponsiveSize = () => {
     if (IS_MOBILE) {
-      return size === 'large' ? 'medium' : 'small';
+      // On mobile, we'll use larger sizes for better visibility
+      if (size === 'small') return 'medium';
+      return 'large';
     }
     return size;
   };
@@ -32,21 +35,37 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
   const responsiveSize = getResponsiveSize();
   
   const getPositionStyles = () => {
-    // Adjust position values for mobile
-    const mobileOffset = responsiveSize === 'small' ? 8 : 12;
-    const desktopOffset = responsiveSize === 'small' ? 12 : 16;
-    const offset = IS_MOBILE ? mobileOffset : desktopOffset;
-    
-    switch (position) {
-      case 'top-left':
-        return { top: offset, left: offset };
-      case 'top-right':
-        return { top: offset, right: offset };
-      case 'bottom-left':
-        return { bottom: offset, left: offset };
-      case 'bottom-right':
-      default:
-        return { bottom: offset, right: offset };
+    // For mobile, adjust position to avoid tab navigation
+    if (IS_MOBILE) {
+      const tabHeight = 80; // Height of the tab bar
+      const mobileOffset = responsiveSize === 'small' ? 12 : 16;
+      
+      switch (position) {
+        case 'top-left':
+          return { top: mobileOffset + 40, left: mobileOffset }; // Add extra space for status bar
+        case 'top-right':
+          return { top: mobileOffset + 40, right: mobileOffset }; // Add extra space for status bar
+        case 'bottom-left':
+          return { bottom: tabHeight + mobileOffset, left: mobileOffset };
+        case 'bottom-right':
+        default:
+          return { bottom: tabHeight + mobileOffset, right: mobileOffset };
+      }
+    } else {
+      // Desktop positioning
+      const desktopOffset = responsiveSize === 'small' ? 16 : 24;
+      
+      switch (position) {
+        case 'top-left':
+          return { top: desktopOffset, left: desktopOffset };
+        case 'top-right':
+          return { top: desktopOffset, right: desktopOffset };
+        case 'bottom-left':
+          return { bottom: desktopOffset, left: desktopOffset };
+        case 'bottom-right':
+        default:
+          return { bottom: desktopOffset, right: desktopOffset };
+      }
     }
   };
   
@@ -54,25 +73,25 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
     switch (responsiveSize) {
       case 'small':
         return {
-          badgeHeight: 28,
-          fontSize: 10,
-          iconSize: 12,
-          paddingHorizontal: 8,
+          badgeHeight: IS_MOBILE ? 36 : 32,
+          fontSize: IS_MOBILE ? 12 : 11,
+          iconSize: IS_MOBILE ? 16 : 14,
+          paddingHorizontal: IS_MOBILE ? 10 : 8,
         };
       case 'large':
         return {
-          badgeHeight: 40,
-          fontSize: 14,
-          iconSize: 18,
-          paddingHorizontal: 16,
+          badgeHeight: IS_MOBILE ? 48 : 44,
+          fontSize: IS_MOBILE ? 16 : 15,
+          iconSize: IS_MOBILE ? 22 : 20,
+          paddingHorizontal: IS_MOBILE ? 18 : 16,
         };
       case 'medium':
       default:
         return {
-          badgeHeight: 32,
-          fontSize: 12,
-          iconSize: 14,
-          paddingHorizontal: 12,
+          badgeHeight: IS_MOBILE ? 42 : 38,
+          fontSize: IS_MOBILE ? 14 : 13,
+          iconSize: IS_MOBILE ? 18 : 16,
+          paddingHorizontal: IS_MOBILE ? 14 : 12,
         };
     }
   };
@@ -99,8 +118,8 @@ export const BoltBadge: React.FC<BoltBadgeProps> = ({
           styles.logoContainer, 
           { 
             backgroundColor: theme.colors.primary,
-            height: sizeStyles.badgeHeight - 12, 
-            width: sizeStyles.badgeHeight - 12 
+            height: sizeStyles.badgeHeight - 16, 
+            width: sizeStyles.badgeHeight - 16 
           }
         ]}>
           <Zap size={sizeStyles.iconSize} color="#FFFFFF" />
@@ -130,25 +149,26 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
   },
   logoContainer: {
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 6,
+    marginRight: 8,
   },
   badgeText: {
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   sparkle: {
-    marginLeft: 4,
+    marginLeft: 6,
   },
 });
 
