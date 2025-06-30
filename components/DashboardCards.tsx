@@ -67,7 +67,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           borderColor: theme.colors.border,
           minHeight: currentSize.minHeight,
           width: isMobile ? '48%' : undefined,
-          ...(Platform.OS === 'web' && isMobile ? { minWidth: 160 } : { flex: 1}),
+          ...(Platform.OS === 'web' && isMobile ? { minWidth: 160 } : { flex: isMobile ? 0 : 1}),
         }
       ]}
       onPress={onPress}
@@ -194,7 +194,7 @@ export const QuickActionCard: React.FC<QuickActionCardProps> = ({
         { 
           minHeight: currentSize.minHeight,
           width: isMobile ? '48%' : undefined,
-          ...(Platform.OS === 'web' && isMobile ? { minWidth: 160 } : { flex: 1 }),
+          ...(Platform.OS === 'web' && isMobile ? { minWidth: 160 } : { flex: isMobile ? 0 : 1 }),
         }
       ]}
       onPress={onPress}

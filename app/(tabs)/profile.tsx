@@ -16,6 +16,8 @@ import { User, Settings, LogOut, CreditCard as Edit, Save, X, Mail, Crown, Star,
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
+import { SubscriptionModal } from '@/components/SubscriptionModal';
 
 const { width } = Dimensions.get('window');
 
@@ -48,6 +50,7 @@ interface Achievement {
 
 export default function ProfileScreen() {
   const { theme, isDark, toggleTheme } = useTheme();
+  const { subscription, refreshSubscription } = useSubscription();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -57,8 +60,8 @@ export default function ProfileScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
-  const [isPro, setIsPro] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [units, setUnits] = useState('metric');
   const [language, setLanguage] = useState('en');
@@ -76,7 +79,6 @@ export default function ProfileScreen() {
     fetchProfile(user);
     fetchUserStats(user.id);
     fetchAchievements(user.id);
-    checkSubscription(user.id);
   };
 
   const fetchProfile = async (user: any) => {
@@ -310,10 +312,6 @@ export default function ProfileScreen() {
     setAchievements(mockAchievements);
   };
 
-  const checkSubscription = async (userId: string) => {
-    setIsPro(false);
-  };
-
   const handleSaveProfile = async () => {
     if (!profile || !editedName.trim()) {
       Alert.alert('Error', 'Name cannot be empty');
@@ -346,16 +344,7 @@ export default function ProfileScreen() {
   };
 
   const handleUpgrade = () => {
-    Alert.alert(
-      'Upgrade to Pro',
-      'Get unlimited recipe generation, advanced analytics, and exclusive eco rewards!',
-      [
-        { text: 'Maybe Later', style: 'cancel' },
-        { text: 'Upgrade Now', onPress: () => {
-          Alert.alert('Coming Soon', 'Pro features will be available soon!');
-        }},
-      ]
-    );
+    setShowSubscriptionModal(true);
   };
 
   const handleSignOut = async () => {
@@ -448,7 +437,7 @@ export default function ProfileScreen() {
             <View style={styles.profileSection}>
               <View style={styles.avatarContainer}>
                 <User size={48} color="#FFFFFF" />
-                {isPro && (
+                {subscription.tier === 'pro' && (
                   <View style={styles.proIndicator}>
                     <Crown size={16} color={theme.colors.warning} />
                   </View>
@@ -492,6 +481,12 @@ export default function ProfileScreen() {
                       {userStats.rank ? `Rank #${userStats.rank}` : 'Unranked'} • {userStats.currentStreak} day streak
                     </Text>
                   )}
+                  {subscription.tier === 'pro' && (
+                    <View style={styles.proStatus}>
+                      <Crown size={14} color={theme.colors.warning} />
+                      <Text style={[styles.proStatusText, { color: theme.colors.warning }]}>Pro Member</Text>
+                    </View>
+                  )}
                 </View>
               )}
 
@@ -511,6 +506,7 @@ export default function ProfileScreen() {
                       fetchProfile(profile);
                       fetchUserStats(profile.id);
                       fetchAchievements(profile.id);
+                      refreshSubscription();
                     }
                   }}
                 >
@@ -567,7 +563,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Pro Upgrade */}
-        {!isPro && (
+        {subscription.tier !== 'pro' && (
           <View style={styles.section}>
             <TouchableOpacity style={styles.proCard} onPress={handleUpgrade}>
               <LinearGradient
@@ -797,6 +793,21 @@ export default function ProfileScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      {/* Subscription Modal */}
+      <SubscriptionModal
+        visible={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        onSubscribe={(tierId) => {
+          // This will be implemented with RevenueCat
+          console.log('Subscribe to:', tierId);
+          Alert.alert(
+            'Coming Soon',
+            'Subscription features will be available once you export this project and integrate RevenueCat locally.',
+            [{ text: 'OK' }]
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -880,6 +891,21 @@ const styles = StyleSheet.create({
   profileRank: {
     fontSize: 14,
     color: '#C4B5FD',
+  },
+  proStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  proStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   editNameContainer: {
     alignItems: 'center',
