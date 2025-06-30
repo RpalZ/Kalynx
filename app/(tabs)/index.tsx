@@ -55,6 +55,7 @@ export default function HomeScreen() {
     user: true,
   });
   const [authChecked, setAuthChecked] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const isDesktop = Platform.OS === 'web' && width >= 1024;
   const isTablet = Platform.OS === 'web' && width >= 768 && width < 1024;
@@ -74,64 +75,74 @@ export default function HomeScreen() {
 
   const checkAuth = async () => {
     try {
-      console.log('🔐 Checking authentication...');
+      console.log('🔐 Home: Checking authentication...');
       setLoadingStates(prev => ({ ...prev, user: true }));
+      setError(null);
       
-      const { data: { user }, error } = await supabase.auth.getUser();
-      console.log('👤 Auth check result:', { user: !!user, error });
+      // Add timeout for auth check
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Auth timeout')), 8000);
+      });
+
+      const authPromise = supabase.auth.getUser();
+      const { data: { user }, error } = await Promise.race([authPromise, timeoutPromise]) as any;
+      
+      console.log('👤 Home: Auth check result:', { user: !!user, error: error?.message });
       
       if (error) {
-        console.error('❌ Auth error:', error);
-        router.replace('/auth');
+        console.error('❌ Home: Auth error:', error);
+        setError(`Authentication failed: ${error.message}`);
+        setTimeout(() => router.replace('/auth'), 3000);
         return;
       }
       
       if (!user) {
-        console.log('❌ No user found, redirecting to auth');
+        console.log('❌ Home: No user found, redirecting to auth');
         router.replace('/auth');
         return;
       }
       
-      console.log('✅ User authenticated:', user.id);
+      console.log('✅ Home: User authenticated:', user.id);
       setUser(user);
       setAuthChecked(true);
       setLoadingStates(prev => ({ ...prev, user: false }));
       
       // Fetch dashboard data after auth is confirmed
       fetchDashboardData();
-    } catch (error) {
-      console.error('💥 Auth check error:', error);
+    } catch (error: any) {
+      console.error('💥 Home: Auth check error:', error);
+      setError(`Connection error: ${error.message}`);
       setLoadingStates(prev => ({ ...prev, user: false }));
-      router.replace('/auth');
+      setTimeout(() => router.replace('/auth'), 3000);
     }
   };
 
   const fetchDashboardData = async () => {
     if (!user) {
-      console.log('⚠️ No user available for dashboard data fetch');
+      console.log('⚠️ Home: No user available for dashboard data fetch');
       return;
     }
 
     try {
-      console.log('📊 Fetching dashboard data...');
+      console.log('📊 Home: Fetching dashboard data...');
       const today = new Date().toISOString().split('T')[0];
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
-        console.log('❌ No session found, redirecting to auth');
+        console.log('❌ Home: No session found, redirecting to auth');
         router.replace('/auth');
         return;
       }
 
       const token = session.session.access_token;
 
-      // Fetch daily summary with timeout
+      // Fetch daily summary with timeout and error handling
       setLoadingStates(prev => ({ ...prev, summary: true }));
-      const summaryController = new AbortController();
-      const summaryTimeout = setTimeout(() => summaryController.abort(), 10000); // 10 second timeout
-
       try {
-        console.log('📈 Fetching daily summary...');
+        console.log('📈 Home: Fetching daily summary...');
+        const summaryController = new AbortController();
+        const summaryTimeout = setTimeout(() => summaryController.abort(), 8000);
+
         const summaryResponse = await fetch(
           `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-daily-summary?date=${today}`,
           {
@@ -147,10 +158,13 @@ export default function HomeScreen() {
 
         if (summaryResponse.ok) {
           const summaryData = await summaryResponse.json();
-          console.log('✅ Summary data received:', summaryData);
+          console.log('✅ Home: Summary data received:', summaryData);
           setSummary(summaryData);
         } else {
-          console.error('❌ Summary fetch failed:', summaryResponse.status);
+          console.error('❌ Home: Summary fetch failed:', summaryResponse.status, summaryResponse.statusText);
+          const errorText = await summaryResponse.text();
+          console.error('❌ Home: Summary error details:', errorText);
+          
           // Set default summary data for offline/error state
           setSummary({
             date: today,
@@ -164,8 +178,8 @@ export default function HomeScreen() {
             workoutsCount: 0,
           });
         }
-      } catch (summaryError) {
-        console.error('💥 Summary fetch error:', summaryError);
+      } catch (summaryError: any) {
+        console.error('💥 Home: Summary fetch error:', summaryError);
         // Set default summary data
         setSummary({
           date: today,
@@ -182,13 +196,13 @@ export default function HomeScreen() {
         setLoadingStates(prev => ({ ...prev, summary: false }));
       }
 
-      // Calculate and fetch daily score with timeout
+      // Calculate and fetch daily score with timeout and error handling
       setLoadingStates(prev => ({ ...prev, score: true }));
-      const scoreController = new AbortController();
-      const scoreTimeout = setTimeout(() => scoreController.abort(), 10000); // 10 second timeout
-
       try {
-        console.log('🎯 Calculating daily score...');
+        console.log('🎯 Home: Calculating daily score...');
+        const scoreController = new AbortController();
+        const scoreTimeout = setTimeout(() => scoreController.abort(), 8000);
+
         const scoreResponse = await fetch(
           `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/calculate-score`,
           {
@@ -206,10 +220,13 @@ export default function HomeScreen() {
 
         if (scoreResponse.ok) {
           const scoreData = await scoreResponse.json();
-          console.log('✅ Score data received:', scoreData);
+          console.log('✅ Home: Score data received:', scoreData);
           setScore(scoreData);
         } else {
-          console.error('❌ Score fetch failed:', scoreResponse.status);
+          console.error('❌ Home: Score fetch failed:', scoreResponse.status, scoreResponse.statusText);
+          const errorText = await scoreResponse.text();
+          console.error('❌ Home: Score error details:', errorText);
+          
           // Set default score data
           setScore({
             fitness_score: 0,
@@ -217,8 +234,8 @@ export default function HomeScreen() {
             combined_score: 0,
           });
         }
-      } catch (scoreError) {
-        console.error('💥 Score fetch error:', scoreError);
+      } catch (scoreError: any) {
+        console.error('💥 Home: Score fetch error:', scoreError);
         // Set default score data
         setScore({
           fitness_score: 0,
@@ -229,9 +246,9 @@ export default function HomeScreen() {
         setLoadingStates(prev => ({ ...prev, score: false }));
       }
 
-    } catch (error) {
-      console.error('💥 Error fetching dashboard data:', error);
-      Alert.alert('Error', 'Failed to load dashboard data');
+    } catch (error: any) {
+      console.error('💥 Home: Error fetching dashboard data:', error);
+      setError(`Failed to load dashboard: ${error.message}`);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -240,6 +257,7 @@ export default function HomeScreen() {
 
   const onRefresh = () => {
     setRefreshing(true);
+    setError(null);
     fetchDashboardData();
   };
 
@@ -304,6 +322,36 @@ export default function HomeScreen() {
     );
   };
 
+  // Show error state if there's a critical error
+  if (error && !user) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.errorContainer}>
+          <View style={[styles.errorCard, { backgroundColor: theme.colors.card }]}>
+            <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
+              Connection Issue
+            </Text>
+            <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
+              {error}
+            </Text>
+            <Text style={[styles.errorSubtext, { color: theme.colors.placeholder }]}>
+              Redirecting to login...
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => {
+                setError(null);
+                checkAuth();
+              }}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   // Show loading state while checking auth or initial load
   if (!authChecked || loadingStates.user || (isLoading && !summary && !score)) {
     return (
@@ -312,6 +360,11 @@ export default function HomeScreen() {
           <View style={[styles.loadingCard, { backgroundColor: theme.colors.card }]}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading your dashboard...</Text>
+            {error && (
+              <Text style={[styles.errorText, { color: theme.colors.error, marginTop: 8 }]}>
+                {error}
+              </Text>
+            )}
           </View>
         </View>
       </SafeAreaView>
@@ -636,12 +689,56 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
+    minWidth: 250,
   },
   loadingText: {
     fontSize: 14,
     marginTop: 12,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  errorCard: {
+    padding: 32,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    maxWidth: 300,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  errorText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  errorSubtext: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   quickActionsLoading: {
     alignItems: 'center',
@@ -665,10 +762,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 40,
-  },
-  errorText: {
-    fontSize: 14,
-    textAlign: 'center',
   },
   header: {
     paddingHorizontal: 20,
