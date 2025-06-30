@@ -312,6 +312,7 @@ export default function HomeScreen() {
                 <Text style={styles.userName}>{user?.user_metadata?.name || 'there'}!</Text>
                 <Text style={styles.subtitle}>Ready to make a positive impact today?</Text>
               </View>
+
               <TouchableOpacity 
                 style={styles.refreshButton}
                 onPress={onRefresh}
@@ -386,6 +387,7 @@ export default function HomeScreen() {
                 size={isDesktop ? 'medium' : 'small'}
               />
             </View>
+
           )}
         </View>
 
@@ -579,6 +581,7 @@ export default function HomeScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+
 
   return isDesktop ? <DesktopLayout>{content}</DesktopLayout> : content;
 }
