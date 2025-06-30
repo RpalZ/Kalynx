@@ -54,6 +54,7 @@ export default function HomeScreen() {
     score: true,
     user: true,
   });
+  const [authChecked, setAuthChecked] = useState(false);
 
   const isDesktop = Platform.OS === 'web' && width >= 1024;
   const isTablet = Platform.OS === 'web' && width >= 768 && width < 1024;
@@ -65,35 +66,59 @@ export default function HomeScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      if (user) {
+      if (user && authChecked) {
         fetchDashboardData();
       }
-    }, [user])
+    }, [user, authChecked])
   );
 
   const checkAuth = async () => {
     try {
+      console.log('🔐 Checking authentication...');
       setLoadingStates(prev => ({ ...prev, user: true }));
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      
+      const { data: { user }, error } = await supabase.auth.getUser();
+      console.log('👤 Auth check result:', { user: !!user, error });
+      
+      if (error) {
+        console.error('❌ Auth error:', error);
         router.replace('/auth');
         return;
       }
+      
+      if (!user) {
+        console.log('❌ No user found, redirecting to auth');
+        router.replace('/auth');
+        return;
+      }
+      
+      console.log('✅ User authenticated:', user.id);
       setUser(user);
+      setAuthChecked(true);
       setLoadingStates(prev => ({ ...prev, user: false }));
+      
+      // Fetch dashboard data after auth is confirmed
       fetchDashboardData();
     } catch (error) {
-      console.error('Auth check error:', error);
+      console.error('💥 Auth check error:', error);
       setLoadingStates(prev => ({ ...prev, user: false }));
+      router.replace('/auth');
     }
   };
 
   const fetchDashboardData = async () => {
+    if (!user) {
+      console.log('⚠️ No user available for dashboard data fetch');
+      return;
+    }
+
     try {
+      console.log('📊 Fetching dashboard data...');
       const today = new Date().toISOString().split('T')[0];
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
+        console.log('❌ No session found, redirecting to auth');
         router.replace('/auth');
         return;
       }
@@ -106,6 +131,7 @@ export default function HomeScreen() {
       const summaryTimeout = setTimeout(() => summaryController.abort(), 10000); // 10 second timeout
 
       try {
+        console.log('📈 Fetching daily summary...');
         const summaryResponse = await fetch(
           `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-daily-summary?date=${today}`,
           {
@@ -121,9 +147,10 @@ export default function HomeScreen() {
 
         if (summaryResponse.ok) {
           const summaryData = await summaryResponse.json();
+          console.log('✅ Summary data received:', summaryData);
           setSummary(summaryData);
         } else {
-          console.error('Summary fetch failed:', summaryResponse.status);
+          console.error('❌ Summary fetch failed:', summaryResponse.status);
           // Set default summary data for offline/error state
           setSummary({
             date: today,
@@ -138,7 +165,7 @@ export default function HomeScreen() {
           });
         }
       } catch (summaryError) {
-        console.error('Summary fetch error:', summaryError);
+        console.error('💥 Summary fetch error:', summaryError);
         // Set default summary data
         setSummary({
           date: today,
@@ -161,6 +188,7 @@ export default function HomeScreen() {
       const scoreTimeout = setTimeout(() => scoreController.abort(), 10000); // 10 second timeout
 
       try {
+        console.log('🎯 Calculating daily score...');
         const scoreResponse = await fetch(
           `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/calculate-score`,
           {
@@ -178,9 +206,10 @@ export default function HomeScreen() {
 
         if (scoreResponse.ok) {
           const scoreData = await scoreResponse.json();
+          console.log('✅ Score data received:', scoreData);
           setScore(scoreData);
         } else {
-          console.error('Score fetch failed:', scoreResponse.status);
+          console.error('❌ Score fetch failed:', scoreResponse.status);
           // Set default score data
           setScore({
             fitness_score: 0,
@@ -189,7 +218,7 @@ export default function HomeScreen() {
           });
         }
       } catch (scoreError) {
-        console.error('Score fetch error:', scoreError);
+        console.error('💥 Score fetch error:', scoreError);
         // Set default score data
         setScore({
           fitness_score: 0,
@@ -201,7 +230,7 @@ export default function HomeScreen() {
       }
 
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('💥 Error fetching dashboard data:', error);
       Alert.alert('Error', 'Failed to load dashboard data');
     } finally {
       setIsLoading(false);
@@ -276,7 +305,7 @@ export default function HomeScreen() {
   };
 
   // Show loading state while checking auth or initial load
-  if (loadingStates.user || (isLoading && !summary && !score)) {
+  if (!authChecked || loadingStates.user || (isLoading && !summary && !score)) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
