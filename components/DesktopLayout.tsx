@@ -35,21 +35,43 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
   const { theme, isDark } = useTheme();
   const [user, setUser] = useState<any>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isUserLoading, setIsUserLoading] = useState(true);
   const pathname = usePathname();
   const isDesktop = Platform.OS === 'web' && screenWidth >= DESKTOP_BREAKPOINT;
   const isTablet = Platform.OS === 'web' && screenWidth >= TABLET_BREAKPOINT && screenWidth < DESKTOP_BREAKPOINT;
 
   useEffect(() => {
-    fetchUser();
-  }, []);
+    let mounted = true;
+    
+    const fetchUser = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (mounted) {
+          if (error) {
+            console.error('DesktopLayout: Error fetching user:', error);
+          } else {
+            setUser(user);
+          }
+          setIsUserLoading(false);
+        }
+      } catch (error) {
+        console.error('DesktopLayout: Exception fetching user:', error);
+        if (mounted) {
+          setIsUserLoading(false);
+        }
+      }
+    };
 
-  const fetchUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
-  };
+    fetchUser();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleSignOut = async () => {
     try {
+      setUser(null);
       await supabase.auth.signOut();
       router.replace('/auth');
     } catch (error) {
@@ -85,7 +107,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
     console.log('🚀 Desktop navigation clicked:', item.label, 'Route:', item.route);
     
     try {
-      // Navigate directly without any state management
+      // Use push instead of replace to avoid navigation conflicts
       router.push(item.route);
       console.log('✅ Navigation completed for:', item.label);
     } catch (error) {
@@ -233,7 +255,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
           {/* Welcome Text */}
           <View style={styles.welcomeSection}>
             <Text style={[styles.welcomeText, { color: theme.colors.text }]}>
-              Welcome back, {user?.user_metadata?.name || 'there'}!
+              Welcome back, {isUserLoading ? '...' : (user?.user_metadata?.name || 'there')}!
             </Text>
             <Text style={[styles.welcomeSubtext, { color: theme.colors.textSecondary }]}>
               Here's your sustainability dashboard
@@ -260,7 +282,7 @@ export const DesktopLayout: React.FC<DesktopLayoutProps> = ({
                 <User size={16} color="#FFFFFF" />
               </View>
               <Text style={[styles.userName, { color: theme.colors.text }]}>
-                {user?.user_metadata?.name || 'User'}
+                {isUserLoading ? '...' : (user?.user_metadata?.name || 'User')}
               </Text>
             </TouchableOpacity>
             
