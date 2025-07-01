@@ -23,6 +23,7 @@ import { DesktopLayout } from '@/components/DesktopLayout';
 
 const { width } = Dimensions.get('window');
 const isDesktop = Platform.OS === 'web' && width >= 1024;
+const isSmallScreen = width < 400;
 
 interface Meal {
   id: string;
@@ -445,17 +446,27 @@ export default function MealsScreen() {
                   <View style={styles.ingredientsSection}>
                     <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Add Ingredients (Optional)</Text>
                     <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>Add each ingredient with its amount and unit for better accuracy</Text>
-                    <View style={styles.ingredientInputContainer}>
-                      <View style={styles.ingredientInputRow}>
+                    <View style={[styles.ingredientInputContainer, isSmallScreen && { flexDirection: 'column', alignItems: 'stretch', gap: 0, padding: 0 }]}> 
+                      <View style={[styles.ingredientInputRow, isSmallScreen && { flexDirection: 'column', gap: 0, padding: 0 }]}> 
                         <TextInput
-                          style={[styles.input, styles.ingredientInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                          style={[
+                            styles.input,
+                            styles.ingredientInput,
+                            { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface },
+                            isSmallScreen && { borderRadius: 8, marginRight: 0, marginBottom: 8, height: 58, width: '100%', alignSelf: 'stretch', paddingVertical: 12 }
+                          ]}
                           placeholder="Ingredient"
                           placeholderTextColor={theme.colors.placeholder}
                           value={currentIngredient}
                           onChangeText={setCurrentIngredient}
                         />
                         <TextInput
-                          style={[styles.input, styles.amountInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                          style={[
+                            styles.input,
+                            styles.amountInput,
+                            { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface },
+                            isSmallScreen && { borderRadius: 8, marginRight: 0, marginBottom: 8, height: 58, width: '100%', alignSelf: 'stretch', paddingVertical: 12 }
+                          ]}
                           placeholder="Amount"
                           placeholderTextColor={theme.colors.placeholder}
                           value={currentAmount}
@@ -463,19 +474,37 @@ export default function MealsScreen() {
                           keyboardType="numeric"
                         />
                         <TextInput
-                          style={[styles.input, styles.unitInput, { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface }]}
+                          style={[
+                            styles.input,
+                            styles.unitInput,
+                            { borderColor: theme.colors.border, color: theme.colors.text, backgroundColor: theme.colors.surface },
+                            isSmallScreen && { borderRadius: 8, marginRight: 0, marginBottom: 0, height: 58, width: '100%', alignSelf: 'stretch', paddingVertical: 12 }
+                          ]}
                           placeholder="Unit"
                           placeholderTextColor={theme.colors.placeholder}
                           value={currentUnit}
                           onChangeText={setCurrentUnit}
                         />
                       </View>
-                      <TouchableOpacity
-                        style={[styles.addIngredientButton, { backgroundColor: theme.colors.success }]}
-                        onPress={handleAddIngredient}
-                      >
-                        <Plus size={20} color="#FFFFFF" />
-                      </TouchableOpacity>
+                      {isSmallScreen ? (
+                        <TouchableOpacity
+                          style={[
+                            styles.addIngredientButton,
+                            { backgroundColor: theme.colors.success },
+                            isSmallScreen && { alignSelf: 'stretch', marginTop: 8, borderRadius: 8, height: 44, width: '100%', justifyContent: 'center', alignItems: 'center' }
+                          ]}
+                          onPress={handleAddIngredient}
+                        >
+                          <Plus size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.addIngredientButton, { backgroundColor: theme.colors.success }]}
+                          onPress={handleAddIngredient}
+                        >
+                          <Plus size={20} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      )}
                     </View>
                     {detailedIngredients.length > 0 && (
                       <View style={styles.ingredientsList}>
