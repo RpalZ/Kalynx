@@ -22,6 +22,7 @@ import ChartWidget from '@/components/ChartWidget';
 import { ResponsiveGrid, GridItem } from '@/components/ResponsiveGrid';
 import { MetricCard, QuickActionCard, StatsOverview } from '@/components/DashboardCards';
 import { DesktopLayout } from '@/components/DesktopLayout';
+import BoltBadge from '@/components/BoltBadge';
 
 const { width } = Dimensions.get('window');
 
@@ -579,11 +580,15 @@ export default function HomeScreen() {
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+      <BoltBadge size="large" />
     </SafeAreaView>
   );
 
-
-  return isDesktop ? <DesktopLayout>{content}</DesktopLayout> : content;
+  return isDesktop ? (
+    <DesktopLayout>{content}</DesktopLayout>
+  ) : (
+    content
+  );
 }
 
 const styles = StyleSheet.create({
